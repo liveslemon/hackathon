@@ -185,6 +185,7 @@ const InternshipCard = ({ internship }: InternshipCardProps) => {
         <InternshipDetails
           open={openDetails}
           onClose={() => setOpenDetails(false)}
+          // @ts-ignore
           internship={internship}
         />
       )}

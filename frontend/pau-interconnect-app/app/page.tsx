@@ -1,5 +1,5 @@
 "use client";
-import { Button, Container, Box, Typography, Grid } from "@mui/material";
+import { Button, Container, Box, Typography } from "@mui/material";
 import { useEffect } from "react";
 import { MdWork, MdTrendingUp, MdPeople } from "react-icons/md";
 
@@ -72,7 +72,7 @@ const Welcome = () => {
             position: "absolute",
             inset: 0,
             opacity: 0.2,
-            backgroundImage: `url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzBoLTJ2LTJoMnYyem0wLTRoLTJ2LTJoMnYyem0wLTRoLTJ2LTJoMnYyem0wLTRoLTJ2LTJoMnYyem0wLTRoLTJ2LTJoMnYyem0wLTRoLTJ2LTJoMnYyem0wLTRoLTJ2LTJoMnYyeiIvPjwvZz48L2c+PC9zdmc+")`,
+            backgroundImage: `url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzBoLTJ2LTJoMnYyem0wLTRoLTJ2LTJoMnYyem0wLTRoLTJ2LTJoMnYyem0wLTRoLTJ2LTJoMnYyem0wLTRoLTJ2LTJoMnYyem0wLTRoLTJ2LTJoMnYyeiIvPjwvZz48L2c+PC9zdmc+")`,
             backgroundRepeat: "no-repeat",
             backgroundPosition: "center",
             backgroundSize: "contain",
@@ -143,25 +143,30 @@ const Welcome = () => {
 
       {/* Features Section */}
       <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }}>
-        <Grid
-          container
-          spacing={4}
-          direction={{ xs: "column", md: "row" }}
-          wrap="nowrap"
-          alignItems="stretch"
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", md: "row" },
+            gap: 4,
+            alignItems: "stretch",
+          }}
         >
-          <Grid item xs={12} md={4}>
+          {[ 
+            { icon: <MdWork />, title: "Personalized Matches", text: "Get internship recommendations tailored to your course, interests, and career goals." },
+            { icon: <MdTrendingUp />, title: "Real Opportunities", text: "Access internships from leading companies across various industries and fields." },
+            { icon: <MdPeople />, title: "Easy Application", text: "Apply to multiple internships with your saved profile and track your progress." }
+          ].map((feature, i) => (
             <Box
+              key={i}
               sx={{
+                flex: 1,
                 p: 4,
                 borderRadius: 3,
                 bgcolor: "background.paper",
                 boxShadow: 3,
                 textAlign: "center",
                 transition: "box-shadow 0.3s",
-                "&:hover": {
-                  boxShadow: 6,
-                },
+                "&:hover": { boxShadow: 6 },
                 height: "100%",
               }}
             >
@@ -180,104 +185,15 @@ const Welcome = () => {
                   fontSize: 40,
                 }}
               >
-                <MdWork />
+                {feature.icon}
               </Box>
               <Typography variant="h6" fontWeight="600" gutterBottom>
-                Personalized Matches
+                {feature.title}
               </Typography>
-              <Typography color="text.secondary">
-                Get internship recommendations tailored to your course,
-                interests, and career goals.
-              </Typography>
+              <Typography color="text.secondary">{feature.text}</Typography>
             </Box>
-          </Grid>
-
-          <Grid item xs={12} md={4}>
-            <Box
-              sx={{
-                p: 4,
-                borderRadius: 3,
-                bgcolor: "background.paper",
-                boxShadow: 3,
-                textAlign: "center",
-                transition: "box-shadow 0.3s",
-                "&:hover": {
-                  boxShadow: 6,
-                },
-                animationDelay: "0.1s",
-                height: "100%",
-              }}
-            >
-              <Box
-                sx={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 64,
-                  height: 64,
-                  borderRadius: 3,
-                  bgcolor: "primary.main",
-                  color: "common.white",
-                  mb: 3,
-                  mx: "auto",
-                  fontSize: 40,
-                }}
-              >
-                <MdTrendingUp />
-              </Box>
-              <Typography variant="h6" fontWeight="600" gutterBottom>
-                Real Opportunities
-              </Typography>
-              <Typography color="text.secondary">
-                Access internships from leading companies across various
-                industries and fields.
-              </Typography>
-            </Box>
-          </Grid>
-
-          <Grid item xs={12} md={4}>
-            <Box
-              sx={{
-                p: 4,
-                borderRadius: 3,
-                bgcolor: "background.paper",
-                boxShadow: 3,
-                textAlign: "center",
-                transition: "box-shadow 0.3s",
-                "&:hover": {
-                  boxShadow: 6,
-                },
-                animationDelay: "0.2s",
-                height: "100%",
-              }}
-            >
-              <Box
-                sx={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 64,
-                  height: 64,
-                  borderRadius: 3,
-                  bgcolor: "primary.main",
-                  color: "common.white",
-                  mb: 3,
-                  mx: "auto",
-                  fontSize: 40,
-                }}
-              >
-                <MdPeople />
-              </Box>
-              <Typography variant="h6" fontWeight="600" gutterBottom>
-                Easy Application
-              </Typography>
-              <Typography color="text.secondary">
-                Apply to multiple internships with your saved profile and track
-                your progress.
-              </Typography>
-            </Box>
-          </Grid>
-        </Grid>
+          ))}
+        </Box>
       </Container>
     </Box>
   );

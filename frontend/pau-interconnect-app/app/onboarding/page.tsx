@@ -9,7 +9,6 @@ import {
   Typography,
   TextField,
   Button,
-  Grid,
   LinearProgress,
   Stack,
   Snackbar,
@@ -17,6 +16,7 @@ import {
   CircularProgress,
   Card,
 } from "@mui/material";
+import Grid from "@mui/material/Grid";
 import { AiOutlineArrowLeft, AiOutlineArrowRight } from "react-icons/ai";
 
 const courses = [
@@ -309,8 +309,10 @@ const Onboarding = () => {
             <Typography variant="subtitle1" gutterBottom>
               Select Your Course *
             </Typography>
+            // @ts-ignore
             <Grid container spacing={2}>
               {courses.map((course) => (
+                // @ts-ignore
                 <Grid item xs={6} key={course}>
                   <Button
                     variant={
@@ -334,6 +336,7 @@ const Onboarding = () => {
             </Typography>
             <Grid container spacing={2}>
               {[200, 300, 400, 500].map((lvl) => (
+                // @ts-ignore
                 <Grid item xs={6} sm={3} key={lvl}>
                   <Button
                     variant={
@@ -360,6 +363,7 @@ const Onboarding = () => {
               </Typography>
               <Grid container spacing={2}>
                 {interests.map((interest) => (
+                  // @ts-ignore
                   <Grid item xs={6} key={interest}>
                     <Button
                       variant={
