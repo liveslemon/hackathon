@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import AnalyticsPage from "@/app/dashboard/analytics/page";
+import AnalyticsPage from "@/app/dashboard/admin/analytics/page";
 import PostInternshipView from "./post/page";
 import { Button, Box, Stack, AppBar, Typography, Toolbar, Divider } from "@mui/material";
 

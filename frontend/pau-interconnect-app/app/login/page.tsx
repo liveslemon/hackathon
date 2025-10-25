@@ -1,8 +1,47 @@
-import React from "react";
+"use client";
+import React, {useState} from "react";
 import { FaLock } from "react-icons/fa";
+import { useRouter } from "next/navigation";
 import { Box, Button, Card, CardContent, TextField, Typography } from "@mui/material";
 
+
+
+interface AdminAccount {
+  email: string;
+  password: string;
+}
+
+const adminAccounts: AdminAccount[] = [
+  { email: "admin@pau.edu.ng", password: "admin123" },
+  { email: "supervisor@pau.edu.ng", password: "super456" },
+  { email: "head@pau.edu.ng", password: "admin789" },
+];
+
 export default function Home() {
+    const router = useRouter();
+  const [email, setEmail] = useState("admin@pau.edu.ng");
+  const [password, setPassword] = useState("");
+const [error, setError] = useState("");
+
+ const handleLogin = () => {
+  // find an admin account that matches the entered email (if any)
+  const admin = adminAccounts.find(a => a.email === email);
+
+  if (admin) {
+    if (admin.password === password) {
+      router.push("/dashboard/admin");
+    } else {
+      setError("Invalid password for admin account.");
+    }
+    return;
+  }
+
+  if (email && password) {
+    router.push("/dashboard/student");
+  } else {
+    setError("Please enter your email and password.");
+  }
+};
   return (
     <div className="body">
       <Box
@@ -49,37 +88,49 @@ export default function Home() {
             Sign in to manage internship postings
           </Typography>
 
-          <TextField
-            label="Email"
-            variant="outlined"
-            fullWidth
-            margin="normal"
-            defaultValue="admin@pau.edu.ng"
-          />
+          <form
+  onSubmit={(e) => {
+    e.preventDefault(); // prevent page reload
+    handleLogin();
+  }}
+>
+  <TextField
+    label="Email"
+    variant="outlined"
+    fullWidth
+    margin="normal"
+    value={email}
+    onChange={(e) => setEmail(e.target.value)}
+  />
 
-          <TextField
-            label="Password"
-            type="password"
-            variant="outlined"
-            fullWidth
-            margin="normal"
-          />
+  <TextField
+    label="Password"
+    type="password"
+    variant="outlined"
+    fullWidth
+    margin="normal"
+    value={password}
+    onChange={(e) => setPassword(e.target.value)}
+    error={Boolean(error)}
+    helperText={error}
+  />
 
-          <Button
-            variant="contained"
-            fullWidth
-            sx={{
-              mt: 2,
-              bgcolor: "#1976d2",
-              "&:hover": { bgcolor: "#1259a0ff" },
-              borderRadius: 2,
-              textTransform: "none",
-              fontWeight: "bold",
-            }}
-          >
-            Sign In
-          </Button>
-
+  <Button
+    type="submit"
+    variant="contained"
+    fullWidth
+    sx={{
+      mt: 2,
+      bgcolor: "#1976d2",
+      "&:hover": { bgcolor: "#1259a0ff" },
+      borderRadius: 2,
+      textTransform: "none",
+      fontWeight: "bold",
+    }}
+  >
+    Sign In
+  </Button>
+</form>
 
 
                     <Button
@@ -94,7 +145,9 @@ export default function Home() {
               "&:hover": { color: "#FFF", bgcolor: "#4F46E5", boxShadow: "none",},
               borderRadius: 2,
               textTransform: "none",
+              
             }}
+            onClick={() => router.push("/")}
           >
             Back to home
           </Button>
