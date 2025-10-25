@@ -160,7 +160,9 @@ const Dashboard = () => {
         // Safely parse profile.interests if it's a string or array
         let parsedInterests: string[] = [];
         if (Array.isArray(profile.interests)) {
-          parsedInterests = profile.interests.filter((i) => typeof i === "string");
+          parsedInterests = (profile.interests as unknown[]).filter(
+            (i): i is string => typeof i === "string"
+          );
         } else if (typeof profile.interests === "string") {
           try {
             const parsed = JSON.parse(profile.interests);
@@ -196,7 +198,10 @@ const Dashboard = () => {
           })
         );
 
-        console.log("Fetched internships with matches:", internshipsWithMatches);
+        console.log(
+          "Fetched internships with matches:",
+          internshipsWithMatches
+        );
 
         setInternships(internshipsWithMatches);
         setFilteredInternships(internshipsWithMatches);
@@ -272,8 +277,10 @@ const Dashboard = () => {
         const query = searchQuery.toLowerCase();
         filtered = filtered.filter(
           (internship) =>
-            (internship.company && internship.company.toLowerCase().includes(query)) ||
-            (internship.role && internship.role.toLowerCase().includes(query)) ||
+            (internship.company &&
+              internship.company.toLowerCase().includes(query)) ||
+            (internship.role &&
+              internship.role.toLowerCase().includes(query)) ||
             (internship.field && internship.field.toLowerCase().includes(query))
         );
       }
