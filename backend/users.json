@@ -1,0 +1,135 @@
+{
+    "hillaryilona19@gmail.com": {
+        "name": "jb",
+        "email": "hillaryilona19@gmail.com",
+        "cv_analysis": [
+            {
+                "file_name": "CV 5.pdf",
+                "date": "2025-10-25T04:36:30.079705",
+                "analysis": "Based on the CV, here's the analysis for each internship:\n\n**Data Analyst Intern**\n- Match score: 30%\n- Matching skills: Basic understanding of database management (although not explicitly mentioned, the candidate has experience with data structures in C)\n- Missing skills: Python, SQL\n- Reasoning: The candidate has no direct experience with Python or SQL, which are the primary skills required for this internship. However, they have a basic understanding of database management and problem-solving skills that could be transferable.\n\n**Frontend Intern**\n- Match score: 70%\n- Matching skills: HTML, CSS, JavaScript\n- Missing skills: React\n- Reasoning: The candidate has hands-on experience with frontend development using HTML, CSS, and JavaScript, making them a strong fit for this internship. They also have experience with responsive design and UX/UI design, which could be beneficial for building UI. However, they lack experience with React, which is a key skill required for this internship."
+            },
+            {
+                "file_name": "CV.pdf",
+                "date": "2025-10-25T04:51:47.960533",
+                "analysis": [
+                    {
+                        "match_score": 20,
+                        "matching_skills": [],
+                        "missing_skills": [
+                            "Python",
+                            "SQL"
+                        ],
+                        "reasoning": "While the candidate has a strong foundation in computer science, their skills don't align with the specific requirements of the Data Analyst Intern role, which demands expertise in Python and SQL."
+                    },
+                    {
+                        "match_score": 60,
+                        "matching_skills": [
+                            "CSS"
+                        ],
+                        "missing_skills": [
+                            "React"
+                        ],
+                        "reasoning": "The candidate has experience with CSS, which is a requirement for the Frontend Intern role. However, they lack experience with React, which is a key skill for this position."
+                    }
+                ]
+            },
+            {
+                "file_name": "CV.pdf",
+                "date": "2025-10-25T04:53:21.515093",
+                "analysis": [
+                    {
+                        "match_score": 20,
+                        "matching_skills": [],
+                        "missing_skills": [
+                            "Python",
+                            "SQL"
+                        ],
+                        "reasoning": "While the candidate has a strong foundation in computer science, they lack the specific skills required for the Data Analyst Intern role, including Python and SQL."
+                    },
+                    {
+                        "match_score": 80,
+                        "matching_skills": [
+                            "CSS"
+                        ],
+                        "missing_skills": [
+                            "React"
+                        ],
+                        "reasoning": "The candidate has experience with CSS, which is a requirement for the Frontend Intern role, and has demonstrated proficiency in frontend development through their courses and projects. However, they lack experience with React."
+                    }
+                ]
+            },
+            {
+                "file_name": "CV.pdf",
+                "date": "2025-10-25T04:55:20.312748",
+                "analysis": [
+                    {
+                        "match_score": 20,
+                        "matching_skills": [],
+                        "missing_skills": [
+                            "Python",
+                            "SQL"
+                        ],
+                        "reasoning": "While the candidate has a strong foundation in computer science, they lack the specific skills required for the Data Analyst Intern role, including Python and SQL."
+                    },
+                    {
+                        "match_score": 80,
+                        "matching_skills": [
+                            "CSS"
+                        ],
+                        "missing_skills": [
+                            "React"
+                        ],
+                        "reasoning": "The candidate has experience with CSS, which is a key skill for the Frontend Intern role. However, they lack experience with React, which is also a required skill."
+                    }
+                ]
+            },
+            {
+                "file_name": "CV.pdf",
+                "date": "2025-10-25T04:57:29.531685",
+                "analysis": "Based on the CV, here's the analysis for each internship:\n\n**Data Analyst Intern**\n- Match score: 30%\n- Matching skills: Basic understanding of computer science concepts\n- Missing skills: Python, SQL, and specific data analysis skills\n- Reasoning: The candidate has a foundation in computer science, but lacks direct experience with Python, SQL, and data analysis. While they have a strong foundation in HTML, CSS, and JavaScript, these skills aren't directly applicable to a data analyst role.\n\n**Frontend Intern**\n- Match score: 80%\n- Matching skills: HTML, CSS, JavaScript, frontend development\n- Missing skills: React\n- Reasoning: The candidate has a strong background in frontend development, with experience in HTML, CSS, and JavaScript. They've also honed their skills through various courses and internships, making them a good fit for a frontend role. However, they lack direct experience with React, which might require some additional training or learning."
+            },
+            {
+                "file_name": "CV 5.pdf",
+                "date": "2025-10-25T06:18:14.759609",
+                "analysis": "Based on the provided CV, I analyzed the candidate's fit for each internship. Here are the results:\n\n**Internship 1: Data Analyst Intern**\n\n* Match score: 20%\n* Matching skills: None ( although the candidate has basic database management skills, it's not explicitly mentioned that they have experience with Python or SQL)\n* Missing skills: Python, SQL\n* Reasoning: The candidate lacks direct experience with the required skills for this internship, such as Python and SQL. However, they have shown problem-solving skills and experience with coding, which could be transferable.\n\n**Internship 2: Frontend Intern**\n\n* Match score: 80%\n* Matching skills: CSS, JavaScript (frontend development experience)\n* Missing skills: React\n* Reasoning: The candidate has relevant frontend development experience, with skills in CSS, JavaScript, and HTML. They have also demonstrated proficiency in responsive design and UX/UI design. Although they lack experience with React, their existing frontend skills make them a strong candidate for this internship."
+            },
+            {
+                "file_name": "CV 5.pdf",
+                "date": "2025-10-25T06:25:35.601731",
+                "analysis": "Based on the provided CV, I analyzed the candidate's fit for each internship. Here are the results:\n\n**Internship 1: Data Analyst Intern**\n\n* Match score: 20%\n* Matching skills: None (some basic understanding of database management, but not specific to Python or SQL)\n* Missing skills: Python, SQL\n* Reasoning: Although the candidate has some basic understanding of database management, they lack the specific skills required for the Data Analyst Intern role, such as Python and SQL. Their technical skills are more focused on frontend development and graphic design.\n\n**Internship 2: Frontend Intern**\n\n* Match score: 60%\n* Matching skills: CSS ( frontend development, responsive design, UX/UI design)\n* Missing skills: React (although they have experience with HTML, JavaScript, and CSS, React is a specific skill not mentioned in their CV)\n* Reasoning: The candidate has relevant skills in frontend development, CSS, and responsive design, making them a good fit for the Frontend Intern role. However, they lack experience with React, which is a specific requirement for this internship. Their experience with HTML, JavaScript, and CSS could be transferable, but they may need additional training or learning to adapt to React."
+            },
+            {
+                "file_name": "CV 5.pdf",
+                "date": "2025-10-25T06:32:57.671204",
+                "analysis": "Based on the provided CV, I analyzed the candidate's fit for each internship. Here are the results:\n\n**Internship 1: Data Analyst Intern**\n\n* Match score: 20%\n* Matching skills: None ( Candidate has experience with HTML, CSS, JavaScript, C, but no specific skills mentioned for data analysis)\n* Missing skills: Python, SQL, data analysis\n* Reasoning: The candidate lacks specific skills and experience in data analysis, Python, and SQL, which are crucial for this internship. While they have a strong background in programming, it's not directly applicable to this role.\n\n**Internship 2: Frontend Intern**\n\n* Match score: 80%\n* Matching skills: CSS, JavaScript (both mentioned in the CV as technical skills)\n* Missing skills: React\n* Reasoning: The candidate has a strong background in frontend development, with experience in HTML, CSS, and JavaScript. Although they lack experience with React, their existing skills provide a solid foundation for this internship. With some additional training or experience with React, they could be a strong fit for this role.\n\nLet me know if you'd like me to analyze any other internships or provide more detailed feedback!"
+            },
+            {
+                "file_name": "CV 4 IU.pdf",
+                "date": "2025-10-25T07:24:40.575219",
+                "analysis": "Based on the provided CV, I analyzed the candidate's fit for each internship. Here are the results:\n\n**Internship 1: Data Analyst Intern**\n\n* Match score: 20%\n* Matching skills: None (some basic understanding of database management, but not Python or SQL)\n* Missing skills: Python, SQL, data analysis\n* Reasoning: The candidate lacks experience in data analysis and programming languages required for the role (Python and SQL). While they have some basic understanding of database management, it's not enough to meet the internship's requirements.\n\n**Internship 2: Frontend Intern**\n\n* Match score: 80%\n* Matching skills: CSS, JavaScript, frontend development, responsive design, UX/UI design\n* Missing skills: React (although they have experience with JavaScript, which is a related skill)\n* Reasoning: The candidate has a strong background in frontend development, with experience in CSS, JavaScript, and responsive design. They also have skills in UX/UI design, which is a plus for the role. The only missing skill is React, but their existing knowledge of JavaScript and frontend development makes them a strong candidate for the internship."
+            }
+        ]
+    },
+    "i.hillaryilona@gmail.com": {
+        "name": "Hillary Ilona",
+        "email": "i.hillaryilona@gmail.com",
+        "cv_analysis": [
+            {
+                "file_name": "CV.pdf",
+                "date": "2025-10-25T05:10:53.514304",
+                "analysis": "Based on the CV, here's the analysis for each internship:\n\n**Data Analyst Intern**\n- Match score: 10%\n- Matching skills: None\n- Missing skills: Python, SQL\n- Reasoning: The candidate has no experience with Python or SQL, which are the primary skills required for this internship. While they have a strong background in computer science, their skills are more focused on frontend development and software engineering.\n\n**Frontend Intern**\n- Match score: 70%\n- Matching skills: CSS\n- Missing skills: React\n- Reasoning: The candidate has experience with CSS, which is one of the required skills for this internship. However, they lack experience with React, which is a key skill for building UI components. Their background in HTML, JavaScript, and web design also demonstrates potential for frontend development, but they would need to learn React to be a strong fit."
+            }
+        ]
+    },
+    "faheema.abdulaziz@pau.edu.ng": {
+        "name": "fahema",
+        "email": "faheema.abdulaziz@pau.edu.ng",
+        "cv_analysis": [
+            {
+                "file_name": "CV 4 IU.pdf",
+                "date": "2025-10-25T05:49:34.997042",
+                "analysis": "Based on the provided CV, I analyzed the candidate's fit for each internship. Here are the results:\n\n**Internship 1: Data Analyst Intern**\n\n* Match score: 20%\n* Matching skills: None (CSS is mentioned in the CV, but it's not a primary skill required for this internship)\n* Missing skills: Python, SQL\n* Reasoning: The candidate lacks experience in Python and SQL, which are the primary skills required for this internship. Although they have demonstrated problem-solving skills and experience with coding, the specific technologies required for this role are not mentioned in their CV.\n\n**Internship 2: Frontend Intern**\n\n* Match score: 80%\n* Matching skills: CSS, JavaScript ( frontend development experience)\n* Missing skills: React\n* Reasoning: The candidate has a strong foundation in frontend development, with experience in HTML, CSS, and JavaScript. They have also demonstrated proficiency in responsive design and UX/UI design. Although they lack experience with React, their existing skills make them a strong candidate for this internship."
+            }
+        ]
+    }
+}

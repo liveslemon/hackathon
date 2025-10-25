@@ -1,8 +1,12 @@
+"use client"
 import React from "react";
 import { FaLock } from "react-icons/fa";
 import { Box, Button, Card, CardContent, TextField, Typography } from "@mui/material";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const router = useRouter();
+
   return (
     <div className="body">
       <Box
@@ -99,7 +103,25 @@ export default function Home() {
             Back to home
           </Button>
 
-   {/*      <Typography
+          <Box sx={{ mt: 2 }}>
+            <Button
+              variant="outlined"
+              fullWidth
+              onClick={() => router.push("/login/student")}
+              sx={{
+                textTransform: "none",
+                fontSize: "0.875rem",
+                borderRadius: 2,
+                color: "#1976d2",
+                borderColor: "#1976d2",
+                "&:hover": { bgcolor: "#1976d2", color: "#fff" },
+              }}
+            >
+              Student Login
+            </Button>
+          </Box>
+
+   {/*        <Typography
             variant="body2"
             mt={3}
             color="text.secondary"

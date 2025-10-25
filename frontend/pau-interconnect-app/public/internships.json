@@ -1,0 +1,102 @@
+[
+  {
+    "id": "1",
+    "company": "TechCorp",
+    "role": "Frontend Developer Intern",
+    "field": "Software Development",
+    "category": "Engineering",
+    "description": "Work on developing and maintaining frontend features.",
+    "deadline": "2025-12-01",
+    "interests": ["Frontend", "React", "UI/UX"]
+  },
+  {
+    "id": "2",
+    "company": "DataSolutions",
+    "role": "Data Analyst Intern",
+    "field": "Data Science",
+    "category": "Analytics",
+    "description": "Analyze data sets and provide actionable insights.",
+    "deadline": "2025-11-15",
+    "interests": ["Data Analysis", "Python", "SQL"]
+  },
+  {
+    "id": "3",
+    "company": "CloudNet",
+    "role": "Backend Developer Intern",
+    "field": "Software Development",
+    "category": "Engineering",
+    "description": "Assist in building backend APIs and database integration.",
+    "deadline": "2025-12-10",
+    "interests": ["Backend", "Node.js", "Databases"]
+  },
+  {
+    "id": "4",
+    "company": "AI Labs",
+    "role": "Machine Learning Intern",
+    "field": "Artificial Intelligence",
+    "category": "Engineering",
+    "description": "Work on ML models and NLP tasks.",
+    "deadline": "2025-12-05",
+    "interests": ["Machine Learning", "Python", "AI"]
+  },
+  {
+    "id": "5",
+    "company": "FinTechPro",
+    "role": "Finance Intern",
+    "field": "Finance",
+    "category": "Business",
+    "description": "Assist with financial analysis and reporting.",
+    "deadline": "2025-11-30",
+    "interests": ["Finance", "Excel", "Analytics"]
+  },
+  {
+    "id": "6",
+    "company": "DesignHub",
+    "role": "UI/UX Designer Intern",
+    "field": "Design",
+    "category": "Creative",
+    "description": "Create and improve design prototypes for applications.",
+    "deadline": "2025-12-15",
+    "interests": ["Design", "Figma", "UI/UX"]
+  },
+  {
+    "id": "7",
+    "company": "GreenTech",
+    "role": "Environmental Research Intern",
+    "field": "Research",
+    "category": "Science",
+    "description": "Conduct research on sustainable technologies.",
+    "deadline": "2025-12-20",
+    "interests": ["Research", "Environment", "Sustainability"]
+  },
+  {
+    "id": "8",
+    "company": "MarketingPro",
+    "role": "Marketing Intern",
+    "field": "Marketing",
+    "category": "Business",
+    "description": "Assist with campaigns and digital marketing strategies.",
+    "deadline": "2025-12-10",
+    "interests": ["Marketing", "Social Media", "Content"]
+  },
+  {
+    "id": "9",
+    "company": "CyberSecure",
+    "role": "Cybersecurity Intern",
+    "field": "Security",
+    "category": "IT",
+    "description": "Assist in monitoring and improving system security.",
+    "deadline": "2025-11-28",
+    "interests": ["Security", "Networking", "Ethical Hacking"]
+  },
+  {
+    "id": "10",
+    "company": "HealthTech",
+    "role": "Biomedical Intern",
+    "field": "Healthcare",
+    "category": "Science",
+    "description": "Work on healthcare technology research and applications.",
+    "deadline": "2025-12-12",
+    "interests": ["Healthcare", "Research", "Technology"]
+  }
+]
