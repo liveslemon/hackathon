@@ -94,6 +94,7 @@ const Dashboard = () => {
 
   const handleSnackbarClose = () => setSnackbarOpen(false);
   const handleNotificationClose = (
+    // @ts-ignore
     event?: React.SyntheticEvent | Event,
     reason?: string
   ) => {
