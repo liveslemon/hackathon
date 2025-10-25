@@ -234,6 +234,7 @@ const Dashboard = () => {
     if (userProfile?.interests) {
       let interests: string[] = [];
       if (Array.isArray(userProfile.interests)) {
+        // @ts-ignore
         interests = userProfile.interests.filter((i) => typeof i === "string");
       } else if (typeof userProfile.interests === "string") {
         try {
@@ -374,6 +375,7 @@ const Dashboard = () => {
           <TextField
             placeholder="Search internships by company, role, or field..."
             value={searchQuery}
+            // @ts-ignore
             onChange={(e) => setSearchQuery(e.target.value)}
             size="medium"
             InputProps={{
