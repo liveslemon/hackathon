@@ -15,7 +15,7 @@ import {
   Snackbar,
   Alert,
   CircularProgress,
-  Paper,
+  Card,
 } from "@mui/material";
 import { AiOutlineArrowLeft, AiOutlineArrowRight } from "react-icons/ai";
 
@@ -90,86 +90,97 @@ const Onboarding = () => {
     }
   };
 
-const analyzeCV = async () => {
-  if (!formData.cvFile) {
-    setCvAnalysis("Please upload a CV file before analysis.");
-    return;
-  }
-  if (!formData.name.trim()) {
-    setCvAnalysis("Please enter your full name before analysis.");
-    return;
-  }
-  if (!formData.email.trim()) {
-    setCvAnalysis("Please enter your email before analysis.");
-    return;
-  }
-
-  setIsAnalyzing(true);
-  setCvAnalysis(null);
-
-  try {
-    const formPayload = new FormData();
-    formPayload.append("file", formData.cvFile);               // Must match FastAPI field
-    formPayload.append("name", formData.name);
-    formPayload.append("email", formData.email);
-    formPayload.append(
-      "internships",
-      JSON.stringify([
-        { title: "Data Analyst Intern", skills: "Python, SQL", description: "Analyze data" },
-        { title: "Frontend Intern", skills: "React, CSS", description: "Build UI" },
-      ])
-    );
-
-    const response = await fetch("http://127.0.0.1:8000/analyze", {
-      method: "POST",
-      body: formPayload,
-    });
-
-    const data = await response.json();
-    console.log("Backend response:", data);
-
-    if (!response.ok) {
-      const errorMsg = data.error || "Failed to analyze CV";
-      setCvAnalysis(`Error: ${errorMsg}`);
+  const analyzeCV = async () => {
+    if (!formData.cvFile) {
+      setCvAnalysis("Please upload a CV file before analysis.");
+      return;
+    }
+    if (!formData.name.trim()) {
+      setCvAnalysis("Please enter your full name before analysis.");
+      return;
+    }
+    if (!formData.email.trim()) {
+      setCvAnalysis("Please enter your email before analysis.");
       return;
     }
 
-    if (data.analysis) {
-      setCvAnalysis(data.analysis);
+    setIsAnalyzing(true);
+    setCvAnalysis(null);
 
-      // Save structured CV analysis to Supabase
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    try {
+      const formPayload = new FormData();
+      formPayload.append("file", formData.cvFile); // Must match FastAPI field
+      formPayload.append("name", formData.name);
+      formPayload.append("email", formData.email);
+      formPayload.append(
+        "internships",
+        JSON.stringify([
+          {
+            title: "Data Analyst Intern",
+            skills: "Python, SQL",
+            description: "Analyze data",
+          },
+          {
+            title: "Frontend Intern",
+            skills: "React, CSS",
+            description: "Build UI",
+          },
+        ])
+      );
 
-      if (user) {
-        const { error: updateError } = await supabase
-          .from("profiles")
-          .update({
-            cv_url: formData.cvFile ? formData.cvFile.name : null,
-            cv_analysis: data.analysis,
-          })
-          .eq("id", user.id);
+      const response = await fetch("http://127.0.0.1:8000/analyze", {
+        method: "POST",
+        body: formPayload,
+      });
 
-        if (updateError) {
-          console.error("Error updating CV analysis in Supabase:", updateError);
-          setSnackbar({
-            open: true,
-            message: `Failed to save CV analysis: ${updateError.message}`,
-            severity: "error",
-          });
-        }
+      const data = await response.json();
+      console.log("Backend response:", data);
+
+      if (!response.ok) {
+        const errorMsg = data.error || "Failed to analyze CV";
+        setCvAnalysis(`Error: ${errorMsg}`);
+        return;
       }
-    } else {
-      setCvAnalysis("No analysis returned from the backend.");
+
+      if (data.analysis) {
+        setCvAnalysis(data.analysis);
+
+        // Save structured CV analysis to Supabase
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user) {
+          const { error: updateError } = await supabase
+            .from("profiles")
+            .update({
+              cv_url: formData.cvFile ? formData.cvFile.name : null,
+              cv_analysis: data.analysis,
+            })
+            .eq("id", user.id);
+
+          if (updateError) {
+            console.error(
+              "Error updating CV analysis in Supabase:",
+              updateError
+            );
+            setSnackbar({
+              open: true,
+              message: `Failed to save CV analysis: ${updateError.message}`,
+              severity: "error",
+            });
+          }
+        }
+      } else {
+        setCvAnalysis("No analysis returned from the backend.");
+      }
+    } catch (error: any) {
+      console.error("Error during CV analysis:", error);
+      setCvAnalysis(`An error occurred: ${error.message || error.toString()}`);
+    } finally {
+      setIsAnalyzing(false);
     }
-  } catch (error: any) {
-    console.error("Error during CV analysis:", error);
-    setCvAnalysis(`An error occurred: ${error.message || error.toString()}`);
-  } finally {
-    setIsAnalyzing(false);
-  }
-};
+  };
 
   const handleSubmit = async () => {
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -324,9 +335,13 @@ const analyzeCV = async () => {
               {[200, 300, 400, 500].map((lvl) => (
                 <Grid item xs={6} sm={3} key={lvl}>
                   <Button
-                    variant={formData.level === String(lvl) ? "contained" : "outlined"}
+                    variant={
+                      formData.level === String(lvl) ? "contained" : "outlined"
+                    }
                     fullWidth
-                    onClick={() => setFormData({ ...formData, level: String(lvl) })}
+                    onClick={() =>
+                      setFormData({ ...formData, level: String(lvl) })
+                    }
                   >
                     {lvl}
                   </Button>
@@ -395,23 +410,37 @@ const analyzeCV = async () => {
                 </Button>
               </Box>
               {cvAnalysis && (
-                <Paper
-                  elevation={3}
-                  sx={{
-                    mt: 3,
-                    p: 2,
-                    backgroundColor: "#f0f4f8",
-                    whiteSpace: "pre-wrap",
-                    maxHeight: 200,
-                    overflowY: "auto",
-                    borderRadius: 1,
-                  }}
-                >
-                  <Typography variant="subtitle1" gutterBottom>
-                    CV Analysis:
-                  </Typography>
-                  <Typography variant="body2">{cvAnalysis}</Typography>
-                </Paper>
+                <Box sx={{ mt: 3 }}>
+                  <Card
+                    elevation={4}
+                    sx={{
+                      p: 3,
+                      borderRadius: 2,
+                      backgroundColor: "#e3f2fd", // light blue theme accent
+                      borderLeft: "5px solid #1976d2", // theme primary color accent
+                      maxHeight: 250,
+                      overflowY: "auto",
+                    }}
+                  >
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      spacing={1}
+                      sx={{ mb: 1 }}
+                    >
+                      <AiOutlineArrowRight size={20} color="#1976d2" />
+                      <Typography variant="h6" component="div">
+                        AI CV Analysis
+                      </Typography>
+                    </Stack>
+                    <Typography
+                      variant="body2"
+                      sx={{ whiteSpace: "pre-wrap", color: "#0d47a1" }}
+                    >
+                      {cvAnalysis}
+                    </Typography>
+                  </Card>
+                </Box>
               )}
             </Box>
           </Stack>
