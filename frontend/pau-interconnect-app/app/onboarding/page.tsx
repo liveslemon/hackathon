@@ -237,7 +237,8 @@ const Onboarding = () => {
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#f5f5f5",
+        bgcolor: "primary.main",
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
         px: { xs: 2, sm: 4 },
         overflowY: "auto",
       }}

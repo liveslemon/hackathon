@@ -98,7 +98,7 @@ export default function PostInternshipView() {
         interests,
         deadline: deadline,
         recruiter_linkedin: linkedin || null,
-        created_at: new Date(),
+        // created_at: new Date(),
       },
     ]);
 
