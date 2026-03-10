@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
-import TextareaAutosize from "@mui/material/TextareaAutosize";
 import Chip from "@mui/material/Chip";
 import Card from "@mui/material/Card";
 import Snackbar from "@mui/material/Snackbar";
@@ -24,42 +24,127 @@ import InternshipCard from "@/components/InternshipCard";
 const Profile = () => {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<any>({});
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [savedInternships, setSavedInternships] = useState<any[]>([]);
   const [appliedInternships, setAppliedInternships] = useState<any[]>([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [isProfileLoaded, setIsProfileLoaded] = useState(false);
 
   useEffect(() => {
-    const userProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
-    setProfile(userProfile);
+    (async () => {
+      // Load user profile from Supabase (if signed in)
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const userId = sessionData?.session?.user?.id ?? null;
 
-    fetch("/internships.json")
-      .then((res) => res.json())
-      .then((data) => {
-        const saved = JSON.parse(
-          localStorage.getItem("savedInternships") || "[]"
-        );
-        const applied = JSON.parse(
-          localStorage.getItem("appliedInternships") || "[]"
-        );
+        if (userId) {
+          // fetch user email from session
+          setUserEmail(sessionData?.session?.user?.email ?? null);
+          // fetch profile
+          const { data: profileRow } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", userId)
+            .maybeSingle();
+          setProfile(profileRow ?? {});
 
-        setSavedInternships(data.filter((i: any) => saved.includes(i.id)));
-        setAppliedInternships(data.filter((i: any) => applied.includes(i.id)));
-      });
+          // fetch saved internships ids
+          const { data: savedRows } = await supabase
+            .from("saved_internships")
+            .select("internship_id")
+            .eq("user_id", userId);
+
+          const savedIds = (savedRows ?? []).map((r: any) => r.internship_id);
+          if (savedIds.length > 0) {
+            const { data: internshipsData } = await supabase
+              .from("internships")
+              .select("*")
+              .in("id", savedIds);
+            setSavedInternships(internshipsData ?? []);
+          } else {
+            setSavedInternships([]);
+          }
+
+          // fetch applied internships ids
+          const { data: appliedRows } = await supabase
+            .from("applied_internships")
+            .select("internship_id")
+            .eq("user_id", userId);
+
+          const appliedIds = (appliedRows ?? []).map(
+            (r: any) => r.internship_id,
+          );
+          if (appliedIds.length > 0) {
+            const { data: appliedData } = await supabase
+              .from("internships")
+              .select("*")
+              .in("id", appliedIds);
+            setAppliedInternships(appliedData ?? []);
+          } else {
+            setAppliedInternships([]);
+          }
+        } else {
+          // No signed-in user: keep empty lists
+          setProfile({});
+          setSavedInternships([]);
+          setAppliedInternships([]);
+        }
+      } catch (err) {
+        console.error("Error loading profile data:", err);
+        setProfile({});
+        setSavedInternships([]);
+        setAppliedInternships([]);
+      } finally {
+        setIsProfileLoaded(true);
+      }
+    })();
   }, []);
 
-  const handleSave = () => {
-    localStorage.setItem("userProfile", JSON.stringify(profile));
-    setIsEditing(false);
-    setSnackbarOpen(true);
+  const handleSave = async () => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id ?? null;
+
+      if (userId) {
+        const upsertPayload = {
+          id: userId,
+          full_name: profile.full_name ?? null,
+          course: profile.course ?? null,
+          level: profile.level ?? null,
+          interests: profile.interests ?? [],
+          cv_url: profile.cv_url ?? null,
+        };
+
+        const { error } = await supabase
+          .from("profiles")
+          .upsert(upsertPayload, { returning: "minimal" });
+
+        if (error) {
+          console.error("Failed to save profile:", error);
+          setSnackbarOpen(true);
+        } else {
+          setIsEditing(false);
+          setSnackbarOpen(true);
+        }
+      } else {
+        // fallback for unsigned users (keep previous behavior)
+        localStorage.setItem("userProfile", JSON.stringify(profile));
+        setIsEditing(false);
+        setSnackbarOpen(true);
+      }
+    } catch (err) {
+      console.error("Error saving profile:", err);
+      setSnackbarOpen(true);
+    }
   };
 
-  if (!profile) return null;
+  if (!isProfileLoaded) return null;
 
   const expiringInternships = appliedInternships.filter((internship) => {
     const daysLeft = Math.ceil(
       (new Date(internship.deadline).getTime() - new Date().getTime()) /
-        (1000 * 60 * 60 * 24)
+        (1000 * 60 * 60 * 24),
     );
     return daysLeft > 0 && daysLeft <= 7;
   });
@@ -120,10 +205,12 @@ const Profile = () => {
         >
           <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
             <TextField
-              id="name"
+              id="full_name"
               label="Full Name"
-              value={profile.name}
-              onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+              value={profile.full_name || ""}
+              onChange={(e) =>
+                setProfile({ ...profile, full_name: e.target.value })
+              }
               disabled={!isEditing}
               fullWidth
               sx={{ flex: "1 1 300px" }}
@@ -131,11 +218,9 @@ const Profile = () => {
             <TextField
               id="email"
               label="Email"
-              value={profile.email}
-              onChange={(e) =>
-                setProfile({ ...profile, email: e.target.value })
-              }
-              disabled={!isEditing}
+              value={userEmail || profile.email || ""}
+              onChange={(e) => setUserEmail(e.target.value)}
+              disabled={true}
               fullWidth
               sx={{ flex: "1 1 300px" }}
             />
@@ -144,7 +229,7 @@ const Profile = () => {
           <TextField
             id="course"
             label="Course"
-            value={profile.course}
+            value={profile.course || ""}
             onChange={(e) => setProfile({ ...profile, course: e.target.value })}
             disabled={!isEditing}
             fullWidth
@@ -203,7 +288,7 @@ const Profile = () => {
               const daysLeft = Math.ceil(
                 (new Date(internship.deadline).getTime() -
                   new Date().getTime()) /
-                  (1000 * 60 * 60 * 24)
+                  (1000 * 60 * 60 * 24),
               );
               return (
                 <Box

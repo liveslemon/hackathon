@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 import Button from "@mui/material/Button";
 import Badge from "@mui/material/Chip";
 import TextareaAutosize from "@mui/material/TextareaAutosize";
@@ -26,7 +27,7 @@ interface Internship {
   description: string;
   requirements: string[];
   deadline: string;
-  recruiterLinkedIn: string;
+  recruiter_link: string;
 }
 
 interface InternshipDetailsProps {
@@ -35,7 +36,11 @@ interface InternshipDetailsProps {
   internship: Internship;
 }
 
-const InternshipDetails = ({ open, onClose, internship }: InternshipDetailsProps) => {
+const InternshipDetails = ({
+  open,
+  onClose,
+  internship,
+}: InternshipDetailsProps) => {
   const [showApplyDialog, setShowApplyDialog] = useState(false);
   const [coverLetter, setCoverLetter] = useState("");
   const [hasApplied, setHasApplied] = useState(false);
@@ -46,11 +51,36 @@ const InternshipDetails = ({ open, onClose, internship }: InternshipDetailsProps
   >("info");
 
   useEffect(() => {
-    const applied = JSON.parse(localStorage.getItem("appliedInternships") || "[]");
-    setHasApplied(applied.includes(internship.id));
+    (async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const userId = sessionData?.session?.user?.id ?? null;
+        if (!userId) {
+          setHasApplied(false);
+          return;
+        }
+
+        const { data: rows, error } = await supabase
+          .from("applied_internships")
+          .select("id")
+          .match({ user_id: userId, internship_id: internship.id })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error checking application status:", error);
+          setHasApplied(false);
+        } else {
+          setHasApplied(!!rows);
+        }
+      } catch (err) {
+        console.error("Error checking application status:", err);
+        setHasApplied(false);
+      }
+    })();
   }, [internship.id]);
 
-  const handleApply = () => {
+  const handleApply = async () => {
     if (!coverLetter.trim()) {
       setSnackbarMessage("Please write a cover letter to apply");
       setSnackbarSeverity("error");
@@ -58,30 +88,48 @@ const InternshipDetails = ({ open, onClose, internship }: InternshipDetailsProps
       return;
     }
 
-    const applied = JSON.parse(
-      localStorage.getItem("appliedInternships") || "[]"
-    );
-    if (!applied.includes(internship.id)) {
-      applied.push(internship.id);
-      localStorage.setItem("appliedInternships", JSON.stringify(applied));
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id ?? null;
+
+      if (!userId) {
+        setSnackbarMessage("You must be signed in to apply");
+        setSnackbarSeverity("error");
+        setSnackbarOpen(true);
+        return;
+      }
+
+      // Insert cover letter into new `cover_letter` column
+      const payload = {
+        user_id: userId,
+        internship_id: internship.id,
+        cover_letter: coverLetter,
+      };
+
+      const { error } = await supabase
+        .from("applied_internships")
+        .insert(payload);
+      if (error) {
+        console.error("Failed to submit application:", error);
+        setSnackbarMessage("Failed to submit application. Try again.");
+        setSnackbarSeverity("error");
+        setSnackbarOpen(true);
+        return;
+      }
+
+      setHasApplied(true);
+      setShowApplyDialog(false);
+      setSnackbarMessage(
+        "Application submitted! Good luck with your application",
+      );
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+    } catch (err) {
+      console.error("Error submitting application:", err);
+      setSnackbarMessage("Failed to submit application. Try again.");
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
     }
-
-    const applications = JSON.parse(
-      localStorage.getItem("applications") || "{}"
-    );
-    applications[internship.id] = {
-      coverLetter,
-      appliedAt: new Date().toISOString(),
-    };
-    localStorage.setItem("applications", JSON.stringify(applications));
-
-    setHasApplied(true);
-    setShowApplyDialog(false);
-    setSnackbarMessage(
-      "Application submitted! Good luck with your application"
-    );
-    setSnackbarSeverity("success");
-    setSnackbarOpen(true);
   };
 
   if (!internship) {
@@ -170,7 +218,7 @@ const InternshipDetails = ({ open, onClose, internship }: InternshipDetailsProps
                   <Badge label={internship.category} color="secondary" />
                   <Badge
                     label={`Deadline: ${new Date(
-                      internship.deadline
+                      internship.deadline,
                     ).toLocaleDateString()}`}
                     variant="outlined"
                     icon={<FiCalendar size={16} />}
@@ -218,7 +266,8 @@ const InternshipDetails = ({ open, onClose, internship }: InternshipDetailsProps
                     gap: 8,
                   }}
                 >
-                  {Array.isArray(internship.requirements) && internship.requirements.length > 0 ? (
+                  {Array.isArray(internship.requirements) &&
+                  internship.requirements.length > 0 ? (
                     internship.requirements.map((req, index) => (
                       <li
                         key={index}
@@ -242,7 +291,9 @@ const InternshipDetails = ({ open, onClose, internship }: InternshipDetailsProps
                       </li>
                     ))
                   ) : (
-                    <li style={{ color: "gray" }}>No specific requirements listed.</li>
+                    <li style={{ color: "gray" }}>
+                      No specific requirements listed.
+                    </li>
                   )}
                 </ul>
               </section>
@@ -268,7 +319,7 @@ const InternshipDetails = ({ open, onClose, internship }: InternshipDetailsProps
                   variant="outlined"
                   startIcon={<FiExternalLink />}
                   onClick={() =>
-                    window.open(internship.recruiterLinkedIn, "_blank")
+                    window.open(internship.recruiter_link, "_blank")
                   }
                 >
                   Recruiter LinkedIn

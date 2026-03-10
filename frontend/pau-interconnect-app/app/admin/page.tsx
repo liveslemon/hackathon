@@ -54,8 +54,11 @@ export default function Home() {
         justifyContent="center"
         alignItems="center"
         minHeight="100vh"
-        bgcolor="#f9fafb"
         px={2}
+        sx={{
+          bgcolor: "primary.main",
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        }}
       >
         <Card
           sx={{

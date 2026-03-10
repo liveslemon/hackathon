@@ -1,195 +1,199 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation"; // use this instead of react-router-dom
+import { useState, useEffect, useCallback } from "react";
 import {
   Card,
   CardContent,
-  CardActions,
-  CardHeader,
-  Button,
-  Chip,
-  IconButton,
   Typography,
+  IconButton,
+  Link,
+  Chip,
+  CircularProgress,
+  CardMedia,
+  CardActions,
+  Divider,
   Box,
 } from "@mui/material";
-import { MdFavorite, MdCalendarMonth, MdBusiness } from "react-icons/md"; // React Icons (Material Design)
-import { Snackbar, Alert } from "@mui/material";
-
-import InternshipDetails from "@/components/InternshipDetails";
+import Favorite from "@mui/icons-material/Favorite";
+import FavoriteBorder from "@mui/icons-material/FavoriteBorder";
+import { supabase } from "@/lib/supabaseClient";
 
 interface InternshipCardProps {
   internship: {
     id: string;
     company: string;
     role: string;
-    field: string;
-    category: string;
+    location: string;
     deadline: string;
+    category: string;
     matchPercentage?: number;
+    imageUrl?: string;
   };
 }
 
-const InternshipCard = ({ internship }: InternshipCardProps) => {
+export default function InternshipCard({ internship }: InternshipCardProps) {
   const [isSaved, setIsSaved] = useState(false);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({
-    open: false,
-    message: "",
-  });
-  const [openDetails, setOpenDetails] = useState(false);
-  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const checkSavedStatus = useCallback(
+    async (mounted: boolean) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user?.id) return;
+
+      const { data, error } = await supabase
+        .from("saved_internships")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("internship_id", internship.id)
+        .maybeSingle();
+
+      if (!error && mounted) setIsSaved(Boolean(data));
+    },
+    [internship.id],
+  );
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("savedInternships") || "[]");
-    setIsSaved(saved.includes(internship.id));
-  }, [internship.id]);
+    let mounted = true;
+    checkSavedStatus(mounted);
 
-  const handleSave = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const saved = JSON.parse(localStorage.getItem("savedInternships") || "[]");
+    const handleUpdate = () => checkSavedStatus(mounted);
+    window.addEventListener("savedInternshipsUpdate", handleUpdate);
 
-    if (isSaved) {
-      const updated = saved.filter((id: string) => id !== internship.id);
-      localStorage.setItem("savedInternships", JSON.stringify(updated));
-      setIsSaved(false);
-      setSnackbar({ open: true, message: "Removed from saved" });
-    } else {
-      saved.push(internship.id);
-      localStorage.setItem("savedInternships", JSON.stringify(saved));
-      setIsSaved(true);
-      setSnackbar({ open: true, message: "Saved successfully!" });
+    return () => {
+      mounted = false;
+      window.removeEventListener("savedInternshipsUpdate", handleUpdate);
+    };
+  }, [checkSavedStatus]);
+
+  const handleSave = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isLoading) return;
+    setIsLoading(true);
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const userId = user?.id;
+
+      if (!userId) {
+        alert("Please sign in to save internships.");
+        setIsLoading(false);
+        return;
+      }
+
+      if (isSaved) {
+        await supabase
+          .from("saved_internships")
+          .delete()
+          .eq("user_id", userId)
+          .eq("internship_id", internship.id);
+        setIsSaved(false);
+      } else {
+        await supabase
+          .from("saved_internships")
+          .insert([{ user_id: userId, internship_id: internship.id }]);
+        setIsSaved(true);
+      }
+      window.dispatchEvent(new CustomEvent("savedInternshipsUpdate"));
+    } catch (err) {
+      console.error("Save error:", err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleCloseSnackbar = () => setSnackbar({ open: false, message: "" });
-
-  const daysUntilDeadline = Math.ceil(
-    (new Date(internship.deadline).getTime() - new Date().getTime()) /
-      (1000 * 60 * 60 * 24)
-  );
+  const daysUntilDeadline = internship.deadline
+    ? Math.ceil(
+        (new Date(internship.deadline).getTime() - new Date().getTime()) /
+          (1000 * 60 * 60 * 24),
+      )
+    : 0;
 
   const getMatchColor = (percentage?: number) => {
-    if (!percentage) return "text.secondary";
-    if (percentage >= 80) return "success.main";
-    if (percentage >= 60) return "primary.main";
-    if (percentage >= 40) return "warning.main";
-    return "text.secondary";
+    if (!percentage) return "default";
+    if (percentage >= 80) return "success";
+    if (percentage >= 60) return "primary";
+    if (percentage >= 40) return "warning";
+    return "default";
   };
 
   return (
-    <>
-      <Card
-        sx={{
-          borderRadius: 3,
-          boxShadow: 3,
-          p: 2,
-          cursor: "pointer",
-          position: "relative",
-          transition: "transform 0.2s ease",
-          "&:hover": { transform: "scale(1.02)", boxShadow: 6 },
-        }}
-        onClick={() => setOpenDetails(true)}
-      >
-        {/* Match Badge */}
+    <Card
+      variant="outlined"
+      sx={{
+        width: 320,
+        transition: "transform 0.2s",
+        "&:hover": { transform: "translateY(-4px)", boxShadow: 3 },
+      }}
+    >
+      <Box sx={{ position: "relative" }}>
+        <CardMedia
+          component="img"
+          height="160"
+          image={
+            internship.imageUrl ||
+            "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=318"
+          }
+          alt={`${internship.company} office`}
+        />
         {internship.matchPercentage !== undefined && (
           <Chip
-            label={`${internship.matchPercentage}% Match`}
             size="small"
-            color="default"
+            color={getMatchColor(internship.matchPercentage)}
+            label={`${internship.matchPercentage}% Match`}
             sx={{
               position: "absolute",
-              top: 12,
-              right: 12,
-              fontWeight: 600,
-              color: getMatchColor(internship.matchPercentage),
-              bgcolor: "background.paper",
-              border: "1px solid",
-              borderColor: "divider"
+              zIndex: 2,
+              top: "0.75rem",
+              right: "0.75rem",
+              fontWeight: "bold",
+              boxShadow: 1,
             }}
           />
         )}
-
-        <CardHeader
-          avatar={
-            <Box
-              sx={{
-                bgcolor: "primary.main",
-                color: "white",
-                borderRadius: 2,
-                width: 48,
-                height: 48,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <MdBusiness size={24} />
-            </Box>
-          }
-          action={
-            <IconButton onClick={handleSave}>
-              <MdFavorite
-                size={22}
-                color={isSaved ? "red" : "gray"}
-                style={{ transition: "0.3s" }}
-              />
-            </IconButton>
-          }
-          title={
-            <Typography variant="h6" fontWeight={600}>
-              {internship.company}
-            </Typography>
-          }
-          subheader={
-            <Typography variant="body2" color="text.secondary">
-              {internship.field}
-            </Typography>
-          }
-        />
-
-        <CardContent>
-          <Typography variant="subtitle1" fontWeight={600} mb={2}>
+      </Box>
+      <CardContent>
+        <Typography variant="h6" component="div">
+          <Link
+            href={`/internships/${internship.id}`}
+            underline="none"
+            color="inherit"
+          >
             {internship.role}
-          </Typography>
-
-          <Box display="flex" alignItems="center" gap={1} mb={2}>
-            <Chip label={internship.category} size="small" />
-            <Box display="flex" alignItems="center" gap={0.5}>
-              <MdCalendarMonth size={16} color="gray" />
-              <Typography variant="body2" color="text.secondary">
-                {daysUntilDeadline > 0
-                  ? `${daysUntilDeadline} days left`
-                  : "Deadline passed"}
-              </Typography>
-            </Box>
-          </Box>
-        </CardContent>
-
-        <CardActions>
-          <Button fullWidth variant="outlined">
-            View Details
-          </Button>
-        </CardActions>
-      </Card>
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={2000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert severity="info" onClose={handleCloseSnackbar}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-      {openDetails && (
-        <InternshipDetails
-          open={openDetails}
-          onClose={() => setOpenDetails(false)}
-          internship={internship}
-        />
-      )}
-    </>
+          </Link>
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {internship.company} • {internship.location}
+        </Typography>
+      </CardContent>
+      <Divider />
+      <CardActions sx={{ justifyContent: "space-between", p: 2 }}>
+        <Typography variant="body2" fontWeight="medium">
+          {internship.category}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {daysUntilDeadline > 0
+            ? `${daysUntilDeadline} days left`
+            : "Deadline passed"}
+        </Typography>
+        <IconButton
+          aria-label={isSaved ? "Remove from saved" : "Save internship"}
+          size="medium"
+          color="error"
+          onClick={handleSave}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <CircularProgress size={24} color="inherit" />
+          ) : isSaved ? (
+            <Favorite />
+          ) : (
+            <FavoriteBorder />
+          )}
+        </IconButton>
+      </CardActions>
+    </Card>
   );
-};
-
-export default InternshipCard;
+}

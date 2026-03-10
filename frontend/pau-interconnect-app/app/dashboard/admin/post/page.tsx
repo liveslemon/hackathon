@@ -61,7 +61,7 @@ export default function PostInternshipView() {
 
   const toggleInterest = (item: string) => {
     setInterests((prev) =>
-      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
+      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item],
     );
   };
 
@@ -80,33 +80,63 @@ export default function PostInternshipView() {
       interests.length === 0
     ) {
       setSnackbarMessage(
-        "Please fill all required fields and select interests."
+        "Please fill all required fields and select interests.",
       );
       setSnackbarSeverity("error");
       setSnackbarOpen(true);
       return;
     }
 
-    const { data, error } = await supabase.from("internships").insert([
-      {
-        company: company,
-        role: role,
-        field,
-        category,
-        description,
-        requirements: requirements.split("\n"),
-        interests,
-        deadline: deadline,
-        recruiter_linkedin: linkedin || null,
-        // created_at: new Date(),
-      },
-    ]);
+    // Get the current user if available; allow anonymous posting when no user
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user ?? null;
+
+    // Prefer the admin profile as the poster if one exists; fall back to the
+    // signed-in user id or null. This allows the single-admin workflow.
+    let posterId: string | null = null;
+    try {
+      const { data: adminProfile, error: adminError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("is_admin", true)
+        .maybeSingle();
+
+      if (adminError) {
+        console.warn("Could not query admin profile:", adminError);
+      }
+
+      posterId = adminProfile?.id ?? user?.id ?? null;
+    } catch (err) {
+      console.warn("Error looking up admin profile:", err);
+      posterId = user?.id ?? null;
+    }
+
+    const payload = {
+      poster_id: posterId,
+      company,
+      role,
+      field,
+      category,
+      description,
+      // keep requirements as a single text field (one per line)
+      requirements,
+      interests,
+      deadline: deadline ? deadline.toISOString() : null,
+      // DB column is `recruiter_link`
+      recruiter_link: linkedin || null,
+    };
+
+    const { data, error } = await supabase
+      .from("internships")
+      .insert([payload]);
 
     if (error) {
-      setSnackbarMessage("Failed to post internship. Try again.");
+      console.error("Post internship error:", error);
+      setSnackbarMessage(
+        error?.message ?? "Failed to post internship. Try again.",
+      );
       setSnackbarSeverity("error");
       setSnackbarOpen(true);
-      console.error(error);
     } else {
       setSnackbarMessage("Internship posted successfully!");
       setSnackbarSeverity("success");

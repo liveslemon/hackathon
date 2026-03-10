@@ -21,7 +21,7 @@ const Login = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
-    "success"
+    "success",
   );
 
   useEffect(() => {
@@ -40,7 +40,7 @@ const Login = () => {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -50,19 +50,75 @@ const Login = () => {
       setSnackbarSeverity("error");
       setSnackbarOpen(true);
     } else {
-      setSnackbarMessage("Logged in successfully!");
+      const { user } = data;
+      // Optional: fetch name from user_metadata if set during signup
+      const userName = user?.user_metadata?.name || user?.email;
+
+      // Store in localStorage for later
+      localStorage.setItem("userName", userName);
+      localStorage.setItem("userEmail", user?.email || "");
+
+      setSnackbarMessage(`Welcome back, ${userName}!`);
       setSnackbarSeverity("success");
       setSnackbarOpen(true);
 
+      // If the user signed in and we have a pending profile (saved during signup),
+      // create the `profiles` row now so that auth.uid() is available and RLS passes.
+      try {
+        const pending = localStorage.getItem("pendingProfile");
+        if (pending) {
+          const parsed = JSON.parse(pending);
+
+          // Check whether a profile already exists for this user
+          const { data: existing, error: selectError } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("id", user?.id)
+            .limit(1)
+            .maybeSingle();
+
+          if (selectError) {
+            console.warn("Error checking existing profile:", selectError);
+          }
+
+          if (!existing) {
+            const { error: insertError } = await supabase
+              .from("profiles")
+              .insert({
+                id: user?.id,
+                full_name: parsed.full_name,
+                course: parsed.course,
+                level: parsed.level,
+                interests: parsed.interests,
+                cv_url: parsed.cv_url,
+              });
+
+            if (insertError) {
+              console.error(
+                "Failed to create profile after sign-in:",
+                insertError,
+              );
+            } else {
+              localStorage.removeItem("pendingProfile");
+            }
+          } else {
+            // If profile exists, remove pending data to avoid future attempts
+            localStorage.removeItem("pendingProfile");
+          }
+        }
+      } catch (e) {
+        console.warn("Error processing pending profile:", e);
+      }
+
       setTimeout(() => {
         router.push("/dashboard/student");
-      }, 500);
+      }, 800);
     }
   };
 
   const handleCloseSnackbar = (
     event?: React.SyntheticEvent | Event,
-    reason?: string
+    reason?: string,
   ) => {
     if (reason === "clickaway") {
       return;
@@ -74,7 +130,8 @@ const Login = () => {
     <Box
       sx={{
         minHeight: "100vh",
-        bgcolor: "background.default",
+        bgcolor: "primary.main",
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
