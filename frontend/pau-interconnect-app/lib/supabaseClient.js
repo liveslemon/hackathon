@@ -1,29 +1,26 @@
-import { createBrowserClient } from "@supabase/ssr";
+// lib/supabaseClient.ts
+"use client"; // ensures this runs in the browser
+
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
-    "Missing Supabase environment variables. Please check .env.local file.",
+    "Missing Supabase environment variables. Please check .env.local file."
   );
 }
 
-// Wrap the global fetch to log network errors and non-OK responses originating
-// from Supabase requests. This helps when debugging "failed to fetch" or
-// unexpected HTTP status codes.
-const supabaseFetch = async (input, init) => {
+// Custom fetch wrapper for logging
+const supabaseFetch = async (input: RequestInfo, init?: RequestInit) => {
   try {
     const res = await fetch(input, init);
 
-    // Do not log successful 2xx responses to avoid noisy output.
     if (res.ok) return res;
 
-    // For non-OK responses, categorize logging level:
-    // - 4xx: likely client/auth/RLS issue — log as warning with context
-    // - 5xx+: server error — log as error and include body when possible
     const status = res.status || 0;
-    let body = null;
+    let body: string | null = null;
     try {
       body = await res.clone().text();
     } catch (e) {
@@ -38,15 +35,10 @@ const supabaseFetch = async (input, init) => {
       body,
     };
 
-    if (status >= 500) {
-      console.error("[Supabase fetch] Server error", meta);
-    } else if (status >= 400) {
-      // Use console.warn for client/auth errors to make them easier to triage
+    if (status >= 500) console.error("[Supabase fetch] Server error", meta);
+    else if (status >= 400)
       console.warn("[Supabase fetch] Client error (possible auth/RLS)", meta);
-    } else {
-      // Fallback to debug for anything else
-      console.debug("[Supabase fetch] Unexpected response", meta);
-    }
+    else console.debug("[Supabase fetch] Unexpected response", meta);
 
     return res;
   } catch (err) {
@@ -55,13 +47,12 @@ const supabaseFetch = async (input, init) => {
   }
 };
 
-export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey, {
-  global: {
-    fetch: supabaseFetch,
-  },
+// Create the Supabase client
+export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+  global: { fetch: supabaseFetch },
 });
 
-// Log auth state changes to help trace signup/signin flows.
+// Optional: Log auth changes for debugging
 supabase.auth.onAuthStateChange((event, session) => {
   console.debug("[Supabase auth] event:", event, { session });
 });
