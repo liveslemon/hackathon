@@ -16,6 +16,7 @@
     "@mui/material": "^7.3.4",
     "@mui/x-date-pickers": "^8.15.0",
     "@supabase/supabase-js": "^2.99.1",
+    "@supabase/ssr": "latest",
     "@untitledui/file-icons": "^0.0.9",
     "@untitledui/icons": "^0.0.21",
     "date-fns": "^4.1.0",

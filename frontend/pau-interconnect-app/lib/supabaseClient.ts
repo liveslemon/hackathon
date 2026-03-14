@@ -13,7 +13,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // Custom fetch wrapper for logging
-const supabaseFetch = async (input: RequestInfo, init?: RequestInit) => {
+const supabaseFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   try {
     const res = await fetch(input, init);
 
