@@ -47,10 +47,7 @@ supabase: Client = create_client(
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-    ],
+    allow_origins=["*"],  # In production, you might want to restrict this to your actual frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
