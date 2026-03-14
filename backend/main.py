@@ -56,26 +56,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.middleware("http")
-async def add_debug_header(request: Request, call_next):
-    response = await call_next(request)
-    response.headers["X-Debug-Version"] = "v2-diagnostics"
-    return response
-
 @app.get("/health-check")
 @app.get("/api/health-check")
 def health_check():
-    return {"status": "ok", "version": "v3-diagnostic", "path_tried": "health-check"}
-
-@app.api_route("/{path_name:path}", methods=["GET", "POST", "PUT", "DELETE"])
-async def catch_all(request: Request, path_name: str):
-    return {
-        "error": "Path not found in explicit routes",
-        "path_requested": path_name,
-        "full_url": str(request.url),
-        "method": request.method,
-        "version": "v3-diagnostic"
-    }
+    return {"status": "ok", "version": "v3.1", "path_tried": "health-check"}
 
 class AnalyzeRequest(BaseModel):
     user_id: str
@@ -1060,3 +1044,19 @@ def update_application_status(application_id: str, payload: ApplicationStatusUpd
         return JSONResponse(
             content={"error": f"Failed to update application status: {str(e)}"}, status_code=500
         )
+
+@app.middleware("http")
+async def add_debug_header(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Debug-Version"] = "v3.1"
+    return response
+
+@app.api_route("/{path_name:path}", methods=["GET", "POST", "PUT", "DELETE"])
+async def catch_all(request: Request, path_name: str):
+    return {
+        "error": "Path not found in explicit routes",
+        "path_requested": path_name,
+        "full_url": str(request.url),
+        "method": request.method,
+        "version": "v3.1"
+    }
