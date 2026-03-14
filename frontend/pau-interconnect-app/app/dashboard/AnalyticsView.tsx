@@ -16,7 +16,7 @@ export default function AnalyticsView({
   const stats = [
     {
       title: "Total Internships",
-      value: categories.reduce((acc, cat) => acc + cat.value, 0),
+      value: (categories || []).reduce((acc, cat) => acc + (cat.value || 0), 0),
       icon: <FiBriefcase className="w-6 h-6" />,
       color: "bg-blue-500",
       accent: "text-blue-500",
@@ -69,14 +69,14 @@ export default function AnalyticsView({
           <Typography variant="h4" weight="bold">Internships by Category</Typography>
         </div>
         <CardContent className="p-8 space-y-8">
-          {categories.map((cat, idx) => {
-            const total = categories.reduce((acc, c) => acc + c.value, 0);
-            const percentage = total > 0 ? (cat.value / total) * 100 : 0;
+          {(categories || []).map((cat, idx) => {
+            const total = (categories || []).reduce((acc, c) => acc + (c.value || 0), 0);
+            const percentage = total > 0 ? ((cat.value || 0) / total) * 100 : 0;
             return (
               <div key={idx} className="space-y-3">
                 <div className="flex justify-between items-center px-1">
-                  <Typography variant="body1" weight="bold" className="text-slate-700">{cat.label}</Typography>
-                  <Typography variant="body2" weight="bold" color="primary">{cat.value}</Typography>
+                  <Typography variant="body1" weight="bold" className="text-slate-700">{cat.label || "Unknown"}</Typography>
+                  <Typography variant="body2" weight="bold" color="primary">{cat.value || 0}</Typography>
                 </div>
                 <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden shadow-inner">
                   <div 

@@ -101,7 +101,7 @@ export default function SearchOverlay({ onClose }: SearchOverlayProps) {
           ) : (
             <div className="p-2 space-y-6">
               {/* Students Section */}
-              {results.students.length > 0 && (
+              {results?.students?.length > 0 && (
                 <div className="space-y-2">
                   <div className="px-4 py-1 flex items-center justify-between">
                     <Typography variant="caption" weight="extrabold" color="muted" className="uppercase tracking-widest">Students</Typography>
@@ -125,7 +125,7 @@ export default function SearchOverlay({ onClose }: SearchOverlayProps) {
               )}
 
               {/* Employers Section */}
-              {results.employers.length > 0 && (
+              {results?.employers?.length > 0 && (
                 <div className="space-y-2">
                   <div className="px-4 py-1 flex items-center justify-between">
                     <Typography variant="caption" weight="extrabold" color="muted" className="uppercase tracking-widest">Companies</Typography>
@@ -149,7 +149,7 @@ export default function SearchOverlay({ onClose }: SearchOverlayProps) {
               )}
 
               {/* Internships Section */}
-              {results.internships.length > 0 && (
+              {results?.internships?.length > 0 && (
                 <div className="space-y-2">
                   <div className="px-4 py-1 flex items-center justify-between">
                     <Typography variant="caption" weight="extrabold" color="muted" className="uppercase tracking-widest">Internships</Typography>

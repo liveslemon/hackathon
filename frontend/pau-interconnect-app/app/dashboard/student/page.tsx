@@ -89,7 +89,7 @@ export default async function StudentDashboardPage() {
 
     const matches = matchData || [];
     const applications = appliedData || [];
-    const statusMap = new Map(applications.map(a => [a.internship_id, a.status]));
+    const statusMap = new Map((applications || []).map(a => [a.internship_id, a.status]));
 
     internshipsWithMatches = data.map((internship) => ({
       ...internship,

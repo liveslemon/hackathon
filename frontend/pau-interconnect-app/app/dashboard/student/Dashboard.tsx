@@ -307,8 +307,8 @@ const Dashboard = ({
         </Stack>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {filteredInternships.length > 0 ? (
-            filteredInternships.map((internship, index) => (
+          {(filteredInternships || []).length > 0 ? (
+            (filteredInternships || []).map((internship, index) => (
               <div 
                 key={internship.id}
                 className="animate-in fade-in slide-in-from-bottom-8 duration-500 ease-out"
@@ -337,13 +337,13 @@ const Dashboard = ({
         size="lg"
         footer={<Button onClick={handleCloseAnalysis}>Close</Button>}
       >
-        {internships.length === 0 ? (
+        {(internships || []).length === 0 ? (
           <Typography color="muted" className="text-center py-10">
             No internships available for analysis.
           </Typography>
         ) : (
           <Stack spacing={8}>
-            {internships.map((internship) => (
+            {(internships || []).map((internship) => (
               <div key={internship.id} className="group">
                 <Stack direction="row" justify="between" align="center" className="mb-4">
                   <div>

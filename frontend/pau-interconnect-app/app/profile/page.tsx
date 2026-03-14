@@ -102,12 +102,23 @@ const Profile = () => {
               throw new Error(result?.error || "Backend upload failed");
             }
             
+            if (result.text_length === 0) {
+              setStatus({ 
+                type: 'warning', 
+                message: "Profile saved, but the PDF content appears empty. Please ensure it's a text-based PDF." 
+              });
+            } else {
+              setStatus({ 
+                type: 'success', 
+                message: `Success! Analyzed ${result.internships_count} internships and found ${result.matches_count} potential matches.` 
+              });
+            }
+            
             setProfile((prev: any) => ({
               ...prev,
               cv_url: result.cv_url,
               cvFile: null,
             }));
-            setStatus({ type: 'success', message: "Profile saved & CV analyzed perfectly!" });
             
           } catch (cvErr: any) {
             console.error("CV Upload/Analysis failed. Full error:", cvErr);

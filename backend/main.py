@@ -373,19 +373,26 @@ def upload_and_analyze(
             logger.error(f"[/upload-and-analyze] AI error: {e}")
             return JSONResponse(content={"error": str(e)}, status_code=500)
         # 11. Upsert match results
+        matches_count = 0
         try:
             for result in results:
                 upsert_match_result(user_id, result.get("internship_id"), result)
+                matches_count += 1
         except Exception as e:
             logger.error(f"[/upload-and-analyze] Failed saving match results: {e}")
             return JSONResponse(
                 content={"error": f"Failed saving match results: {str(e)}"}, status_code=500
             )
-        logger.info(f"[/upload-and-analyze] Success for user_id={user_id}")
+
+        logger.info(f"[/upload-and-analyze] Success for user_id={user_id}. Analyzed {len(internships)} internships, {matches_count} matches.")
+        
         return {
             "message": "CV uploaded and matches computed successfully",
             "cv_url": signed_url,
-            "cv_text": cv_text,
+            "text_length": len(cv_text),
+            "internships_count": len(internships),
+            "matches_count": matches_count,
+            "cv_text_preview": cv_text[:200] if cv_text else "",
         }
     finally:
         # Clean up temp file
@@ -410,6 +417,19 @@ def my_matches(user_id: str):
             content={"error": f"Failed to fetch match results: {str(e)}"},
             status_code=500,
         )
+
+@app.get("/debug/match-results/{user_id}")
+def debug_match_results(user_id: str):
+    """Debug endpoint to see raw match results in DB."""
+    try:
+        res = supabase.table("match_results").select("*").eq("user_id", user_id).execute()
+        return {
+            "user_id": user_id,
+            "count": len(res.data),
+            "data": res.data
+        }
+    except Exception as e:
+        return {"error": str(e)}
 
 class AnalyzeNewInternshipRequest(BaseModel):
     internship_id: str
