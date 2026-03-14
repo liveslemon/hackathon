@@ -56,6 +56,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def add_debug_header(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Debug-Version"] = "v2-diagnostics"
+    return response
+
+@app.get("/health-check")
+def health_check():
+    return {"status": "ok", "version": "v2-diagnostics"}
+
 class AnalyzeRequest(BaseModel):
     user_id: str
 
