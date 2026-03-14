@@ -57,6 +57,25 @@ class AnalyzeRequest(BaseModel):
     user_id: str
 
 # ======================
+# Root & Health Check
+# ======================
+
+@app.get("/")
+def read_root():
+    """Root endpoint for health check and platform welcome."""
+    return {
+        "status": "online",
+        "message": "Welcome to the PAU Interconnect Backend API",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    """Handle favicon requests to avoid 404s in logs."""
+    from fastapi import Response
+    return Response(status_code=204)
+
+# ======================
 # Helper Functions
 # ======================
 
