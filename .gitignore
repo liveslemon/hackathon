@@ -1,0 +1,30 @@
+# Root .gitignore
+
+# Dependencies
+node_modules/
+.pnp/
+.pnp.*
+
+# Python
+**/__pycache__/
+**/*.pyc
+backend/.venv/
+
+# Env and sensitive
+.env
+.env.local
+backend/.env
+
+# OS
+.DS_Store
+**/.DS_Store
+
+# Project specific
+backend/uploads/
+backend/backend.log
+
+# Scratch scripts
+*.js
+*.py
+!frontend/pau-interconnect-app/**
+!backend/main.py
