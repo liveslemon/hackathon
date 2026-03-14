@@ -1,7 +1,4 @@
-// lib/supabaseClient.ts
-"use client"; // ensures this runs in the browser
-
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -47,12 +44,14 @@ const supabaseFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   }
 };
 
-// Create the Supabase client
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+// Create the Supabase client using createBrowserClient for consistent SSR handling
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey, {
   global: { fetch: supabaseFetch },
 });
 
 // Optional: Log auth changes for debugging
-supabase.auth.onAuthStateChange((event, session) => {
-  console.debug("[Supabase auth] event:", event, { session });
-});
+if (typeof window !== 'undefined') {
+  supabase.auth.onAuthStateChange((event, session) => {
+    console.debug("[Supabase auth] event:", event, { session });
+  });
+}
