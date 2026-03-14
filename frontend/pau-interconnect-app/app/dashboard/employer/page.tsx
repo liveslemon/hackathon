@@ -136,7 +136,7 @@ export default function EmployerDashboard() {
        if (error) throw error;
        
        if (newInternship?.id) {
-         fetch("http://localhost:8000/analyze-new-internship", {
+         fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/analyze-new-internship`, {
            method: "POST",
            headers: { "Content-Type": "application/json" },
            body: JSON.stringify({ internship_id: newInternship.id })

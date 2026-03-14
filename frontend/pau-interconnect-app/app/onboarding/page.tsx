@@ -261,7 +261,7 @@ export default function Onboarding() {
 
         try {
           const response = await fetch(
-            "http://localhost:8000/upload-and-analyze",
+            `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/upload-and-analyze`,
             {
               method: "POST",
               body: backendFormData,

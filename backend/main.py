@@ -45,10 +45,13 @@ supabase: Client = create_client(
 )
 
 app = FastAPI()
+
+FRONTEND_URL = os.getenv("FRONTEND_URL", "*")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, you might want to restrict this to your actual frontend URL
-    allow_credentials=True,
+    allow_origins=[FRONTEND_URL] if FRONTEND_URL != "*" else ["*"],
+    allow_credentials=True if FRONTEND_URL != "*" else False, # Credentials cannot be used with "*"
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -66,6 +69,8 @@ def read_root():
     return {
         "status": "online",
         "message": "Welcome to the PAU Interconnect Backend API",
+        "ai_key_loaded": bool(NVIDIA_API_KEY),
+        "supabase_url": SUPABASE_URL[:10] + "..." if SUPABASE_URL else None,
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
