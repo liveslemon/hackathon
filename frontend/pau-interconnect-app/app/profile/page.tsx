@@ -110,8 +110,16 @@ const Profile = () => {
             setStatus({ type: 'success', message: "Profile saved & CV analyzed perfectly!" });
             
           } catch (cvErr: any) {
-            console.error("CV Upload/Analysis failed:", cvErr);
-            setStatus({ type: 'warning', message: "Profile saved, but CV analysis failed. Please ensure backend is running." });
+            console.error("CV Upload/Analysis failed. Full error:", cvErr);
+            const errorMsg = cvErr.message || "Unknown error";
+            const detailedMsg = cvErr.name === "TypeError" && cvErr.message === "Failed to fetch" 
+              ? "Network error: The backend may be down, use an invalid URL, or have CORS issues."
+              : `Backend error: ${errorMsg}`;
+            
+            setStatus({ 
+              type: 'warning', 
+              message: `Profile saved, but CV analysis failed. ${detailedMsg}` 
+            });
           }
         } else {
            setStatus({ type: 'success', message: "Profile details saved securely." });
