@@ -294,7 +294,7 @@ const Profile = () => {
                           
                           const data = await response.json();
                           if (data.cv_url) {
-                             setProfile(prev => ({ ...prev, cv_url: data.cv_url }));
+                             setProfile((prev: any) => ({ ...prev, cv_url: data.cv_url }));
                              window.open(data.cv_url, "_blank");
                              return;
                           }

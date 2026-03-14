@@ -3,7 +3,7 @@ import { cx } from "@/utils/cx";
 
 interface BadgeProps {
   children: React.ReactNode;
-  variant?: "primary" | "secondary" | "success" | "warning" | "error" | "slate";
+  variant?: "primary" | "secondary" | "success" | "warning" | "error" | "slate" | "emerald" | "indigo" | "pink";
   size?: "sm" | "md";
   className?: string;
 }
@@ -16,6 +16,9 @@ export const Badge: React.FC<BadgeProps> = ({ children, variant = "primary", siz
     warning: "bg-amber-500/10 text-amber-600 border-amber-500/20",
     error: "bg-red-500/10 text-red-600 border-red-500/20",
     slate: "bg-slate-500/10 text-slate-600 border-slate-500/20",
+    emerald: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+    indigo: "bg-indigo-500/10 text-indigo-600 border-indigo-500/20",
+    pink: "bg-pink-500/10 text-pink-600 border-pink-500/20",
   };
 
   const sizes = {

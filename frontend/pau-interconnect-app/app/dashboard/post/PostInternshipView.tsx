@@ -139,7 +139,7 @@ export default function PostInternshipView() {
               label="Industry Category"
               options={categories}
               value={formData.category}
-              onChange={(value) => setFormData({...formData, category: value})}
+              onChange={(e) => setFormData({...formData, category: e.target.value})}
               placeholder="Select category"
               required
             />
