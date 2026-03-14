@@ -3,3 +3,6 @@ uvicorn
 python-dotenv
 pdfplumber
 requests
+supabase
+python-multipart
+pydantic

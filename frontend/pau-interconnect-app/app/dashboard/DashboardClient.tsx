@@ -2,125 +2,123 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import AnalyticsPage from "@/app/dashboard/analytics/page";
+import { supabase } from "@/lib/supabaseClient";
 import PostInternshipView from "./post/PostInternshipView";
 import {
   Button,
-  Box,
   Stack,
-  AppBar,
   Typography,
-  Toolbar,
-  CircularProgress,
-} from "@mui/material";
+  Divider,
+} from "@/components/ui";
+import { FiLogOut, FiPieChart, FiPlusSquare } from "react-icons/fi";
+import AnalyticsView from "./AnalyticsView";
 
 export default function DashboardClient({ session }: { session: any }) {
   const [activeTab, setActiveTab] = useState("analytics");
+  const [categories, setCategories] = useState<{ label: string; value: number }[]>([]);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     if (!session?.user) {
       router.push("/");
+      return;
     }
+
+    const fetchData = async () => {
+      setLoading(true);
+      const { data, error } = await supabase.from("internships").select("category");
+      
+      if (!error && data) {
+        const counts: Record<string, number> = {};
+        data.forEach((item) => {
+          const category = item.category || "Unknown";
+          counts[category] = (counts[category] || 0) + 1;
+        });
+        const categoryArray = Object.entries(counts).map(([label, value]) => ({
+          label,
+          value,
+        }));
+        setCategories(categoryArray);
+      }
+      setLoading(false);
+    };
+
+    fetchData();
   }, [session, router]);
 
-  if (!session?.user) {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/");
+  };
+
+  if (!session?.user || loading) {
     return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          backdropFilter: "blur(12px)",
-        }}
-      >
-        <CircularProgress />
-      </Box>
+      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#667eea]"></div>
+      </div>
     );
   }
 
   return (
-    <Box
-      p={3}
-      sx={{
-        minHeight: "100vh",
-        background:
-          "linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))",
-        backdropFilter: "blur(12px)",
-        borderRadius: 3,
-        color: "#111",
-      }}
-    >
-      <AppBar
-        position="static"
-        elevation={0}
-        sx={{
-          background: "rgba(255, 255, 255, 0.1)",
-          backdropFilter: "blur(12px)",
-          color: "#111",
-          mb: 3,
-          borderRadius: 2,
-        }}
-      >
-        <Toolbar sx={{ justifyContent: "space-between" }}>
-          <Typography variant="h6" fontWeight="bold">
-            Admin Dashboard
-          </Typography>
+    <div className="min-h-screen bg-[#f8fafc] p-6 md:p-10">
+      <div className="max-w-7xl mx-auto space-y-10">
+        <header className="flex justify-between items-center bg-white/60 backdrop-blur-xl p-6 rounded-[32px] border border-white shadow-xl shadow-indigo-50/50">
+          <Stack direction="row" align="center" spacing={4}>
+            <div className="w-12 h-12 bg-gradient-to-br from-[#667eea] to-[#764ba2] rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+              <img src="/favicon.ico" alt="Logo" className="w-8 h-8 opacity-90" />
+            </div>
+            <div>
+              <Typography variant="h4" weight="bold">Admin Portal</Typography>
+              <Typography variant="caption" weight="semibold" color="muted">Manage your platform ecosystem</Typography>
+            </div>
+          </Stack>
+
           <Button
-            variant="outlined"
-            href="/"
-            sx={{
-              color: "#111",
-              borderColor: "rgba(0,0,0,0.2)",
-              "&:hover": {
-                bgcolor: "rgba(0,0,0,0.05)",
-              },
-            }}
+            variant="outline"
+            size="sm"
+            onClick={handleLogout}
+            leftIcon={<FiLogOut className="w-4 h-4" />}
+            className="rounded-xl border-slate-200 hover:border-red-200 hover:text-red-500 hover:bg-red-50 transition-all font-bold"
           >
             Logout
           </Button>
-        </Toolbar>
-      </AppBar>
+        </header>
 
-      <Stack direction="row" gap={2} mb={3}>
-        <Button
-          variant={activeTab === "analytics" ? "contained" : "outlined"}
-          onClick={() => setActiveTab("analytics")}
-          sx={{
-            bgcolor:
-              activeTab === "analytics" ? "rgba(0,0,0,0.1)" : "transparent",
-            color: "#111",
-            "&:hover": { bgcolor: "rgba(0,0,0,0.15)" },
-          }}
-        >
-          Analytics
-        </Button>
-        <Button
-          variant={activeTab === "post" ? "contained" : "outlined"}
-          onClick={() => setActiveTab("post")}
-          sx={{
-            bgcolor: activeTab === "post" ? "rgba(0,0,0,0.1)" : "transparent",
-            color: "#111",
-            "&:hover": { bgcolor: "rgba(0,0,0,0.15)" },
-          }}
-        >
-          Post Internship
-        </Button>
-      </Stack>
+        <Stack direction="row" spacing={4} className="flex-wrap gap-y-4">
+          <Button
+            variant={activeTab === "analytics" ? "solid" : "outline"}
+            onClick={() => setActiveTab("analytics")}
+            leftIcon={<FiPieChart className="w-5 h-5" />}
+            className={`px-8 h-14 rounded-2xl font-bold transition-all duration-300 ${
+              activeTab === "analytics" 
+                ? "shadow-xl shadow-indigo-100" 
+                : "bg-white border-slate-100 text-slate-500 hover:border-[#667eea] hover:text-[#667eea]"
+            }`}
+          >
+            Analytics Overview
+          </Button>
+          <Button
+            variant={activeTab === "post" ? "solid" : "outline"}
+            onClick={() => setActiveTab("post")}
+            leftIcon={<FiPlusSquare className="w-5 h-5" />}
+            className={`px-8 h-14 rounded-2xl font-bold transition-all duration-300 ${
+              activeTab === "post" 
+                ? "shadow-xl shadow-indigo-100" 
+                : "bg-white border-slate-100 text-slate-500 hover:border-[#667eea] hover:text-[#667eea]"
+            }`}
+          >
+            Post Internship
+          </Button>
+        </Stack>
 
-      <Box mt={4} sx={{ position: "relative", overflow: "hidden" }}>
-        {activeTab === "analytics" && (
-          <Box sx={{ animation: "fadeIn 0.3s" }}>
-            <AnalyticsPage />
-          </Box>
-        )}
-        {activeTab === "post" && (
-          <Box sx={{ animation: "fadeIn 0.3s" }}>
-            <PostInternshipView />
-          </Box>
-        )}
-      </Box>
-    </Box>
+        <Divider className="opacity-40" />
+
+        <main className="animate-in fade-in slide-in-from-bottom-6 duration-500 fill-mode-both">
+          {activeTab === "analytics" && <AnalyticsView categories={categories} />}
+          {activeTab === "post" && <PostInternshipView />}
+        </main>
+      </div>
+    </div>
   );
 }

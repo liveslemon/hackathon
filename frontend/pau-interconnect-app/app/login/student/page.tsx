@@ -4,14 +4,15 @@ import { supabase } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import {
-  Box,
   Button,
   Card,
-  TextField,
+  CardContent,
+  CardHeader,
+  Input,
   Typography,
-  Snackbar,
-  Alert,
-} from "@mui/material";
+  Stack,
+  Container,
+} from "@/components/ui";
 
 const Login = () => {
   const router = useRouter();
@@ -29,8 +30,6 @@ const Login = () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-
-      // Optional: you can store the user session if needed
       setUser(session?.user ?? null);
     };
 
@@ -51,10 +50,8 @@ const Login = () => {
       setSnackbarOpen(true);
     } else {
       const { user } = data;
-      // Optional: fetch name from user_metadata if set during signup
       const userName = user?.user_metadata?.name || user?.email;
 
-      // Store in localStorage for later
       localStorage.setItem("userName", userName);
       localStorage.setItem("userEmail", user?.email || "");
 
@@ -62,14 +59,10 @@ const Login = () => {
       setSnackbarSeverity("success");
       setSnackbarOpen(true);
 
-      // If the user signed in and we have a pending profile (saved during signup),
-      // create the `profiles` row now so that auth.uid() is available and RLS passes.
       try {
         const pending = localStorage.getItem("pendingProfile");
         if (pending) {
           const parsed = JSON.parse(pending);
-
-          // Check whether a profile already exists for this user
           const { data: existing, error: selectError } = await supabase
             .from("profiles")
             .select("id")
@@ -102,7 +95,6 @@ const Login = () => {
               localStorage.removeItem("pendingProfile");
             }
           } else {
-            // If profile exists, remove pending data to avoid future attempts
             localStorage.removeItem("pendingProfile");
           }
         }
@@ -116,121 +108,82 @@ const Login = () => {
     }
   };
 
-  const handleCloseSnackbar = (
-    event?: React.SyntheticEvent | Event,
-    reason?: string,
-  ) => {
-    if (reason === "clickaway") {
-      return;
-    }
-    setSnackbarOpen(false);
-  };
-
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        bgcolor: "primary.main",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        p: 4,
-      }}
-    >
-      <Card sx={{ maxWidth: 400, width: "100%", p: 4, boxShadow: 3 }}>
-        <Box sx={{ textAlign: "center", mb: 4 }}>
-          <Typography
-            variant="h4"
-            component="h1"
-            gutterBottom
-            fontWeight="bold"
-          >
-            Welcome Back
-          </Typography>
-          <Typography color="text.secondary">
-            Sign in to your account
-          </Typography>
-        </Box>
+    <div className="min-h-screen bg-gradient-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center p-6">
+      <Card className="max-w-md w-full p-2">
+        <CardHeader className="text-center pt-8">
+          <Typography variant="h3" className="mb-2">Welcome Back</Typography>
+          <Typography variant="body2" color="muted">Sign in to your student account</Typography>
+        </CardHeader>
+        
+        <CardContent className="pt-6">
+          <form onSubmit={handleAuth} className="space-y-6">
+            <Input
+              id="email"
+              label="Email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
 
-        <Box
-          component="form"
-          onSubmit={handleAuth}
-          sx={{ display: "flex", flexDirection: "column", gap: 3 }}
-        >
-          <TextField
-            id="email"
-            label="Email"
-            type="email"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            fullWidth
-          />
+            <Input
+              id="password"
+              label="Password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
 
-          <TextField
-            id="password"
-            label="Password"
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            fullWidth
-          />
+            <Button type="submit" className="w-full" size="lg">
+              Sign In
+            </Button>
+          </form>
 
-          <Button type="submit" variant="contained" fullWidth>
-            Sign In
-          </Button>
-        </Box>
-
-        <Box sx={{ mt: 3, textAlign: "center" }}>
-          <Button
-            variant="text"
-            onClick={() => router.push("/onboarding")}
-            sx={{ textTransform: "none", fontSize: "0.875rem" }}
-          >
-            Do not have an account? Sign up
-          </Button>
-        </Box>
-
-        <Box sx={{ mt: 2, textAlign: "center" }}>
-          <Button
-            variant="outlined"
-            onClick={() => router.push("/")}
-            sx={{ textTransform: "none", fontSize: "0.875rem" }}
-          >
-            Back to Home
-          </Button>
-        </Box>
-
-        <Box sx={{ mt: 2, textAlign: "center" }}>
-          <Button
-            variant="outlined"
-            onClick={() => router.push("/admin")}
-            sx={{ textTransform: "none", fontSize: "0.875rem" }}
-          >
-            Admin Login
-          </Button>
-        </Box>
+          <Stack spacing={2} className="mt-8">
+            <Button
+              variant="ghost"
+              colorType="secondary"
+              onClick={() => router.push("/onboarding")}
+              className="text-sm"
+            >
+              Don't have an account? Sign up
+            </Button>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                variant="outline"
+                onClick={() => router.push("/")}
+                className="text-xs"
+              >
+                Back to Home
+              </Button>
+              <Button
+                variant="outline"
+                colorType="secondary"
+                onClick={() => router.push("/login/admin")}
+                className="text-xs"
+              >
+                Admin Login
+              </Button>
+            </div>
+          </Stack>
+        </CardContent>
       </Card>
 
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={4000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbarSeverity}
-          sx={{ width: "100%" }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
-    </Box>
+      {snackbarOpen && (
+        <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300 z-[100] border ${
+          snackbarSeverity === "success" 
+            ? "bg-emerald-50 text-emerald-700 border-emerald-100" 
+            : "bg-red-50 text-red-700 border-red-100"
+        }`}>
+          <Typography variant="body2" weight="bold">{snackbarMessage}</Typography>
+        </div>
+      )}
+    </div>
   );
 };
 

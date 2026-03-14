@@ -1,100 +1,60 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import Button from "@mui/material/Button";
-import TextField from "@mui/material/TextField";
-import Chip from "@mui/material/Chip";
-import Card from "@mui/material/Card";
-import Snackbar from "@mui/material/Snackbar";
-import Alert from "@mui/material/Alert";
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
-import Stack from "@mui/material/Stack";
+import {
+  Button,
+  Input,
+  Badge,
+  Card,
+  CardContent,
+  Typography,
+  Stack,
+  Divider,
+} from "@/components/ui";
 import {
   FiArrowLeft,
   FiEdit2,
   FiSave,
-  FiBriefcase,
-  FiHeart,
-  FiCalendar,
+  FiDownload,
+  FiUser,
+  FiUploadCloud,
+  FiCheckCircle,
+  FiAlertCircle,
 } from "react-icons/fi";
-import InternshipCard from "@/components/InternshipCard";
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 const Profile = () => {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [profile, setProfile] = useState<any>({});
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [savedInternships, setSavedInternships] = useState<any[]>([]);
-  const [appliedInternships, setAppliedInternships] = useState<any[]>([]);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [status, setStatus] = useState<{ type: 'success' | 'error' | 'warning', message: string } | null>(null);
   const [isProfileLoaded, setIsProfileLoaded] = useState(false);
 
   useEffect(() => {
     (async () => {
-      // Load user profile from Supabase (if signed in)
       try {
         const { data: sessionData } = await supabase.auth.getSession();
         const userId = sessionData?.session?.user?.id ?? null;
 
         if (userId) {
-          // fetch user email from session
           setUserEmail(sessionData?.session?.user?.email ?? null);
-          // fetch profile
           const { data: profileRow } = await supabase
             .from("profiles")
             .select("*")
             .eq("id", userId)
             .maybeSingle();
           setProfile(profileRow ?? {});
-
-          // fetch saved internships ids
-          const { data: savedRows } = await supabase
-            .from("saved_internships")
-            .select("internship_id")
-            .eq("user_id", userId);
-
-          const savedIds = (savedRows ?? []).map((r: any) => r.internship_id);
-          if (savedIds.length > 0) {
-            const { data: internshipsData } = await supabase
-              .from("internships")
-              .select("*")
-              .in("id", savedIds);
-            setSavedInternships(internshipsData ?? []);
-          } else {
-            setSavedInternships([]);
-          }
-
-          // fetch applied internships ids
-          const { data: appliedRows } = await supabase
-            .from("applied_internships")
-            .select("internship_id")
-            .eq("user_id", userId);
-
-          const appliedIds = (appliedRows ?? []).map(
-            (r: any) => r.internship_id,
-          );
-          if (appliedIds.length > 0) {
-            const { data: appliedData } = await supabase
-              .from("internships")
-              .select("*")
-              .in("id", appliedIds);
-            setAppliedInternships(appliedData ?? []);
-          } else {
-            setAppliedInternships([]);
-          }
         } else {
-          // No signed-in user: keep empty lists
           setProfile({});
-          setSavedInternships([]);
-          setAppliedInternships([]);
         }
       } catch (err) {
         console.error("Error loading profile data:", err);
         setProfile({});
-        setSavedInternships([]);
-        setAppliedInternships([]);
       } finally {
         setIsProfileLoaded(true);
       }
@@ -103,6 +63,8 @@ const Profile = () => {
 
   const handleSave = async () => {
     try {
+      setIsSaving(true);
+      setStatus(null);
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData?.session?.user?.id ?? null;
 
@@ -118,255 +80,242 @@ const Profile = () => {
 
         const { error } = await supabase
           .from("profiles")
-          .upsert(upsertPayload, { returning: "minimal" });
+          .upsert(upsertPayload);
 
         if (error) {
-          console.error("Failed to save profile:", error);
-          setSnackbarOpen(true);
-        } else {
-          setIsEditing(false);
-          setSnackbarOpen(true);
+          throw error;
         }
+
+        if (profile.cvFile) {
+          const backendFormData = new FormData();
+          backendFormData.append("user_id", userId);
+          backendFormData.append("file", profile.cvFile);
+
+          try {
+            const response = await fetch(`${BACKEND_URL}/upload-and-analyze`, {
+              method: "POST",
+              body: backendFormData,
+            });
+            const result = await response.json();
+            
+            if (!response.ok) {
+              throw new Error(result?.error || "Backend upload failed");
+            }
+            
+            setProfile((prev: any) => ({
+              ...prev,
+              cv_url: result.cv_url,
+              cvFile: null,
+            }));
+            setStatus({ type: 'success', message: "Profile saved & CV analyzed perfectly!" });
+            
+          } catch (cvErr: any) {
+            console.error("CV Upload/Analysis failed:", cvErr);
+            setStatus({ type: 'warning', message: "Profile saved, but CV analysis failed. Please ensure backend is running." });
+          }
+        } else {
+           setStatus({ type: 'success', message: "Profile details saved securely." });
+        }
+        setIsEditing(false);
       } else {
-        // fallback for unsigned users (keep previous behavior)
         localStorage.setItem("userProfile", JSON.stringify(profile));
         setIsEditing(false);
-        setSnackbarOpen(true);
+        setStatus({ type: 'success', message: "Profile updated locally." });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error saving profile:", err);
-      setSnackbarOpen(true);
+      setStatus({ type: 'error', message: err.message || "An unexpected error occurred." });
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  if (!isProfileLoaded) return null;
-
-  const expiringInternships = appliedInternships.filter((internship) => {
-    const daysLeft = Math.ceil(
-      (new Date(internship.deadline).getTime() - new Date().getTime()) /
-        (1000 * 60 * 60 * 24),
+  if (!isProfileLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#667eea]"></div>
+      </div>
     );
-    return daysLeft > 0 && daysLeft <= 7;
-  });
+  }
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        bgcolor: "background.default",
-        py: 4,
-        px: { xs: 2, sm: 4, md: 8 },
-      }}
-    >
-      <Button
-        variant="text"
-        startIcon={<FiArrowLeft />}
-        onClick={() => router.push("/dashboard/student")}
-        sx={{ mb: 4 }}
-      >
-        Back to Dashboard
-      </Button>
-
-      {/* Profile Section */}
-      <Card sx={{ p: 4, mb: 6 }}>
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          mb={4}
+    <div className="min-h-screen bg-[#f8fafc] py-12 px-6 md:px-12 lg:px-24">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <Button
+          variant="outline"
+          leftIcon={<FiArrowLeft />}
+          onClick={() => router.push("/dashboard/student")}
+          className="border-none bg-white/50 hover:bg-white text-slate-500 font-bold"
         >
-          <Typography variant="h4" component="h1" color="text.primary">
-            My Profile
-          </Typography>
-          {!isEditing ? (
-            <Button
-              variant="contained"
-              startIcon={<FiEdit2 />}
-              onClick={() => setIsEditing(true)}
-            >
-              Edit Profile
-            </Button>
-          ) : (
-            <Button
-              variant="contained"
-              startIcon={<FiSave />}
-              onClick={handleSave}
-            >
-              Save Changes
-            </Button>
-          )}
-        </Box>
+          Back to Dashboard
+        </Button>
 
-        <Box
-          component="form"
-          noValidate
-          autoComplete="off"
-          sx={{ display: "flex", flexDirection: "column", gap: 3 }}
-        >
-          <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
-            <TextField
-              id="full_name"
-              label="Full Name"
-              value={profile.full_name || ""}
-              onChange={(e) =>
-                setProfile({ ...profile, full_name: e.target.value })
-              }
-              disabled={!isEditing}
-              fullWidth
-              sx={{ flex: "1 1 300px" }}
-            />
-            <TextField
-              id="email"
-              label="Email"
-              value={userEmail || profile.email || ""}
-              onChange={(e) => setUserEmail(e.target.value)}
-              disabled={true}
-              fullWidth
-              sx={{ flex: "1 1 300px" }}
-            />
-          </Box>
-
-          <TextField
-            id="course"
-            label="Course"
-            value={profile.course || ""}
-            onChange={(e) => setProfile({ ...profile, course: e.target.value })}
-            disabled={!isEditing}
-            fullWidth
-          />
-
-          <Box>
-            <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-              Career Interests
-            </Typography>
-            <Stack direction="row" spacing={1} flexWrap="wrap">
-              {profile.interests?.map((interest: string) => (
-                <Chip key={interest} label={interest} color="secondary" />
-              ))}
-            </Stack>
-          </Box>
-
-          <Box>
-            <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-              Upload CV
-            </Typography>
-            <Button variant="outlined" component="label" disabled={!isEditing}>
-              {profile.cvFile ? profile.cvFile.name : "Upload CV"}
-              <input
-                type="file"
-                hidden
-                accept=".pdf,.doc,.docx"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) setProfile({ ...profile, cvFile: file });
-                }}
-              />
-            </Button>
-          </Box>
-        </Box>
-      </Card>
-
-      {/* Deadline Reminders */}
-      {expiringInternships.length > 0 && (
-        <Card
-          sx={{
-            p: 3,
-            mb: 6,
-            bgcolor: "secondary.light",
-            border: "1px solid",
-            borderColor: "secondary.main",
-          }}
-        >
-          <Box display="flex" alignItems="center" gap={1} mb={2}>
-            <FiCalendar size={20} color="#1976d2" />
-            <Typography variant="h6" color="text.primary">
-              Upcoming Deadlines
-            </Typography>
-          </Box>
-          <Stack spacing={2}>
-            {expiringInternships.map((internship) => {
-              const daysLeft = Math.ceil(
-                (new Date(internship.deadline).getTime() -
-                  new Date().getTime()) /
-                  (1000 * 60 * 60 * 24),
-              );
-              return (
-                <Box
-                  key={internship.id}
-                  display="flex"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  p={2}
-                  bgcolor="background.paper"
-                  borderRadius={1}
-                  sx={{ cursor: "default" }}
+        <Card className="overflow-hidden border-slate-100 shadow-2xl shadow-indigo-50/50 rounded-[40px]">
+          <div className="bg-gradient-to-r from-[#667eea] to-[#764ba2] px-10 py-12 text-white relative overflow-hidden">
+            {/* Decorative circles */}
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl animate-pulse" />
+            <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-indigo-200/20 rounded-full blur-2xl" />
+            
+            <Stack direction="row" align="center" justify="between">
+              <Stack direction="row" align="center" spacing={6}>
+                <div className="w-24 h-24 bg-white/20 backdrop-blur-md rounded-[32px] flex items-center justify-center border border-white/30 shadow-2xl">
+                  <FiUser className="w-12 h-12 text-white" />
+                </div>
+                <div>
+                  <Typography variant="h2" weight="bold">{profile.full_name || "Guest User"}</Typography>
+                  <Typography variant="body1" className="opacity-80 font-medium">{userEmail || "Log in to save your profile"}</Typography>
+                </div>
+              </Stack>
+              {!isEditing ? (
+                <Button
+                  onClick={() => setIsEditing(true)}
+                  leftIcon={<FiEdit2 />}
+                  className="bg-white/20 backdrop-blur-md border border-white/30 hover:bg-white/30 text-white font-bold rounded-2xl"
                 >
-                  <Typography fontWeight={500} color="text.primary">
-                    {internship.role} at {internship.company}
+                  Edit Profile
+                </Button>
+              ) : (
+                <Button
+                  isLoading={isSaving}
+                  onClick={handleSave}
+                  leftIcon={<FiSave />}
+                  className="bg-white text-[#667eea] hover:bg-white/90 shadow-xl font-bold rounded-2xl"
+                >
+                  {isSaving ? "Saving..." : "Save Changes"}
+                </Button>
+              )}
+            </Stack>
+          </div>
+
+          <CardContent className="p-10 space-y-10">
+            {status && (
+              <div className={`p-4 rounded-2xl flex items-center gap-3 animate-in fade-in zoom-in duration-300 ${
+                status.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 
+                status.type === 'warning' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                'bg-rose-50 text-rose-700 border border-rose-100'
+              }`}>
+                {status.type === 'success' ? <FiCheckCircle className="w-5 h-5" /> : <FiAlertCircle className="w-5 h-5" />}
+                <Typography variant="body2" weight="bold">{status.message}</Typography>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <Input
+                label="Full Name"
+                value={profile.full_name || ""}
+                onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
+                disabled={!isEditing}
+                placeholder="Enter your full name"
+                className={!isEditing ? "opacity-70" : ""}
+              />
+              <Input
+                label="Email Address"
+                value={userEmail || profile.email || ""}
+                disabled={true}
+                className="opacity-50"
+              />
+            </div>
+
+            <Input
+              label="Course / Major"
+              value={profile.course || ""}
+              onChange={(e) => setProfile({ ...profile, course: e.target.value })}
+              disabled={!isEditing}
+              placeholder="e.g. Computer Science"
+              className={!isEditing ? "opacity-70" : ""}
+            />
+
+            <div className="space-y-4">
+              <Typography variant="body2" weight="bold" color="muted" className="ml-1 uppercase tracking-widest text-[10px]">
+                Career Interests
+              </Typography>
+              <div className="flex flex-wrap gap-2">
+                {profile.interests?.length > 0 ? (
+                  profile.interests.map((interest: string) => (
+                    <Badge key={interest} variant="primary" size="md" className="rounded-xl px-4 py-1.5 font-bold">
+                      {interest}
+                    </Badge>
+                  ))
+                ) : (
+                  <Typography variant="body2" color="muted" className="italic ml-1">No interests added yet</Typography>
+                )}
+              </div>
+            </div>
+
+            <Divider />
+
+            <div className="space-y-6">
+              <Typography variant="h4" weight="bold">Curriculum Vitae (CV)</Typography>
+              <div className="bg-slate-50/50 border border-dashed border-slate-200 rounded-[32px] p-8 flex flex-col items-center justify-center space-y-6">
+                <div className="w-16 h-16 bg-white rounded-2xl shadow-md flex items-center justify-center">
+                  <FiUploadCloud className="w-8 h-8 text-[#667eea]" />
+                </div>
+                <div className="text-center space-y-1">
+                  <Typography variant="body1" weight="bold">
+                    {profile.cvFile ? profile.cvFile.name : "Professional CV Document"}
                   </Typography>
-                  <Chip label={`${daysLeft} days left`} color="error" />
-                </Box>
-              );
-            })}
-          </Stack>
+                  <Typography variant="caption" color="muted">PDF, DOCX up to 5MB</Typography>
+                </div>
+                
+                <Stack direction="row" spacing={4}>
+                  <Button 
+                    as="label"
+                    variant="outline" 
+                    disabled={!isEditing}
+                    className={`rounded-xl font-bold px-6 ${!isEditing ? 'opacity-50 cursor-not-allowed' : 'bg-white hover:border-[#667eea] hover:text-[#667eea]'}`}
+                  >
+                    {profile.cvFile ? "Change File" : "Upload New CV"}
+                    <input
+                      type="file"
+                      hidden
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setProfile({ ...profile, cvFile: file });
+                      }}
+                    />
+                  </Button>
+                  
+                  {profile.cv_url && (
+                    <Button
+                      variant="solid"
+                      leftIcon={<FiDownload />}
+                      onClick={async () => {
+                        try {
+                          const { data: sessionData } = await supabase.auth.getSession();
+                          const userId = sessionData?.session?.user?.id;
+                          if (!userId) throw new Error("Not logged in");
+
+                          const response = await fetch(`${BACKEND_URL}/refresh-cv-url`, {
+                             method: "POST",
+                             headers: { "Content-Type": "application/json" },
+                             body: JSON.stringify({ user_id: userId })
+                          });
+                          
+                          const data = await response.json();
+                          if (data.cv_url) {
+                             setProfile(prev => ({ ...prev, cv_url: data.cv_url }));
+                             window.open(data.cv_url, "_blank");
+                             return;
+                          }
+                          window.open(profile.cv_url, "_blank");
+                        } catch (err) {
+                          console.error("Download Error:", err);
+                          window.open(profile.cv_url, "_blank");
+                        }
+                      }}
+                      className="rounded-xl font-bold px-8 shadow-lg shadow-indigo-100"
+                    >
+                      View Current CV
+                    </Button>
+                  )}
+                </Stack>
+              </div>
+            </div>
+          </CardContent>
         </Card>
-      )}
-
-      {/* Saved Internships */}
-      <Box mb={6}>
-        <Box display="flex" alignItems="center" gap={1} mb={2}>
-          <FiHeart size={20} color="#e53935" />
-          <Typography variant="h6" color="text.primary">
-            Saved Internships ({savedInternships.length})
-          </Typography>
-        </Box>
-        {savedInternships.length > 0 ? (
-          <Stack spacing={2}>
-            {savedInternships.map((internship) => (
-              <InternshipCard key={internship.id} internship={internship} />
-            ))}
-          </Stack>
-        ) : (
-          <Typography color="text.secondary">
-            No saved internships yet
-          </Typography>
-        )}
-      </Box>
-
-      {/* Applied Internships */}
-      <Box mb={6}>
-        <Box display="flex" alignItems="center" gap={1} mb={2}>
-          <FiBriefcase size={20} color="#1976d2" />
-          <Typography variant="h6" color="text.primary">
-            Applied Internships ({appliedInternships.length})
-          </Typography>
-        </Box>
-        {appliedInternships.length > 0 ? (
-          <Stack spacing={2}>
-            {appliedInternships.map((internship) => (
-              <InternshipCard key={internship.id} internship={internship} />
-            ))}
-          </Stack>
-        ) : (
-          <Typography color="text.secondary">No applications yet</Typography>
-        )}
-      </Box>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={4000}
-        onClose={() => setSnackbarOpen(false)}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert
-          onClose={() => setSnackbarOpen(false)}
-          severity="success"
-          sx={{ width: "100%" }}
-        >
-          Profile updated - Your changes have been saved
-        </Alert>
-      </Snackbar>
-    </Box>
+      </div>
+    </div>
   );
 };
 

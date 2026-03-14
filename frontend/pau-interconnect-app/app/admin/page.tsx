@@ -1,15 +1,15 @@
 "use client";
+
 import React, { useState } from "react";
-import { FaLock } from "react-icons/fa";
+import { FiLock, FiArrowLeft } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import {
-  Box,
+  Typography,
   Button,
   Card,
   CardContent,
-  TextField,
-  Typography,
-} from "@mui/material";
+  Input,
+} from "@/components/ui";
 
 interface AdminAccount {
   email: string;
@@ -29,152 +29,94 @@ export default function Home() {
   const [error, setError] = useState("");
 
   const handleLogin = () => {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
+    if (!cleanEmail || !cleanPassword) {
+      setError("Please enter your email and password.");
+      return;
+    }
+
     // find an admin account that matches the entered email (if any)
-    const admin = adminAccounts.find((a) => a.email === email);
+    const admin = adminAccounts.find((a) => a.email.toLowerCase() === cleanEmail);
 
     if (admin) {
-      if (admin.password === password) {
+      if (admin.password === cleanPassword) {
         router.push("/dashboard/admin");
       } else {
         setError("Invalid password for admin account.");
       }
-      return;
-    }
-
-    if (email && password) {
-      router.push("/dashboard/student");
     } else {
-      setError("Please enter your email and password.");
+      setError("This account is not authorized to access the Admin Portal.");
     }
   };
-  return (
-    <div className="body">
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="100vh"
-        px={2}
-        sx={{
-          bgcolor: "primary.main",
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-        }}
-      >
-        <Card
-          sx={{
-            width: { xs: "100%", sm: 380 },
-            borderRadius: 3,
-            boxShadow: 3,
-            textAlign: "center",
-            maxWidth: 400,
-            p: { xs: 3, sm: 4 },
-          }}
-        >
-          <CardContent>
-            <Box
-              display="flex"
-              justifyContent="center"
-              alignItems="center"
-              mb={2}
-            >
-              <Box
-                sx={{
-                  backgroundColor: "#1976d2",
-                  borderRadius: 2,
-                  p: 1.5,
-                  display: "inline-flex",
-                }}
-              >
-                <FaLock size={28} color="white" />
-              </Box>
-            </Box>
 
-            <Typography variant="h5" fontWeight="bold">
-              Admin Portal
-            </Typography>
-            <Typography color="text.secondary" mb={3}>
-              Sign in to manage internship postings
-            </Typography>
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6 bg-[#667eea] bg-gradient-to-br from-[#667eea] via-[#764ba2] to-[#667eea]">
+      <div className="w-full max-w-md animate-in fade-in zoom-in duration-500">
+        <Card className="rounded-[40px] shadow-2xl border-none overflow-hidden">
+          <CardContent className="p-10 md:p-12">
+            <div className="flex justify-center mb-8">
+              <div className="w-20 h-20 bg-[#667eea] rounded-[32px] flex items-center justify-center shadow-xl shadow-indigo-100/50 transform -rotate-6">
+                <FiLock size={32} className="text-white" />
+              </div>
+            </div>
+
+            <div className="text-center space-y-2 mb-10">
+              <Typography variant="h2" weight="bold">Admin Portal</Typography>
+              <Typography color="muted">Sign in to manage the internship ecosystem</Typography>
+            </div>
 
             <form
               onSubmit={(e) => {
-                e.preventDefault(); // prevent page reload
+                e.preventDefault();
                 handleLogin();
               }}
+              className="space-y-6"
             >
-              <TextField
-                label="Email"
-                variant="outlined"
-                fullWidth
-                margin="normal"
+              <Input
+                label="Email Address"
+                placeholder="admin@pau.edu.ng"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                className="bg-slate-50 border-slate-100 focus:bg-white"
               />
 
-              <TextField
-                label="Password"
+              <Input
+                label="Security Key"
                 type="password"
-                variant="outlined"
-                fullWidth
-                margin="normal"
+                placeholder="••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                error={Boolean(error)}
-                helperText={error}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (error) setError("");
+                }}
+                error={error}
+                className="bg-slate-50 border-slate-100 focus:bg-white"
               />
 
               <Button
                 type="submit"
-                variant="contained"
-                fullWidth
-                sx={{
-                  mt: 2,
-                  bgcolor: "#1976d2",
-                  "&:hover": { bgcolor: "#1259a0ff" },
-                  borderRadius: 2,
-                  textTransform: "none",
-                  fontWeight: "bold",
-                }}
+                size="lg"
+                className="w-full h-14 text-lg shadow-xl shadow-indigo-100"
               >
-                Sign In
+                Enter Portal
               </Button>
             </form>
 
-            <Button
-              variant="contained"
-              fullWidth
-              sx={{
-                mt: 2,
-                color: "text.secondary",
-                bgcolor: "transparent",
-                boxShadow: "none",
-                "&:hover": {
-                  color: "#FFF",
-                  bgcolor: "#4F46E5",
-                  boxShadow: "none",
-                },
-                borderRadius: 2,
-                textTransform: "none",
-              }}
-              onClick={() => router.push("/")}
-            >
-              Back to home
-            </Button>
-
-            {/*      <Typography
-            variant="body2"
-            mt={3}
-            color="text.secondary"
-            sx={{
-              cursor: "pointer",
-              "&:hover": { color: "#FFF", bgcolor: "#8a2be2"},
-            }}
-          >
-            Back to Home
-          </Typography> */}
+            <div className="mt-8 flex justify-center">
+              <Button
+                variant="ghost"
+                leftIcon={<FiArrowLeft />}
+                onClick={() => router.push("/")}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                Back to Public Site
+              </Button>
+            </div>
           </CardContent>
         </Card>
-      </Box>
+      </div>
     </div>
   );
 }

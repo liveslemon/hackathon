@@ -3,76 +3,33 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FiLogOut, FiSearch, FiUser, FiBell } from "react-icons/fi";
 import { supabase } from "@/lib/supabaseClient";
+import { cx } from "@/utils/cx";
 import {
   Button,
-  TextField,
-  Box,
-  Stack,
+  Input,
   Typography,
-  CircularProgress,
-  Snackbar,
-  Alert,
-  Fade,
-  Slide,
-  SlideProps,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  LinearProgress,
-  Chip,
-  Divider,
-} from "@mui/material";
+  Stack,
+  Card,
+  Badge,
+  Modal,
+  Select,
+} from "@/components/ui";
 import InternshipCard from "@/components/InternshipCard";
+import DashboardHeader from "@/components/DashboardHeader";
 
 interface Internship {
   id: string;
   company: string;
   role: string;
+  location: string;
   field: string;
   category: string;
   description: string;
   deadline: string;
   interests: string[];
   matchPercentage?: number;
+  applicationStatus?: string;
 }
-
-function SlideDownTransition(props: SlideProps) {
-  return <Slide {...props} direction="down" />;
-}
-
-interface NotificationBarProps {
-  open: boolean;
-  message: string;
-  severity: "success" | "error" | "info" | "warning";
-  onClose: () => void;
-}
-
-const NotificationBar = ({
-  open,
-  message,
-  severity,
-  onClose,
-}: NotificationBarProps) => {
-  return (
-    <Snackbar
-      open={open}
-      autoHideDuration={4000}
-      onClose={onClose}
-      TransitionComponent={SlideDownTransition}
-      anchorOrigin={{ vertical: "top", horizontal: "center" }}
-    >
-      <Alert
-        onClose={onClose}
-        severity={severity}
-        icon={<FiBell />}
-        sx={{ width: "100%" }}
-      >
-        {message}
-      </Alert>
-    </Snackbar>
-  );
-};
 
 const Dashboard = ({
   userProfile,
@@ -87,14 +44,11 @@ const Dashboard = ({
     initialInternships,
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedFilter, setSelectedFilter] = useState("All");
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
-    "success",
-  );
+  const [selectedInterest, setSelectedInterest] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All"); // "All", "Applied", "Accepted", "Rejected"
+  const [matchFilter, setMatchFilter] = useState("All"); // "All", "70", "40"
+  const [sortBy, setSortBy] = useState("match"); // "match", "deadline", "company"
   const [availableFilters, setAvailableFilters] = useState<string[]>([]);
-  const [notificationCount, setNotificationCount] = useState(0);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationSeverity, setNotificationSeverity] = useState<
@@ -103,17 +57,6 @@ const Dashboard = ({
   const [analysisOpen, setAnalysisOpen] = useState(false);
 
   const router = useRouter();
-
-  const handleSnackbarClose = () => setSnackbarOpen(false);
-  const handleNotificationClose = (
-    event?: React.SyntheticEvent | Event,
-    reason?: string,
-  ) => {
-    if (reason === "clickaway") {
-      return;
-    }
-    setNotificationOpen(false);
-  };
 
   const getInternshipInterests = (internship: Internship | any) => {
     if (Array.isArray(internship.interests)) return internship.interests;
@@ -161,29 +104,45 @@ const Dashboard = ({
       }
 
       setAvailableFilters(["All", ...interests]);
-      if (interests.length > 0) {
-        setSelectedFilter("All");
-      } else {
-        setSelectedFilter("All");
-      }
+      setSelectedInterest("All");
     } else {
       setAvailableFilters(["All"]);
-      setSelectedFilter("All");
+      setSelectedInterest("All");
     }
   }, [userProfile]);
 
   useEffect(() => {
     setFilteredInternships(() => {
-      let filtered = internships;
+      let filtered = [...internships];
 
-      if (selectedFilter !== "All") {
+      // 1. Interest Filter
+      if (selectedInterest !== "All") {
         filtered = filtered.filter((internship) =>
           getInternshipInterests(internship).some(
-            (i: string) => i.toLowerCase() === selectedFilter.toLowerCase(),
+            (i: string) => i.toLowerCase() === selectedInterest.toLowerCase(),
           ),
         );
       }
 
+      // 2. Status Filter
+      if (statusFilter !== "All") {
+        filtered = filtered.filter((internship) => {
+          const status = (internship.applicationStatus || "").toLowerCase();
+          if (statusFilter === "Applied") return status === "pending" || status === "applied";
+          if (statusFilter === "Accepted") return status === "accepted";
+          if (statusFilter === "Rejected") return status === "rejected";
+          if (statusFilter === "None") return !internship.applicationStatus;
+          return true;
+        });
+      }
+
+      // 3. Match Filter
+      if (matchFilter !== "All") {
+        const minMatch = parseInt(matchFilter);
+        filtered = filtered.filter((internship) => (internship.matchPercentage ?? 0) >= minMatch);
+      }
+
+      // 4. Search Filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         filtered = filtered.filter(
@@ -197,24 +156,23 @@ const Dashboard = ({
         );
       }
 
+      // 5. Sorting
+      filtered.sort((a, b) => {
+        if (sortBy === "match") {
+          return (b.matchPercentage ?? 0) - (a.matchPercentage ?? 0);
+        }
+        if (sortBy === "deadline") {
+          return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+        }
+        if (sortBy === "company") {
+          return a.company.localeCompare(b.company);
+        }
+        return 0;
+      });
+
       return filtered;
     });
-  }, [selectedFilter, searchQuery, internships]);
-
-  const handleLogout = () => {
-    (async () => {
-      try {
-        await supabase.auth.signOut();
-      } catch (err) {
-        console.warn("Error signing out:", err);
-      }
-      localStorage.clear();
-      setNotificationMessage("Logged out successfully");
-      setNotificationSeverity("success");
-      setNotificationOpen(true);
-      router.push("/");
-    })();
-  };
+  }, [selectedInterest, statusFilter, matchFilter, sortBy, searchQuery, internships]);
 
   const handleOpenAnalysis = () => {
     setAnalysisOpen(true);
@@ -234,231 +192,208 @@ const Dashboard = ({
       const { data: internshipsData } = await supabase
         .from("internships")
         .select("*");
+      
+      const { data: appliedData } = await supabase
+        .from("applied_internships")
+        .select("internship_id, status")
+        .eq("user_id", session.user.id);
+
+      const statusMap = new Map(appliedData?.map(a => [a.internship_id, a.status]) || []);
+
       if (internshipsData) {
         const merged = internshipsData.map((internship) => {
           const existing = internships.find((i) => i.id === internship.id);
-          return existing?.matchPercentage !== undefined
-            ? { ...internship, matchPercentage: existing.matchPercentage }
-            : { ...internship, matchPercentage: 0 };
+          return {
+            ...internship,
+            matchPercentage: existing?.matchPercentage ?? 0,
+            applicationStatus: statusMap.get(internship.id)
+          };
         });
 
         setInternships(merged);
         setFilteredInternships(merged);
-        setNotificationCount(merged.length);
         setNotificationMessage(`Loaded ${merged.length} internships`);
         setNotificationSeverity("success");
+        setNotificationOpen(true);
+        setTimeout(() => setNotificationOpen(false), 3000);
       }
     } catch (err) {
       console.warn("Error refreshing data:", err);
     }
   };
 
+  const getMatchColor = (percentage?: number) => {
+    if (percentage === undefined || percentage === null) return "primary";
+    if (percentage >= 70) return "success";
+    if (percentage >= 40) return "warning";
+    return "error";
+  };
+
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
-      <NotificationBar
-        open={notificationOpen}
-        message={notificationMessage}
-        severity={notificationSeverity}
-        onClose={handleNotificationClose}
+    <div className="min-h-screen bg-[#f8fafc]">
+      <DashboardHeader 
+        userProfile={userProfile} 
+        onOpenAnalysis={handleOpenAnalysis} 
       />
-      <Box
-        component="header"
-        sx={{
-          borderBottom: 1,
-          borderColor: "divider",
-          bgcolor: "background.paper",
-          position: "sticky",
-          top: 0,
-          zIndex: 10,
-          backdropFilter: "blur(8px)",
-          backgroundColor: "rgba(255,255,255,0.8)",
-        }}
-      >
-        <Box maxWidth="lg" mx="auto" px={{ xs: 2, sm: 3, lg: 4 }} py={2}>
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-          >
-            <Box>
-              <Typography variant="h5" fontWeight="bold" color="text.primary">
-                PAU InterConnect
-              </Typography>
-              <Typography variant="body2" color="text.secondary" mt={0.5}>
-                Welcome back,{" "}
-                {userProfile?.name?.split(" ")[0] ||
-                  userProfile?.email ||
-                  "Student"}
-                !
-              </Typography>
-            </Box>
-            <Stack direction="row" spacing={1.5} alignItems="center">
-              <Button
-                variant="contained"
-                size="small"
-                onClick={handleOpenAnalysis}
-                sx={{ textTransform: "none", fontWeight: 600 }}
-              >
-                View CV Analysis
-              </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={() => router.push("/profile")}
-                sx={{ minWidth: 0, p: 1 }}
-              >
-                <FiUser size={20} />
-              </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={handleLogout}
-                sx={{ minWidth: 0, p: 1 }}
-              >
-                <FiLogOut size={20} />
-              </Button>
-            </Stack>
-          </Stack>
-        </Box>
-      </Box>
 
-      <Box maxWidth="lg" mx="auto" px={{ xs: 2, sm: 3, lg: 4 }} py={4}>
-        <Stack spacing={3} mb={4}>
-          <TextField
-            placeholder="Search internships by company, role, or field..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            size="medium"
-            InputProps={{
-              startAdornment: (
-                <FiSearch
-                  style={{
-                    marginLeft: 8,
-                    marginRight: 8,
-                    color: "rgba(0,0,0,0.54)",
-                  }}
-                />
-              ),
-            }}
-            sx={{ width: "100%" }}
-          />
+      <main className="max-w-7xl mx-auto px-6 py-12">
+        <Stack spacing={6} className="mb-12">
+          <div className="w-full">
+            <Input
+              placeholder="Search internships by company, role, or field..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              leftIcon={<FiSearch className="w-5 h-5" />}
+              className="bg-white shadow-sm border-slate-100 h-14"
+            />
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-wrap gap-2.5">
+              {availableFilters.map((filter) => (
+                <Button
+                  key={filter}
+                  variant={selectedInterest === filter ? "solid" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedInterest(filter)}
+                  className="px-6 rounded-xl text-xs font-bold transition-all duration-300"
+                >
+                  {filter}
+                </Button>
+              ))}
+            </div>
 
-          <Stack direction="row" spacing={1} sx={{ overflowX: "auto", pb: 1 }}>
-            {availableFilters.map((filter) => (
-              <Button
-                key={filter}
-                variant={selectedFilter === filter ? "contained" : "outlined"}
-                size="small"
-                onClick={() => setSelectedFilter(filter)}
-                sx={{ whiteSpace: "nowrap", flexShrink: 0 }}
-              >
-                {filter}
-              </Button>
-            ))}
-          </Stack>
+            <div className="flex flex-wrap gap-3 items-center flex-grow sm:flex-grow-0">
+               <div className="w-full sm:w-[150px]">
+                 <Select 
+                   value={statusFilter}
+                   onChange={(e) => setStatusFilter(e.target.value)}
+                   options={[
+                     { value: "All", label: "Any Status" },
+                     { value: "Applied", label: "Pending App" },
+                     { value: "Accepted", label: "Approved" },
+                     { value: "Rejected", label: "Denied" },
+                     { value: "None", label: "Not Applied" },
+                   ]}
+                   className="h-11 text-xs shadow-sm border-slate-100 rounded-xl"
+                 />
+               </div>
+               <div className="w-full sm:w-[150px]">
+                 <Select 
+                   value={matchFilter}
+                   onChange={(e) => setMatchFilter(e.target.value)}
+                   options={[
+                     { value: "All", label: "Any Match" },
+                     { value: "70", label: "70%+ Match" },
+                     { value: "40", label: "40%+ Match" },
+                   ]}
+                   className="h-11 text-xs shadow-sm border-slate-100 rounded-xl"
+                 />
+               </div>
+               <div className="w-full sm:w-[150px]">
+                 <Select 
+                   value={sortBy}
+                   onChange={(e) => setSortBy(e.target.value)}
+                   options={[
+                     { value: "match", label: "Best Match" },
+                     { value: "deadline", label: "Soonest Deadline" },
+                     { value: "company", label: "Company (A-Z)" },
+                   ]}
+                   className="h-11 text-xs shadow-sm border-slate-100 rounded-xl"
+                 />
+               </div>
+            </div>
+          </div>
         </Stack>
 
-        <Box
-          display="grid"
-          gridTemplateColumns={{
-            xs: "1fr",
-            md: "1fr 1fr",
-            lg: "repeat(3, 1fr)",
-          }}
-          gap={3}
-          sx={{ animationFillMode: "forwards" }}
-        >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {filteredInternships.length > 0 ? (
             filteredInternships.map((internship, index) => (
-              <Fade
-                in={true}
+              <div 
                 key={internship.id}
-                timeout={300}
-                style={{ transitionDelay: `${index * 50}ms` }}
+                className="animate-in fade-in slide-in-from-bottom-8 duration-500 ease-out"
+                style={{ animationDelay: `${index * 50}ms` }}
               >
-                <Box>
-                  <InternshipCard internship={internship} />
-                </Box>
-              </Fade>
+                <InternshipCard internship={internship} />
+              </div>
             ))
           ) : (
-            <Box gridColumn="1 / -1" textAlign="center" py={6}>
-              <Typography color="text.secondary" variant="h6">
+            <div className="col-span-full py-20 text-center bg-white rounded-3xl border border-dashed border-slate-200">
+              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <FiSearch className="w-10 h-10 text-slate-300" />
+              </div>
+              <Typography variant="h5" color="muted">
                 No internships found. Try adjusting your filters.
               </Typography>
-            </Box>
+            </div>
           )}
-        </Box>
-      </Box>
-      <Dialog
-        open={analysisOpen}
+        </div>
+      </main>
+
+      <Modal
+        isOpen={analysisOpen}
         onClose={handleCloseAnalysis}
-        fullWidth
-        maxWidth="md"
+        title="CV Analysis & Match Results"
+        size="lg"
+        footer={<Button onClick={handleCloseAnalysis}>Close</Button>}
       >
-        <DialogTitle sx={{ fontWeight: "bold" }}>
-          CV Analysis & Internship Match
-        </DialogTitle>
-        <DialogContent dividers>
-          {internships.length === 0 ? (
-            <Typography color="text.secondary">
-              No internships available for analysis.
-            </Typography>
-          ) : (
-            <Stack spacing={3}>
-              {internships.map((internship) => (
-                <Box key={internship.id}>
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    mb={1}
-                  >
-                    <Box>
-                      <Typography fontWeight="bold">
-                        {internship.role}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {internship.company}
-                      </Typography>
-                    </Box>
+        {internships.length === 0 ? (
+          <Typography color="muted" className="text-center py-10">
+            No internships available for analysis.
+          </Typography>
+        ) : (
+          <Stack spacing={8}>
+            {internships.map((internship) => (
+              <div key={internship.id} className="group">
+                <Stack direction="row" justify="between" align="center" className="mb-4">
+                  <div>
+                    <Typography variant="h5" weight="bold" className="group-hover:text-[#667eea] transition-colors">
+                      {internship.role}
+                    </Typography>
+                    <Typography variant="body2" color="muted">
+                      {internship.company}
+                    </Typography>
+                  </div>
 
-                    {internship.matchPercentage !== undefined ? (
-                      <Chip
-                        label={`${internship.matchPercentage}% Match`}
-                        color={
-                          internship.matchPercentage >= 70
-                            ? "success"
-                            : internship.matchPercentage >= 40
-                              ? "warning"
-                              : "error"
-                        }
-                        sx={{ fontWeight: 600 }}
-                      />
-                    ) : (
-                      <Chip label="Not analyzed" variant="outlined" />
-                    )}
-                  </Stack>
-
-                  {internship.matchPercentage !== undefined && (
-                    <LinearProgress
-                      variant="determinate"
-                      value={internship.matchPercentage}
-                      sx={{ height: 8, borderRadius: 5 }}
-                    />
+                  {internship.matchPercentage !== undefined ? (
+                    <Badge 
+                      variant={getMatchColor(internship.matchPercentage)}
+                      className="px-4 py-1.5 rounded-xl font-bold"
+                    >
+                      {internship.matchPercentage}% Match
+                    </Badge>
+                  ) : (
+                    <Badge variant="slate" className="px-4 py-1.5 rounded-xl">Not analyzed</Badge>
                   )}
+                </Stack>
 
-                  <Divider sx={{ mt: 2 }} />
-                </Box>
-              ))}
-            </Stack>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseAnalysis}>Close</Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+                {internship.matchPercentage !== undefined && (
+                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-1000 ease-out ${
+                        internship.matchPercentage >= 70 ? 'bg-emerald-500' : 
+                        internship.matchPercentage >= 40 ? 'bg-amber-500' : 'bg-red-500'
+                      }`}
+                      style={{ width: `${internship.matchPercentage}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </Stack>
+        )}
+      </Modal>
+
+      {notificationOpen && (
+        <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 px-8 py-4 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-6 duration-300 z-[100] border ${
+          notificationSeverity === "success" 
+            ? "bg-emerald-50 text-emerald-700 border-emerald-100" 
+            : "bg-red-50 text-red-700 border-red-100"
+        }`}>
+          <Typography variant="body2" weight="bold">{notificationMessage}</Typography>
+        </div>
+      )}
+    </div>
   );
 };
 

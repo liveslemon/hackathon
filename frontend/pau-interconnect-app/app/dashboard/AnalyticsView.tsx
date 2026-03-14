@@ -1,89 +1,94 @@
 "use client";
+
 import {
-  Box,
-  AppBar,
-  Toolbar,
   Typography,
-  Button,
   Card,
   CardContent,
-  Avatar,
   Stack,
-  LinearProgress,
-} from "@mui/material";
-import Grid from "@mui/material/Grid";
-import { FaBriefcase, FaUsers, FaChartLine } from "react-icons/fa";
-
-const stats = [
-  {
-    title: "Total Internships",
-    value: 8,
-    icon: <FaBriefcase />,
-    color: "#1976d2",
-  },
-  {
-    title: "Total Applications",
-    value: 0,
-    icon: <FaUsers />,
-    color: "#1976d2",
-  },
-  {
-    title: "Avg Applications",
-    value: "0.0",
-    icon: <FaChartLine />,
-    color: "#1976d2",
-  },
-];
+} from "@/components/ui";
+import { FiBriefcase, FiUsers, FiTrendingUp } from "react-icons/fi";
 
 export default function AnalyticsView({
   categories,
 }: {
   categories: { label: string; value: number }[];
 }) {
+  const stats = [
+    {
+      title: "Total Internships",
+      value: categories.reduce((acc, cat) => acc + cat.value, 0),
+      icon: <FiBriefcase className="w-6 h-6" />,
+      color: "bg-blue-500",
+      accent: "text-blue-500",
+      shadow: "shadow-blue-100",
+    },
+    {
+      title: "Total Applications",
+      value: 0, // This would need to be fetched or passed
+      icon: <FiUsers className="w-6 h-6" />,
+      color: "bg-emerald-500",
+      accent: "text-emerald-500",
+      shadow: "shadow-emerald-100",
+    },
+    {
+      title: "Avg Applications",
+      value: "0.0",
+      icon: <FiTrendingUp className="w-6 h-6" />,
+      color: "bg-amber-500",
+      accent: "text-amber-500",
+      shadow: "shadow-amber-100",
+    },
+  ];
+
   return (
-    <Box p={3} style={{ backgroundColor: "#fff" }}>
-      <Grid container spacing={3} mt={2}>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={3} mt={2}>
-          {stats.map((item, idx) => (
-            <Card key={idx} sx={{ flex: 1, borderRadius: 3 }}>
-              <CardContent>
-                <Stack direction="row" spacing={2} alignItems="center">
-                  <Avatar sx={{ background: item.color }}>{item.icon}</Avatar>
-                  <Box>
-                    <Typography variant="body2">{item.title}</Typography>
-                    <Typography variant="h5" fontWeight="bold">
-                      {item.value}
-                    </Typography>
-                  </Box>
-                </Stack>
-              </CardContent>
-            </Card>
-          ))}
-        </Stack>
-      </Grid>
-
-      {/* Category Bars */}
-      <Box mt={5}>
-        <Typography variant="h6" mb={2} fontWeight="bold">
-          Internships by Category
-        </Typography>
-
-        {categories.map((cat, idx) => (
-          <Stack
-            key={idx}
-            direction="row"
-            alignItems="center"
-            spacing={2}
-            mb={1}
-          >
-            <Typography sx={{ width: 130 }}>{cat.label}</Typography>
-            <Box sx={{ flexGrow: 1 }}>
-              <LinearProgress variant="determinate" value={cat.value * 50} />
-            </Box>
-            <Typography>{cat.value}</Typography>
-          </Stack>
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-500">
+      <Stack direction="row" spacing={6} className="flex-wrap gap-y-6">
+        {stats.map((item, idx) => (
+          <Card key={idx} className={`flex-1 min-w-[240px] border-slate-100 shadow-xl ${item.shadow} hover:scale-[1.02] transition-transform duration-300`}>
+            <CardContent className="p-8">
+              <Stack direction="row" spacing={4} align="center">
+                <div className={`w-14 h-14 ${item.color} text-white rounded-2xl flex items-center justify-center shadow-lg shadow-current/20`}>
+                  {item.icon}
+                </div>
+                <div className="space-y-1">
+                  <Typography variant="body2" weight="bold" color="muted" className="uppercase tracking-widest text-[10px]">
+                    {item.title}
+                  </Typography>
+                  <Typography variant="h2" weight="bold" className="text-slate-900">
+                    {item.value}
+                  </Typography>
+                </div>
+              </Stack>
+            </CardContent>
+          </Card>
         ))}
-      </Box>
-    </Box>
+      </Stack>
+
+      <Card className="border-slate-100 shadow-sm overflow-hidden">
+        <div className="bg-slate-50/50 px-8 py-6 border-b border-slate-100">
+          <Typography variant="h4" weight="bold">Internships by Category</Typography>
+        </div>
+        <CardContent className="p-8 space-y-8">
+          {categories.map((cat, idx) => {
+            const total = categories.reduce((acc, c) => acc + c.value, 0);
+            const percentage = total > 0 ? (cat.value / total) * 100 : 0;
+            return (
+              <div key={idx} className="space-y-3">
+                <div className="flex justify-between items-center px-1">
+                  <Typography variant="body1" weight="bold" className="text-slate-700">{cat.label}</Typography>
+                  <Typography variant="body2" weight="bold" color="primary">{cat.value}</Typography>
+                </div>
+                <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                  <div 
+                    className="h-full bg-gradient-to-r from-[#667eea] to-[#764ba2] rounded-full transition-all duration-1000 ease-out"
+                    style={{ width: `${percentage}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

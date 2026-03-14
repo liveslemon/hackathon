@@ -2,25 +2,24 @@
 
 import { useState } from "react";
 import {
-  Box,
-  TextField,
   Typography,
   Stack,
   Button,
-  MenuItem,
-  Chip
-} from "@mui/material";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { LocalizationProvider } from "@mui/x-date-pickers";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+  Input,
+  Textarea,
+  Select,
+  Badge,
+} from "@/components/ui";
+import { FiBriefcase, FiPlus, FiCheckCircle, FiAlertCircle } from "react-icons/fi";
+import { supabase } from "@/lib/supabaseClient";
 
 const categories = [
-  "Technology",
-  "Finance",
-  "Consulting",
-  "Healthcare",
-  "Design",
-  "Marketing"
+  { value: "Technology", label: "Technology" },
+  { value: "Finance", label: "Finance" },
+  { value: "Consulting", label: "Consulting" },
+  { value: "Healthcare", label: "Healthcare" },
+  { value: "Design", label: "Design" },
+  { value: "Marketing", label: "Marketing" }
 ];
 
 const interestsOptions = [
@@ -31,8 +30,19 @@ const interestsOptions = [
 ];
 
 export default function PostInternshipView() {
+  const [formData, setFormData] = useState({
+    company: "",
+    role: "",
+    field: "",
+    category: "",
+    description: "",
+    requirements: "",
+    linkedin_url: "",
+  });
   const [interests, setInterests] = useState<string[]>([]);
-  const [deadline, setDeadline] = useState<Date | null>(null);
+  const [deadline, setDeadline] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   const toggleInterest = (item: string) => {
     setInterests(prev =>
@@ -42,107 +52,165 @@ export default function PostInternshipView() {
     );
   };
 
-  return (
-    <Box
-      sx={{
-        background: "#fff",
-        borderRadius: "12px",
-        p: 4,
-        mt: 3,
-        border: "1px solid #e5e7eb"
-      }}
-    >
-      <Typography fontSize={18} fontWeight={700} mb={3}>
-        + Post New Internship
-      </Typography>
-
-      {/* Top Half */}
-      <Stack direction={{ xs: "column", md: "row" }} gap={2}>
-        <TextField label="Company Name *" fullWidth />
-        <TextField label="Role Title *" fullWidth />
-      </Stack>
-
-      <Stack direction={{ xs: "column", md: "row" }} gap={2} mt={2}>
-        <TextField label="Field *" fullWidth />
-        <TextField label="Category *" select fullWidth>
-          {categories.map(cat => (
-            <MenuItem key={cat} value={cat}>{cat}</MenuItem>
-          ))}
-        </TextField>
-      </Stack>
-
-      <TextField
-        label="Description *"
-        fullWidth
-        multiline
-        rows={3}
-        sx={{ mt: 2 }}
-      />
-
-      <TextField
-        label="Requirements * (One per line)"
-        fullWidth
-        multiline
-        rows={3}
-        sx={{ mt: 2 }}
-      />
-
-      {/* Interests */}
-      <Box mt={3}>
-        <Typography fontSize={14} mb={1}>
-          Related Interests * (Select at least one)
-        </Typography>
-
-        <Stack
-          direction="row"
-          flexWrap="wrap"
-          gap={1.5}
-        >
-          {interestsOptions.map(option => (
-            <Chip
-              key={option}
-              label={option}
-              clickable
-              onClick={() => toggleInterest(option)}
-              color={interests.includes(option) ? "primary" : "default"}
-              variant={interests.includes(option) ? "filled" : "outlined"}
-            />
-          ))}
-        </Stack>
-      </Box>
-
-      <Stack direction={{ xs: "column", md: "row" }} gap={2} mt={3}>
-           <LocalizationProvider dateAdapter={AdapterDateFns}>
+  const handlePost = async () => {
+    setLoading(true);
+    setStatus(null);
     
-        <DatePicker
-          label="Application Deadline *"
-          value={deadline}
-          onChange={(newValue) => setDeadline(newValue)}
-          slotProps={{ textField: { fullWidth: true } }}
-        />
-        </LocalizationProvider>
-        <TextField
-          label="Recruiter LinkedIn URL"
-          fullWidth
-          placeholder="https://www.linkedin.com/company/..."
-        />
-      </Stack>
+    try {
+      const { error } = await supabase.from("internships").insert([
+        {
+          ...formData,
+          interests,
+          deadline,
+          created_at: new Error().stack, // Just as a placeholder for current time if needed
+        }
+      ]);
 
+      if (error) throw error;
+      
+      setStatus({ type: 'success', message: "Internship posted successfully!" });
+      // Clear form
+      setFormData({
+        company: "",
+        role: "",
+        field: "",
+        category: "",
+        description: "",
+        requirements: "",
+        linkedin_url: "",
+      });
+      setInterests([]);
+      setDeadline("");
+    } catch (err: any) {
+      setStatus({ type: 'error', message: err.message || "Failed to post internship" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      <Button
-        variant="contained"
-        fullWidth
-        sx={{
-          mt: 3,
-          backgroundColor: "#3949ab",
-          textTransform: "none",
-          fontWeight: 700,
-          borderRadius: "8px",
-          p: 1.5
-        }}
-      >
-        Post Internship
-      </Button>
-    </Box>
+  return (
+    <div className="max-w-4xl mx-auto pb-12">
+      <div className="bg-white rounded-[32px] shadow-2xl shadow-indigo-50/50 border border-slate-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-slate-50 to-white px-10 py-8 border-b border-slate-100 flex items-center justify-between">
+          <Stack direction="row" align="center" spacing={4}>
+            <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
+              <FiBriefcase className="w-6 h-6" />
+            </div>
+            <div>
+              <Typography variant="h3" weight="bold">Post New Internship</Typography>
+              <Typography variant="body2" color="muted">Fill in the details to reach top students</Typography>
+            </div>
+          </Stack>
+        </div>
+
+        <div className="p-10 space-y-10">
+          {status && (
+            <div className={`p-4 rounded-2xl flex items-center gap-3 animate-in fade-in zoom-in duration-300 ${
+              status.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'
+            }`}>
+              {status.type === 'success' ? <FiCheckCircle className="w-5 h-5" /> : <FiAlertCircle className="w-5 h-5" />}
+              <Typography variant="body2" weight="bold">{status.message}</Typography>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <Input
+              label="Company Name"
+              placeholder="e.g. Google"
+              value={formData.company}
+              onChange={(e) => setFormData({...formData, company: e.target.value})}
+              required
+            />
+            <Input
+              label="Role Title"
+              placeholder="e.g. Software Engineer Intern"
+              value={formData.role}
+              onChange={(e) => setFormData({...formData, role: e.target.value})}
+              required
+            />
+            <Input
+              label="Field of Study"
+              placeholder="e.g. Computer Science"
+              value={formData.field}
+              onChange={(e) => setFormData({...formData, field: e.target.value})}
+              required
+            />
+            <Select
+              label="Industry Category"
+              options={categories}
+              value={formData.category}
+              onChange={(value) => setFormData({...formData, category: value})}
+              placeholder="Select category"
+              required
+            />
+          </div>
+
+          <Textarea
+            label="Job Description"
+            placeholder="Describe the role, responsibilities, and team..."
+            value={formData.description}
+            onChange={(e) => setFormData({...formData, description: e.target.value})}
+            rows={4}
+            required
+          />
+
+          <Textarea
+            label="Requirements"
+            placeholder="List key qualifications, skills, and tools (one per line)..."
+            value={formData.requirements}
+            onChange={(e) => setFormData({...formData, requirements: e.target.value})}
+            rows={4}
+            required
+          />
+
+          <div className="space-y-4">
+            <Typography variant="body2" weight="bold" className="text-slate-700 ml-1">Related Interests</Typography>
+            <div className="flex flex-wrap gap-2">
+              {interestsOptions.map(option => (
+                <button
+                  key={option}
+                  onClick={() => toggleInterest(option)}
+                  className={`px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${
+                    interests.includes(option)
+                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 ring-2 ring-indigo-600 ring-offset-2'
+                      : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-slate-100'
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+            <div className="space-y-2">
+              <Typography variant="body2" weight="bold" className="text-slate-700 ml-1">Application Deadline</Typography>
+              <input
+                type="date"
+                className="w-full h-[52px] px-4 rounded-xl border border-slate-100 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-slate-700"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+              />
+            </div>
+            <Input
+              label="Recruiter LinkedIn URL"
+              placeholder="https://linkedin.com/in/..."
+              value={formData.linkedin_url}
+              onChange={(e) => setFormData({...formData, linkedin_url: e.target.value})}
+            />
+          </div>
+
+          <Button
+            className="w-full py-4 rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100"
+            size="lg"
+            isLoading={loading}
+            onClick={handlePost}
+            leftIcon={<FiPlus className="w-6 h-6" />}
+          >
+            Post Internship Position
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }

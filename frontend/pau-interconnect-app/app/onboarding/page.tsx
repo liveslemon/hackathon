@@ -1,22 +1,17 @@
-// "use client" directive for Next.js App Router
 "use client";
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import {
-  Box,
-  Container,
-  Typography,
-  TextField,
   Button,
-  Grid,
-  LinearProgress,
-  Stack,
-  Snackbar,
-  Alert,
-  CircularProgress,
   Card,
-} from "@mui/material";
+  CardContent,
+  CardHeader,
+  Input,
+  Typography,
+  Stack,
+  Container,
+} from "@/components/ui";
 import { AiOutlineArrowLeft, AiOutlineArrowRight } from "react-icons/ai";
 import { FileUpload } from "@/components/application/file-upload/file-upload-base";
 
@@ -129,7 +124,6 @@ export default function Onboarding() {
   // --- Step 4: CV Upload ---
   function handleDropFiles(files: FileList) {
     const arr = Array.from(files);
-    // Only PDF, max 5MB
     const pdf = arr.find(
       (file) =>
         (file.type === "application/pdf" ||
@@ -179,7 +173,6 @@ export default function Onboarding() {
 
   // --- Step 5: Submit ---
   async function handleSubmit() {
-    // Console verify before submit
     if (
       !formData.name.trim() ||
       !formData.email.trim() ||
@@ -216,31 +209,8 @@ export default function Onboarding() {
       });
       return;
     }
-    // If CV file exists, validate again
-    if (formData.cvFile) {
-      if (
-        formData.cvFile.type !== "application/pdf" &&
-        !formData.cvFile.name.toLowerCase().endsWith(".pdf")
-      ) {
-        setSnackbar({
-          open: true,
-          message: "CV must be a PDF file.",
-          severity: "error",
-        });
-        return;
-      }
-      if (formData.cvFile.size > 5 * 1024 * 1024) {
-        setSnackbar({
-          open: true,
-          message: "CV file is too large. Max 5MB.",
-          severity: "error",
-        });
-        return;
-      }
-    }
     setIsSubmitting(true);
     try {
-      // 1. Sign up user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -260,7 +230,6 @@ export default function Onboarding() {
         throw new Error("User ID not returned from signup");
       }
 
-      // Create profile row immediately so backend validation passes
       const { error: profileInsertError } = await supabase
         .from("profiles")
         .insert({
@@ -285,7 +254,6 @@ export default function Onboarding() {
       }
       let cvUrl: string | null = null;
 
-      // 2. Send CV to backend for upload + extraction + analysis
       if (formData.cvFile && user_id) {
         const backendFormData = new FormData();
         backendFormData.append("user_id", user_id);
@@ -317,13 +285,7 @@ export default function Onboarding() {
           });
         }
       }
-      // 3. Log user_id and file info
-      console.log("User ID:", user_id);
-      console.log("Backend CV processing result:", {
-        url: cvUrl,
-        size: formData.cvFile?.size,
-      });
-      // 4. Store pendingProfile in localStorage
+
       const pendingProfile = {
         full_name: formData.name,
         course: formData.course,
@@ -334,7 +296,6 @@ export default function Onboarding() {
       try {
         localStorage.setItem("pendingProfile", JSON.stringify(pendingProfile));
       } catch (e) {
-        // eslint-disable-next-line no-console
         console.warn("Could not write pendingProfile to localStorage", e);
       }
       setSnackbar({
@@ -359,309 +320,259 @@ export default function Onboarding() {
     setSnackbar((prev) => ({ ...prev, open: false }));
   }
 
-  // --- UI ---
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        bgcolor: "primary.main",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-        px: { xs: 2, sm: 4 },
-        overflowY: "auto",
-      }}
-    >
-      <Container
-        sx={{
-          py: { xs: 6, sm: 8, md: 10 },
-          px: { xs: 2, sm: 4, md: 6 },
-          maxWidth: { xs: "100%", sm: "600px", md: "700px", lg: "800px" },
-          borderRadius: 3,
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-          backgroundColor: "#fff",
-        }}
-      >
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" component="h2" gutterBottom>
-            {step === 1 && "Personal Information"}
-            {step === 2 && "Academic Details"}
-            {step === 3 && "Select Your Level"}
-            {step === 4 && "Career Interests & CV"}
-            {step === 5 && "Email Confirmation"}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Step {step} of 5
-          </Typography>
-          <LinearProgress
-            variant="determinate"
-            value={(step / 5) * 100}
-            sx={{ mt: 2, height: 10, borderRadius: 5 }}
-          />
-        </Box>
-
-        {/* Step 1: Personal Info */}
-        {step === 1 && (
-          <Stack spacing={3}>
-            <TextField
-              label="Full Name *"
-              placeholder="John Doe"
-              value={formData.name}
-              onChange={(e) => handleInputChange("name", e.target.value)}
-              fullWidth
-              disabled={isSubmitting}
-            />
-            <TextField
-              label="PAU Email *"
-              type="email"
-              placeholder="john.doe@pau.edu.ng"
-              value={formData.email}
-              onChange={(e) => handleInputChange("email", e.target.value)}
-              fullWidth
-              disabled={isSubmitting}
-            />
-            <TextField
-              label="Password *"
-              type="password"
-              placeholder="Enter your password"
-              value={formData.password}
-              onChange={(e) => handleInputChange("password", e.target.value)}
-              fullWidth
-              disabled={isSubmitting}
-              inputProps={{ minLength: 6 }}
-            />
-          </Stack>
-        )}
-
-        {/* Step 2: Course */}
-        {step === 2 && (
-          <Box>
-            <Typography variant="subtitle1" gutterBottom>
-              Select Your Course *
+    <div className="min-h-screen bg-gradient-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center p-6 overflow-y-auto">
+      <Container className="max-w-3xl w-full">
+        <Card className="p-8 md:p-12 overflow-hidden shadow-2xl transition-all duration-500">
+          <div className="mb-10">
+            <Typography variant="h2" weight="bold" className="mb-3 text-slate-800">
+              {step === 1 && "Personal Information"}
+              {step === 2 && "Academic Details"}
+              {step === 3 && "Select Your Level"}
+              {step === 4 && "Career Interests & CV"}
+              {step === 5 && "Email Confirmation"}
             </Typography>
-            <Grid container spacing={2}>
-              {courses.map((course) => (
-                <Grid item xs={6} key={course}>
-                  <Button
-                    variant={
-                      formData.course === course ? "contained" : "outlined"
-                    }
-                    fullWidth
-                    onClick={() => handleCourseSelect(course)}
-                    disabled={isSubmitting}
-                  >
-                    {course}
-                  </Button>
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-        )}
-
-        {/* Step 3: Level */}
-        {step === 3 && (
-          <Box>
-            <Typography variant="subtitle1" gutterBottom>
-              Select Your Level *
-            </Typography>
-            <Grid container spacing={2}>
-              {levels.map((lvl) => (
-                <Grid item xs={6} sm={3} key={lvl}>
-                  <Button
-                    variant={formData.level === lvl ? "contained" : "outlined"}
-                    fullWidth
-                    onClick={() => handleLevelSelect(lvl)}
-                    disabled={isSubmitting}
-                  >
-                    {lvl}
-                  </Button>
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-        )}
-
-        {/* Step 4: Interests and CV */}
-        {step === 4 && (
-          <Stack spacing={4}>
-            <Box>
-              <Typography variant="subtitle1" gutterBottom>
-                Select Your Interests * (Choose at least one)
+            <div className="flex justify-between items-center mb-6">
+              <Typography variant="body2" color="muted">
+                Step {step} of 5
               </Typography>
-              <Grid container spacing={2}>
-                {interests.map((interest) => (
-                  <Grid item xs={6} key={interest}>
+              <Typography variant="caption" weight="bold" color="secondary">
+                {Math.round((step / 5) * 100)}% Complete
+              </Typography>
+            </div>
+            <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+               <div 
+                 className="h-full bg-gradient-to-r from-[#667eea] to-[#764ba2] transition-all duration-700 ease-out"
+                 style={{ width: `${(step / 5) * 100}%` }}
+               />
+            </div>
+          </div>
+
+          <div className="min-h-[320px] transition-all duration-300">
+            {/* Step 1: Personal Info */}
+            {step === 1 && (
+              <Stack spacing={6}>
+                <Input
+                  label="Full Name *"
+                  placeholder="John Doe"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange("name", e.target.value)}
+                  disabled={isSubmitting}
+                />
+                <Input
+                  label="PAU Email *"
+                  type="email"
+                  placeholder="john.doe@pau.edu.ng"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
+                  disabled={isSubmitting}
+                />
+                <Input
+                  label="Password *"
+                  type="password"
+                  placeholder="Create a strong password"
+                  value={formData.password}
+                  onChange={(e) => handleInputChange("password", e.target.value)}
+                  disabled={isSubmitting}
+                />
+              </Stack>
+            )}
+
+            {/* Step 2: Course */}
+            {step === 2 && (
+              <div>
+                <Typography variant="h6" weight="bold" className="mb-6 text-slate-700">Select Your Course *</Typography>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {courses.map((course) => (
                     <Button
-                      variant={
-                        formData.interests.includes(interest)
-                          ? "contained"
-                          : "outlined"
-                      }
-                      fullWidth
-                      onClick={() => handleInterestToggle(interest)}
+                      key={course}
+                      variant={formData.course === course ? "solid" : "outline"}
+                      onClick={() => handleCourseSelect(course)}
                       disabled={isSubmitting}
+                      className="justify-start px-6 h-14"
                     >
-                      {interest}
+                      {course}
                     </Button>
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-            <Box>
-              <Typography variant="subtitle1" gutterBottom>
-                Upload CV/Resume (Optional)
-              </Typography>
-              <FileUpload.Root>
-                {uploadedFiles.length === 0 && (
-                  <FileUpload.DropZone
-                    isDisabled={isSubmitting}
-                    onDropFiles={handleDropFiles}
-                    accept="application/pdf"
-                  />
-                )}
-                {uploadedFiles.length === 0 && (
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ display: "block", mt: 1 }}
-                  >
-                    Format: PDF only (Max 5MB)
-                  </Typography>
-                )}
-                <FileUpload.List>
-                  {uploadedFiles.map((file) => (
-                    <FileUpload.ListItemProgressBar
-                      key={file.id}
-                      {...file}
-                      size={file.size}
-                      onDelete={() => handleDeleteFile(file.id)}
-                      onRetry={() => handleRetryFile(file.id)}
-                    />
                   ))}
-                </FileUpload.List>
-              </FileUpload.Root>
-            </Box>
-          </Stack>
-        )}
+                </div>
+              </div>
+            )}
 
-        {/* Step 5: Email Confirmation */}
-        {step === 5 && (
-          <Card sx={{ p: 4, mb: 4 }}>
-            <Typography variant="h5" gutterBottom>
-              Check your email to confirm your account
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              We have sent a confirmation link to{" "}
-              <strong>{formData.email}</strong>. Click the link to finish
-              setting up your account.
-            </Typography>
-            <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+            {/* Step 3: Level */}
+            {step === 3 && (
+              <div>
+                <Typography variant="h6" weight="bold" className="mb-6 text-slate-700">Select Your Level *</Typography>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {levels.map((lvl) => (
+                    <Button
+                      key={lvl}
+                      variant={formData.level === lvl ? "solid" : "outline"}
+                      onClick={() => handleLevelSelect(lvl)}
+                      disabled={isSubmitting}
+                      className="h-20 text-xl"
+                    >
+                      {lvl}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Interests and CV */}
+            {step === 4 && (
+              <Stack spacing={10}>
+                <div>
+                  <Typography variant="h6" weight="bold" className="mb-6 text-slate-700">Career Interests *</Typography>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {interests.map((interest) => (
+                      <Button
+                        key={interest}
+                        variant={formData.interests.includes(interest) ? "solid" : "outline"}
+                        size="sm"
+                        onClick={() => handleInterestToggle(interest)}
+                        disabled={isSubmitting}
+                        className="text-xs py-3"
+                      >
+                        {interest}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <Typography variant="h6" weight="bold" className="mb-4 text-slate-700">Upload CV/Resume (Optional)</Typography>
+                  <FileUpload.Root>
+                    {uploadedFiles.length === 0 && (
+                      <FileUpload.DropZone
+                        isDisabled={isSubmitting}
+                        onDropFiles={handleDropFiles}
+                        accept="application/pdf"
+                      />
+                    )}
+                    <FileUpload.List>
+                      {uploadedFiles.map((file) => (
+                        <FileUpload.ListItemProgressBar
+                          key={file.id}
+                          {...file}
+                          size={file.size}
+                          onDelete={() => handleDeleteFile(file.id)}
+                          onRetry={() => handleRetryFile(file.id)}
+                        />
+                      ))}
+                    </FileUpload.List>
+                  </FileUpload.Root>
+                  <Typography variant="caption" color="muted" className="mt-4 block italic">
+                    PDF files only, max 5MB
+                  </Typography>
+                </div>
+              </Stack>
+            )}
+
+            {/* Step 5: Email Confirmation */}
+            {step === 5 && (
+              <div className="text-center py-8">
+                <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
+                   <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                   </svg>
+                </div>
+                <Typography variant="h3" className="mb-4">Check your email!</Typography>
+                <Typography variant="body1" color="muted" className="mb-10 max-w-sm mx-auto">
+                  We've sent a verification link to <span className="text-slate-900 font-bold">{formData.email}</span>. Click it to activate your account.
+                </Typography>
+                
+                <Stack direction="col" spacing={3}>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        const { error } = await supabase.auth.signInWithOtp({
+                          email: formData.email,
+                        });
+                        if (error) throw error;
+                        setSnackbar({ open: true, message: "Verification email resent.", severity: "success" });
+                      } catch (e: any) {
+                        setSnackbar({ open: true, message: `Failed: ${e.message}`, severity: "error" });
+                      }
+                    }}
+                    disabled={isSubmitting}
+                    variant="outline"
+                  >
+                    Resend verification email
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    colorType="secondary"
+                    onClick={() => router.push("/login/student")}
+                  >
+                    Go to sign in 
+                  </Button>
+                </Stack>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-between items-center mt-12 pt-8 border-t border-slate-100">
+            {step > 1 && step < 5 && (
               <Button
-                variant="contained"
-                onClick={async () => {
-                  try {
-                    const { error } = await supabase.auth.signInWithOtp({
-                      email: formData.email,
-                    });
-                    if (error) throw error;
-                    setSnackbar({
-                      open: true,
-                      message: "Verification email resent.",
-                      severity: "success",
-                    });
-                  } catch (e: any) {
-                    setSnackbar({
-                      open: true,
-                      message: `Failed to resend: ${e.message}`,
-                      severity: "error",
-                    });
-                  }
-                }}
+                variant="ghost"
+                leftIcon={<AiOutlineArrowLeft />}
+                onClick={() => setStep(step - 1)}
                 disabled={isSubmitting}
               >
-                Resend verification email
+                Back
               </Button>
-              <Button
-                variant="outlined"
-                onClick={() => router.push("/login/student")}
-                disabled={isSubmitting}
-              >
-                Go to sign in
-              </Button>
-            </Stack>
-          </Card>
+            )}
+            <div className="ml-auto flex gap-4">
+               {step < 4 && (
+                 <Button
+                   rightIcon={<AiOutlineArrowRight />}
+                   onClick={() => setStep(step + 1)}
+                   className="min-w-[120px]"
+                   disabled={
+                     isSubmitting ||
+                     (step === 1 && (!formData.name.trim() || !formData.email.trim() || formData.password.length < 6)) ||
+                     (step === 2 && !formData.course) ||
+                     (step === 3 && !formData.level)
+                   }
+                 >
+                   Next
+                 </Button>
+               )}
+               {step === 4 && (
+                 <Button
+                   onClick={handleSubmit}
+                   className="min-w-[160px]"
+                   isLoading={isSubmitting}
+                   disabled={
+                     isSubmitting ||
+                     formData.interests.length === 0 ||
+                     (uploadedFiles.length > 0 && uploadedFiles.some((f) => f.progress < 100))
+                   }
+                 >
+                   {isSubmitting ? "Creating Account..." : "Complete Setup"}
+                 </Button>
+               )}
+            </div>
+          </div>
+        </Card>
+
+        {/* Custom Snackbar/Toast */}
+        {snackbar.open && (
+          <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 px-8 py-4 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-6 duration-300 z-[100] border ${
+            snackbar.severity === "success" 
+              ? "bg-emerald-50 text-emerald-700 border-emerald-100" 
+              : "bg-red-50 text-red-700 border-red-100"
+          }`}>
+             <div className="flex items-center gap-3">
+               <Typography variant="body2" weight="bold">{snackbar.message}</Typography>
+               <button onClick={handleCloseSnackbar} className="ml-4 hover:opacity-100 opacity-50 transition-opacity">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+               </button>
+             </div>
+          </div>
         )}
-
-        {/* Navigation Buttons */}
-        <Box sx={{ display: "flex", justifyContent: "space-between", mt: 4 }}>
-          {step > 1 && step < 5 && (
-            <Button
-              variant="outlined"
-              startIcon={<AiOutlineArrowLeft />}
-              onClick={() => setStep(step - 1)}
-              disabled={isSubmitting}
-            >
-              Back
-            </Button>
-          )}
-          {step < 4 && (
-            <Button
-              variant="contained"
-              endIcon={<AiOutlineArrowRight />}
-              onClick={() => setStep(step + 1)}
-              disabled={
-                isSubmitting ||
-                (step === 1 &&
-                  (!formData.name.trim() ||
-                    !formData.email.trim() ||
-                    formData.password.length < 6)) ||
-                (step === 2 && !formData.course) ||
-                (step === 3 && !formData.level)
-              }
-              sx={{ ml: "auto" }}
-            >
-              Next
-            </Button>
-          )}
-          {step === 4 && (
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleSubmit}
-              disabled={
-                isSubmitting ||
-                formData.interests.length === 0 ||
-                (uploadedFiles.length > 0 &&
-                  uploadedFiles.some((f) => f.progress < 100))
-              }
-              startIcon={
-                isSubmitting ? (
-                  <CircularProgress size={20} color="inherit" />
-                ) : null
-              }
-            >
-              {isSubmitting ? "Processing..." : "Complete Setup"}
-            </Button>
-          )}
-        </Box>
-
-        {/* Snackbar Alerts */}
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={4000}
-          onClose={handleCloseSnackbar}
-          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-        >
-          <Alert
-            onClose={handleCloseSnackbar}
-            severity={snackbar.severity}
-            sx={{ width: "100%" }}
-          >
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
       </Container>
-    </Box>
+    </div>
   );
 }

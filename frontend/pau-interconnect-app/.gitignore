@@ -39,3 +39,26 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Project Specific
+.env
+.env.local
+backend/.env
+backend/backend.log
+backend/uploads/
+backend/__pycache__/
+**/__pycache__/
+**/*.pyc
+
+# Scratch Scripts
+test-api.js
+test-live.js
+test_db.py
+create_cv.py
+get_schema.js
+create_admin.py
+mini_test.py
+test_main_api.py
+test_storage_upload.py
+Alex_Mercer_Stacked_CV.pdf
+public/Alex_Mercer_Stacked_CV.md
