@@ -63,8 +63,19 @@ async def add_debug_header(request: Request, call_next):
     return response
 
 @app.get("/health-check")
+@app.get("/api/health-check")
 def health_check():
-    return {"status": "ok", "version": "v2-diagnostics"}
+    return {"status": "ok", "version": "v3-diagnostic", "path_tried": "health-check"}
+
+@app.api_route("/{path_name:path}", methods=["GET", "POST", "PUT", "DELETE"])
+async def catch_all(request: Request, path_name: str):
+    return {
+        "error": "Path not found in explicit routes",
+        "path_requested": path_name,
+        "full_url": str(request.url),
+        "method": request.method,
+        "version": "v3-diagnostic"
+    }
 
 class AnalyzeRequest(BaseModel):
     user_id: str
