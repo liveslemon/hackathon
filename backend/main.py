@@ -449,7 +449,11 @@ def submit_app(payload: SubmitApplicationRequest):
         # 6. Email Notification (SMTP)
         SMTP_EMAIL = os.getenv("SMTP_EMAIL")
         SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
-        if SMTP_EMAIL and SMTP_PASSWORD:
+        
+        if not SMTP_EMAIL or not SMTP_PASSWORD:
+            logger.warning(f"[SubmitApp] Email block skipped. SMTP_EMAIL: {'Set' if SMTP_EMAIL else 'MISSING'}, SMTP_PASSWORD: {'Set' if SMTP_PASSWORD else 'MISSING'}")
+        else:
+            logger.info(f"[SubmitApp] Preparing to send email notification.")
             try:
                 msg = MIMEMultipart()
                 msg["Subject"] = f"Application: {job.get('role')} - {student.get('full_name')}"
