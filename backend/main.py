@@ -66,6 +66,8 @@ class AnalyzeNewInternshipRequest(BaseModel):
 class DraftCoverLetterRequest(BaseModel):
     user_id: str
     internship_id: str
+    email: str = ""
+    phone: str = ""
 
 class SubmitApplicationRequest(BaseModel):
     user_id: str
@@ -394,8 +396,21 @@ def build_cover_letter(payload: DraftCoverLetterRequest):
         job = job_res.data
         if not job: return JSONResponse({"error": "Not found"}, status_code=404)
 
-        prompt = f"Write a professional cover letter for {job.get('company')} - {job.get('role')}.\nCV: {cv_text}"
-        if not NVIDIA_API_KEY: return {"cover_letter": "Placeholder (Local/Dev)."}
+        prompt = (
+            f"Write a professional Motivation Letter for {job.get('company')} - {job.get('role')}.\n"
+            f"The letter should be addressed from:\n"
+            f"Name: {profile.get('full_name')}\n"
+            f"Email: {payload.email}\n"
+            f"Phone: {payload.phone}\n\n"
+            f"CV CONTENT:\n{cv_text}\n\n"
+            f"IMPORTANT INSTRUCTIONS:\n"
+            f"1. Format it as a Motivation Letter, NOT an email.\n"
+            f"2. Place the student's Name, Email, and Phone number at the very top of the document.\n"
+            f"3. Do NOT include email-specific headers like 'Subject:', 'To:', or 'From:'.\n"
+            f"4. Do NOT include email signatures at the bottom.\n"
+            f"5. Start directly with the professional salutation after the contact info."
+        )
+        if not NVIDIA_API_KEY: return {"cover_letter": "Placeholder Motivation Letter (Local/Dev)."}
 
         resp = requests.post(
             "https://integrate.api.nvidia.com/v1/chat/completions",
@@ -447,8 +462,10 @@ def submit_app(payload: SubmitApplicationRequest):
         }).execute()
         logger.info("[SubmitApp] Application record created.")
         
-        # 6. Email Notification (Resend API)
+        # Send Email via Resend API (HTTP-based, bypasses Render SMTP block)
         resend_api_key = os.getenv("RESEND_API_KEY")
+        resend_from = os.getenv("RESEND_FROM_EMAIL", "PAU Interconnect <onboarding@resend.dev>")
+        
         if not resend_api_key:
             logger.warning("[SubmitApp] RESEND_API_KEY not found. Skipping email notification.")
         else:
@@ -484,7 +501,7 @@ def submit_app(payload: SubmitApplicationRequest):
                 reply_to = payload.student_email or student.get("email") or os.getenv("SMTP_EMAIL")
                 
                 params = {
-                    "from": "PAU Interconnect <onboarding@resend.dev>",
+                    "from": resend_from,
                     "to": [target_email],
                     "reply_to": reply_to,
                     "subject": f"Application: {job_role} - {student_name}",
