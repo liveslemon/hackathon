@@ -209,6 +209,11 @@ app.add_middleware(
 
 @app.middleware("http")
 async def add_custom_headers(request: Request, call_next):
+    # Normalize path to handle double slashes (e.g. //upload-and-analyze)
+    if "//" in request.url.path:
+        new_path = re.sub(r'/{2,}', '/', request.url.path)
+        request.scope["path"] = new_path
+        
     response = await call_next(request)
     response.headers["X-Backend-Version"] = "v4.1-stable"
     return response
