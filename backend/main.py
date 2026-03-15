@@ -431,21 +431,45 @@ def submit_app(payload: SubmitApplicationRequest):
         if SMTP_EMAIL and SMTP_PASSWORD:
             try:
                 msg = MIMEMultipart()
-                msg["Subject"] = f"New Application: {job.get('role')} - {student.get('full_name')}"
+                msg["Subject"] = f"Application: {job.get('role')} - {student.get('full_name')}"
                 msg["From"] = SMTP_EMAIL
-                msg["To"] = job.get('employer_email') or "admin@example.com"
+                target_email = job.get('employer_email') or "admin@example.com"
+                msg["To"] = target_email
                 
-                body = f"A student has applied for {job.get('role')}.\n\nName: {student.get('full_name')}\nScore: {match_score}%\n\nCover Letter:\n{payload.cover_letter}"
+                body = f"A student has applied for {job.get('role')}.\n\nName: {student.get('full_name')}\nMatch Score: {match_score}%\n\nCover Letter:\n{payload.cover_letter}"
                 msg.attach(MIMEText(body, "plain"))
                 
+                # Download and Attach CV
+                cv_url = student.get("cv_url", "")
+                if cv_url:
+                    filename = ""
+                    for marker in ["/object/sign/cvs/", "/object/public/cvs/", "cvs/"]:
+                        if marker in cv_url:
+                            filename = cv_url.split(marker)[1].split("?")[0]
+                            break
+                    
+                    if filename:
+                        try:
+                            # Use Supabase client to get file bytes
+                            cv_bytes = supabase.storage.from_("cvs").download(filename)
+                            if cv_bytes:
+                                part = MIMEApplication(cv_bytes)
+                                part.add_header('Content-Disposition', 'attachment', filename=f"{student.get('full_name','CV').replace(' ','_')}.pdf")
+                                msg.attach(part)
+                                logger.info(f"[Email] Attached CV: {filename}")
+                        except Exception as storage_e:
+                            logger.error(f"[Email] CV Download error: {storage_e}")
+
+                # Send Email
                 server = smtplib.SMTP("smtp.gmail.com", 587)
+                server.set_debuglevel(1)  # Enable debug tracking
                 server.starttls()
                 server.login(SMTP_EMAIL, SMTP_PASSWORD)
                 server.send_message(msg)
                 server.quit()
-                logger.info("Email notification sent.")
+                logger.info(f"Email notification successfully sent to {target_email}")
             except Exception as e:
-                logger.error(f"Email failure: {e}")
+                logger.error(f"SMTP error for {student.get('full_name')}: {e}")
 
         return {"success": True}
     except Exception as e:
