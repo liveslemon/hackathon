@@ -231,6 +231,15 @@ def home():
 def health():
     return {"status": "ok", "version": "v4.1-stable"}
 
+@app.get("/test-supabase")
+def test_supabase():
+    """Test Supabase connection."""
+    try:
+        res = supabase.table("profiles").select("*").limit(1).execute()
+        return {"status": "success", "example_profile": res.data[0] if res.data else None}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 @app.post("/upload-and-analyze")
 def upload_and_analyze(user_id: str = Form(...), file: UploadFile = File(...)):
     """Handles CV upload, storage, text extraction, and AI analysis."""
@@ -238,32 +247,24 @@ def upload_and_analyze(user_id: str = Form(...), file: UploadFile = File(...)):
     temp_path = None
     
     try:
-        # 1. Check user
         profile = get_user_profile(user_id)
-        
-        # 2. Validate format
         if not file.filename.lower().endswith(".pdf"):
             return JSONResponse({"error": "Only PDFs are supported."}, status_code=400)
             
-        # 3. Save to Temp
         content = file.file.read()
         storage_filename = f"{uuid.uuid4()}.pdf"
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
             tmp.write(content)
             temp_path = tmp.name
 
-        # 4. Upload to Storage
         supabase.storage.from_("cvs").upload(storage_filename, content, {"content-type": "application/pdf"})
         
-        # 5. Get Public/Signed URL
         url_resp = supabase.storage.from_("cvs").create_signed_url(storage_filename, 604800)
         cv_url = url_resp.get("signedURL") or url_resp.get("signedUrl")
         
-        # 6. Extract & Save Profile
         cv_text = extract_text(temp_path)
         save_cv_text_and_url(user_id, cv_url, cv_text)
         
-        # 7. Analyze
         internships = fetch_internships()
         matches_found = 0
         if internships:
@@ -273,7 +274,7 @@ def upload_and_analyze(user_id: str = Form(...), file: UploadFile = File(...)):
             matches_found = len(results)
             
         return {
-            "message": "Analysis completed successfully.",
+            "message": "CV uploaded and matches computed successfully",
             "cv_url": cv_url,
             "text_length": len(cv_text),
             "internships_count": len(internships),
@@ -285,6 +286,67 @@ def upload_and_analyze(user_id: str = Form(...), file: UploadFile = File(...)):
     finally:
         if temp_path and os.path.exists(temp_path):
             os.remove(temp_path)
+
+@app.post("/analyze-new-internship")
+def analyze_new_internship(payload: AnalyzeNewInternshipRequest):
+    """Trigger scoring of all existing student CVs against a new internship."""
+    try:
+        iid = payload.internship_id
+        res_job = supabase.table("internships").select("*").eq("id", iid).execute()
+        if not res_job.data: return JSONResponse({"error": "Not found"}, status_code=404)
+        
+        job = res_job.data[0]
+        res_students = supabase.table("profiles").select("id, cv_text").eq("role", "student").neq("cv_text", None).execute()
+        students = res_students.data or []
+        
+        success = 0
+        for s in students:
+            try:
+                results = run_ai_analysis(s["cv_text"], [job])
+                if results:
+                    upsert_match_result(s["id"], iid, results[0])
+                    success += 1
+            except Exception as e:
+                logger.error(f"AI Skip for {s['id']}: {e}")
+        return {"message": f"Analyzed {success} students."}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.post("/analyze-existing-cv")
+def analyze_existing(payload: AnalyzeRequest):
+    """Re-run AI analysis for a user who already has a CV on file."""
+    try:
+        p = get_user_profile(payload.user_id)
+        if not p.get("cv_text"): return JSONResponse({"error": "No CV"}, status_code=400)
+        jobs = fetch_internships()
+        results = run_ai_analysis(p["cv_text"], jobs)
+        for r in results:
+            upsert_match_result(payload.user_id, r.get("internship_id"), r)
+        return {"message": "Re-analysis complete.", "count": len(results)}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.post("/refresh-cv-url")
+def refresh_url(payload: AnalyzeRequest):
+    """Regenerate a signed URL for a user's CV if the old one expired."""
+    try:
+        p = get_user_profile(payload.user_id)
+        url = p.get("cv_url", "")
+        if not url: return JSONResponse({"error": "No URL"}, status_code=404)
+        
+        filename = ""
+        for marker in ["/object/sign/cvs/", "/object/public/cvs/", "cvs/"]:
+            if marker in url:
+                filename = url.split(marker)[1].split("?")[0]
+                break
+        if not filename: raise ValueError("Could not parse filename")
+
+        signed = supabase.storage.from_("cvs").create_signed_url(filename, 604800)
+        new_url = signed.get("signedURL") or signed.get("signedUrl")
+        save_cv_text_and_url(payload.user_id, new_url, p.get("cv_text", ""))
+        return {"cv_url": new_url}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.get("/my-matches")
 def get_my_matches(user_id: str):
@@ -311,18 +373,14 @@ def build_cover_letter(payload: DraftCoverLetterRequest):
     try:
         profile = get_user_profile(payload.user_id)
         cv_text = profile.get("cv_text")
-        if not cv_text:
-            return JSONResponse({"error": "No CV text found."}, status_code=400)
+        if not cv_text: return JSONResponse({"error": "No CV text"}, status_code=400)
             
         job_res = supabase.table("internships").select("*").eq("id", payload.internship_id).single().execute()
         job = job_res.data
-        if not job:
-            return JSONResponse({"error": "Internship not found."}, status_code=404)
+        if not job: return JSONResponse({"error": "Not found"}, status_code=404)
 
         prompt = f"Write a professional cover letter for {job.get('company')} - {job.get('role')}.\nCV: {cv_text}"
-        
-        if not NVIDIA_API_KEY:
-            return {"cover_letter": "Placeholder cover letter (Local/Dev)."}
+        if not NVIDIA_API_KEY: return {"cover_letter": "Placeholder (Local/Dev)."}
 
         resp = requests.post(
             "https://integrate.api.nvidia.com/v1/chat/completions",
@@ -333,22 +391,20 @@ def build_cover_letter(payload: DraftCoverLetterRequest):
         resp.raise_for_status()
         return {"cover_letter": resp.json()["choices"][0]["message"]["content"]}
     except Exception as e:
-        logger.error(f"[/draft-cover-letter] Error: {e}")
         return JSONResponse({"error": "Drafting failed."}, status_code=500)
 
 @app.post("/submit-application")
 def submit_app(payload: SubmitApplicationRequest):
     try:
-        # 1. Profiles & Job
         student = get_user_profile(payload.user_id)
         job_res = supabase.table("internships").select("*").eq("id", payload.internship_id).single().execute()
         job = job_res.data
+        if not job: return JSONResponse({"error": "Internship not found"}, status_code=404)
         
-        # 2. Get Match Score
         score_res = supabase.table("match_results").select("match_score").eq("user_id", payload.user_id).eq("internship_id", payload.internship_id).maybe_single().execute()
         match_score = score_res.data.get("match_score") if score_res.data else 0
 
-        # 3. Save App
+        # Create record
         supabase.table("applied_internships").insert({
             "user_id": payload.user_id,
             "internship_id": payload.internship_id,
@@ -357,16 +413,55 @@ def submit_app(payload: SubmitApplicationRequest):
             "match_score": match_score
         }).execute()
         
+        # Email Notification (SMTP)
+        SMTP_EMAIL = os.getenv("SMTP_EMAIL")
+        SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+        if SMTP_EMAIL and SMTP_PASSWORD:
+            try:
+                msg = MIMEMultipart()
+                msg["Subject"] = f"New Application: {job.get('role')} - {student.get('full_name')}"
+                msg["From"] = SMTP_EMAIL
+                msg["To"] = job.get('employer_email') or "admin@example.com"
+                
+                body = f"A student has applied for {job.get('role')}.\n\nName: {student.get('full_name')}\nScore: {match_score}%\n\nCover Letter:\n{payload.cover_letter}"
+                msg.attach(MIMEText(body, "plain"))
+                
+                server = smtplib.SMTP("smtp.gmail.com", 587)
+                server.starttls()
+                server.login(SMTP_EMAIL, SMTP_PASSWORD)
+                server.send_message(msg)
+                server.quit()
+                logger.info("Email notification sent.")
+            except Exception as e:
+                logger.error(f"Email failure: {e}")
+
         return {"success": True}
     except Exception as e:
         logger.error(f"[/submit-application] Error: {e}")
-        return JSONResponse({"error": "Submission failed."}, status_code=500)
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.put("/applications/{app_id}/status")
 def update_status(app_id: str, payload: ApplicationStatusUpdate):
     try:
         supabase.table("applied_internships").update({"status": payload.status}).eq("id", app_id).execute()
         return {"success": True}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.get("/internships/{internship_id}/applicants")
+def get_applicants(internship_id: str):
+    try:
+        res_apps = supabase.table("applied_internships").select("*").eq("internship_id", internship_id).order("match_score", desc=True).execute()
+        apps = res_apps.data or []
+        if not apps: return {"applicants": []}
+        
+        uids = [a["user_id"] for a in apps if a.get("user_id")]
+        res_profiles = supabase.table("profiles").select("id, full_name, course, level, cv_url").in_("id", uids).execute()
+        p_map = {p["id"]: p for p in (res_profiles.data or [])}
+        
+        for a in apps:
+            a["profiles"] = p_map.get(a["user_id"])
+        return {"applicants": apps}
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -380,12 +475,7 @@ def fetch_admin_stats():
         t_students = supabase.table("profiles").select("id", count="exact").eq("role", "student").execute().count or 0
         t_jobs = supabase.table("internships").select("id", count="exact").execute().count or 0
         t_apps = supabase.table("applied_internships").select("id", count="exact").execute().count or 0
-        
-        return {
-            "total_students": t_students,
-            "total_internships": t_jobs,
-            "total_applications": t_apps
-        }
+        return {"total_students": t_students, "total_internships": t_jobs, "total_applications": t_apps}
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -396,6 +486,38 @@ def run_admin_search(q: str = ""):
         students = supabase.table("profiles").select("*").eq("role", "student").ilike("full_name", f"%{q}%").execute().data or []
         jobs = supabase.table("internships").select("*").ilike("role", f"%{q}%").execute().data or []
         return {"students": students, "internships": jobs}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.get("/admin/directory")
+def fetch_admin_directory():
+    try:
+        res = supabase.table("profiles").select("*").order("created_at", desc=True).execute()
+        return res.data or []
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.get("/admin/analytics")
+def fetch_admin_analytics():
+    try:
+        jobs = supabase.table("internships").select("id, role, company, category").execute().data or []
+        apps = supabase.table("applied_internships").select("id, internship_id").execute().data or []
+        
+        stats = []
+        counts = {}
+        for a in apps:
+            iid = a.get("internship_id")
+            if iid: counts[iid] = counts.get(iid, 0) + 1
+            
+        for j in jobs:
+            stats.append({
+                "id": j["id"],
+                "title": j.get("role"),
+                "company": j.get("company"),
+                "applications": counts.get(j["id"], 0)
+            })
+        stats.sort(key=lambda x: x["applications"], reverse=True)
+        return {"total_internships": len(jobs), "total_applications": len(apps), "internship_stats": stats}
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 
