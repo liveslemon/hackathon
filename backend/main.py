@@ -9,7 +9,7 @@ import re
 import tempfile
 import uuid
 import socket
-import smtplib
+import resend
 from datetime import datetime, timezone
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
@@ -447,76 +447,55 @@ def submit_app(payload: SubmitApplicationRequest):
         }).execute()
         logger.info("[SubmitApp] Application record created.")
         
-        # 6. Email Notification (SMTP)
-        SMTP_EMAIL = os.getenv("SMTP_EMAIL")
-        SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
-        
-        if not SMTP_EMAIL or not SMTP_PASSWORD:
-            logger.warning(f"[SubmitApp] Email block skipped. SMTP_EMAIL: {'Set' if SMTP_EMAIL else 'MISSING'}, SMTP_PASSWORD: {'Set' if SMTP_PASSWORD else 'MISSING'}")
+        # 6. Email Notification (Resend API)
+        resend_api_key = os.getenv("RESEND_API_KEY")
+        if not resend_api_key:
+            logger.warning("[SubmitApp] RESEND_API_KEY not found. Skipping email notification.")
         else:
-            logger.info(f"[SubmitApp] Preparing to send email notification.")
             try:
-                msg = MIMEMultipart()
-                msg["Subject"] = f"Application: {job.get('role')} - {student.get('full_name')}"
-                msg["From"] = SMTP_EMAIL
-                # Use employer email, or fallback to the site owner (you) to avoid bounces
-                target_email = job.get('employer_email') or SMTP_EMAIL
-                msg["To"] = target_email
-                logger.info(f"[Email] Sending notification to: {target_email} (Employer: {job.get('employer_email')}, Fallback: {SMTP_EMAIL})")
+                resend.api_key = resend_api_key
+                student_name = student.get('full_name', 'Student')
+                job_role = job.get('role', 'Internship')
+                target_email = job.get('employer_email') or os.getenv("SMTP_EMAIL")
                 
-                # Add Reply-To so employer can reply directly to the student
-                if payload.student_email:
-                    msg["Reply-To"] = payload.student_email
-                elif student.get("email"):
-                    msg["Reply-To"] = student.get("email")
+                logger.info(f"[Resend] Preparing email for {student_name} applying to {job_role}...")
                 
-                body = f"A student has applied for {job.get('role')}.\n\nName: {student.get('full_name')}\nMatch Score: {match_score}%\n\nCover Letter:\n{payload.cover_letter}"
-                msg.attach(MIMEText(body, "plain"))
-                
-                # Download and Attach CV
+                # Attachment handling
+                attachments = []
                 cv_url = student.get("cv_url", "")
                 if cv_url:
-                    filename = ""
-                    for marker in ["/object/sign/cvs/", "/object/public/cvs/", "cvs/"]:
-                        if marker in cv_url:
-                            filename = cv_url.split(marker)[1].split("?")[0]
-                            break
-                    
-                    if filename:
-                        try:
-                            # Use Supabase client to get file bytes
+                    try:
+                        filename = ""
+                        for marker in ["/object/sign/cvs/", "/object/public/cvs/", "cvs/"]:
+                            if marker in cv_url:
+                                filename = cv_url.split(marker)[1].split("?")[0]
+                                break
+                        if filename:
                             cv_bytes = supabase.storage.from_("cvs").download(filename)
                             if cv_bytes:
-                                part = MIMEApplication(cv_bytes)
-                                part.add_header('Content-Disposition', 'attachment', filename=f"{student.get('full_name','CV').replace(' ','_')}.pdf")
-                                msg.attach(part)
-                                logger.info(f"[Email] Attached CV: {filename}")
-                        except Exception as storage_e:
-                            logger.error(f"[Email] CV Download error: {storage_e}")
+                                attachments.append({
+                                    "filename": f"{student_name.replace(' ','_')}_CV.pdf",
+                                    "content": list(cv_bytes)
+                                })
+                                logger.info(f"[Resend] Attached CV: {filename}")
+                    except Exception as storage_e:
+                        logger.error(f"[Resend] CV Attachment error: {storage_e}")
 
-                # Send Email via SSL (Port 465)
-                # Force IPv4 to avoid "Network is unreachable" issues on Render
-                try:
-                    host = "smtp.gmail.com"
-                    port = 465
-                    logger.info(f"[SMTP] Resolving {host}...")
-                    addr_info = socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM)
-                    ipv4_host = addr_info[0][4][0]
-                    logger.info(f"[SMTP] Resolved to {ipv4_host}. Connecting via SSL (Port 465)...")
-                    
-                    server = smtplib.SMTP_SSL(ipv4_host, port, timeout=20)
-                    logger.info("[SMTP] Connected. Logging in...")
-                    
-                    server.login(SMTP_EMAIL, SMTP_PASSWORD)
-                    logger.info("[SMTP] Login successful. Sending message...")
-                    
-                    server.send_message(msg)
-                    server.quit()
-                    logger.info(f"Email notification successfully sent to {target_email} (via {ipv4_host}:465)")
-                except Exception as e:
-                    logger.error(f"SMTP error for {student.get('full_name')}: {e}")
-            except Exception as e:
-                logger.error(f"SMTP error for {student.get('full_name')}: {e}")
+                reply_to = payload.student_email or student.get("email") or os.getenv("SMTP_EMAIL")
+                
+                params = {
+                    "from": "PAU Interconnect <onboarding@resend.dev>",
+                    "to": [target_email],
+                    "reply_to": reply_to,
+                    "subject": f"Application: {job_role} - {student_name}",
+                    "text": f"A student has applied for {job_role}.\n\nName: {student_name}\nMatch Score: {match_score}%\n\nCover Letter:\n{payload.cover_letter}",
+                    "attachments": attachments
+                }
+                
+                sent_email = resend.Emails.send(params)
+                logger.info(f"Email notification successfully sent via Resend: {sent_email.get('id')}")
+            except Exception as email_e:
+                logger.error(f"[Resend] Failed to send email for {student_name}: {email_e}")
 
         return {"success": True}
     except Exception as e:
