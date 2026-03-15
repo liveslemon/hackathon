@@ -241,6 +241,7 @@ def test_supabase():
         return {"status": "error", "message": str(e)}
 
 @app.post("/upload-and-analyze")
+@app.post("/api/upload-and-analyze")
 def upload_and_analyze(user_id: str = Form(...), file: UploadFile = File(...)):
     """Handles CV upload, storage, text extraction, and AI analysis."""
     logger.info(f"[/upload-and-analyze] Start: {user_id}, {file.filename}")
@@ -288,6 +289,7 @@ def upload_and_analyze(user_id: str = Form(...), file: UploadFile = File(...)):
             os.remove(temp_path)
 
 @app.post("/analyze-new-internship")
+@app.post("/api/analyze-new-internship")
 def analyze_new_internship(payload: AnalyzeNewInternshipRequest):
     """Trigger scoring of all existing student CVs against a new internship."""
     try:
@@ -313,6 +315,7 @@ def analyze_new_internship(payload: AnalyzeNewInternshipRequest):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.post("/analyze-existing-cv")
+@app.post("/api/analyze-existing-cv")
 def analyze_existing(payload: AnalyzeRequest):
     """Re-run AI analysis for a user who already has a CV on file."""
     try:
@@ -327,6 +330,7 @@ def analyze_existing(payload: AnalyzeRequest):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.post("/refresh-cv-url")
+@app.post("/api/refresh-cv-url")
 def refresh_url(payload: AnalyzeRequest):
     """Regenerate a signed URL for a user's CV if the old one expired."""
     try:
@@ -349,6 +353,7 @@ def refresh_url(payload: AnalyzeRequest):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.get("/my-matches")
+@app.get("/api/my-matches")
 def get_my_matches(user_id: str):
     try:
         res = supabase.table("match_results").select("*").eq("user_id", user_id).execute()
@@ -369,6 +374,7 @@ def debug_results(user_id: str):
 # ------------------------------------------------------------------------------
 
 @app.post("/draft-cover-letter")
+@app.post("/api/draft-cover-letter")
 def build_cover_letter(payload: DraftCoverLetterRequest):
     try:
         profile = get_user_profile(payload.user_id)
@@ -394,6 +400,7 @@ def build_cover_letter(payload: DraftCoverLetterRequest):
         return JSONResponse({"error": "Drafting failed."}, status_code=500)
 
 @app.post("/submit-application")
+@app.post("/api/submit-application")
 def submit_app(payload: SubmitApplicationRequest):
     try:
         student = get_user_profile(payload.user_id)
@@ -441,6 +448,7 @@ def submit_app(payload: SubmitApplicationRequest):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.put("/applications/{app_id}/status")
+@app.put("/api/applications/{app_id}/status")
 def update_status(app_id: str, payload: ApplicationStatusUpdate):
     try:
         supabase.table("applied_internships").update({"status": payload.status}).eq("id", app_id).execute()
@@ -449,6 +457,7 @@ def update_status(app_id: str, payload: ApplicationStatusUpdate):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.get("/internships/{internship_id}/applicants")
+@app.get("/api/internships/{internship_id}/applicants")
 def get_applicants(internship_id: str):
     try:
         res_apps = supabase.table("applied_internships").select("*").eq("internship_id", internship_id).order("match_score", desc=True).execute()
@@ -470,6 +479,7 @@ def get_applicants(internship_id: str):
 # ------------------------------------------------------------------------------
 
 @app.get("/admin/stats")
+@app.get("/api/admin/stats")
 def fetch_admin_stats():
     try:
         t_students = supabase.table("profiles").select("id", count="exact").eq("role", "student").execute().count or 0
@@ -480,6 +490,7 @@ def fetch_admin_stats():
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.get("/admin/search")
+@app.get("/api/admin/search")
 def run_admin_search(q: str = ""):
     if len(q) < 2: return {"students": [], "internships": []}
     try:
@@ -490,6 +501,7 @@ def run_admin_search(q: str = ""):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.get("/admin/directory")
+@app.get("/api/admin/directory")
 def fetch_admin_directory():
     try:
         res = supabase.table("profiles").select("*").order("created_at", desc=True).execute()
@@ -498,6 +510,7 @@ def fetch_admin_directory():
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.get("/admin/analytics")
+@app.get("/api/admin/analytics")
 def fetch_admin_analytics():
     try:
         jobs = supabase.table("internships").select("id, role, company, category").execute().data or []
