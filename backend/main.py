@@ -8,6 +8,7 @@ import os
 import re
 import tempfile
 import uuid
+import socket
 import smtplib
 from datetime import datetime, timezone
 from email.mime.application import MIMEApplication
@@ -492,13 +493,21 @@ def submit_app(payload: SubmitApplicationRequest):
                         except Exception as storage_e:
                             logger.error(f"[Email] CV Download error: {storage_e}")
 
-                # Send Email via SSL (Port 465) for better compatibility
-                server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
-                # server.set_debuglevel(1)  # Enable debug tracking if needed for troubleshooting
-                server.login(SMTP_EMAIL, SMTP_PASSWORD)
-                server.send_message(msg)
-                server.quit()
-                logger.info(f"Email notification successfully sent to {target_email}")
+                # Send Email via SSL (Port 465)
+                # Force IPv4 to avoid "Network is unreachable" issues on Render
+                host = "smtp.gmail.com"
+                port = 465
+                try:
+                    addr_info = socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM)
+                    ipv4_host = addr_info[0][4][0]
+                    server = smtplib.SMTP_SSL(ipv4_host, port, timeout=15)
+                    # server.set_debuglevel(1)  # Enable debug tracking if needed for troubleshooting
+                    server.login(SMTP_EMAIL, SMTP_PASSWORD)
+                    server.send_message(msg)
+                    server.quit()
+                    logger.info(f"Email notification successfully sent to {target_email} (via {ipv4_host}:465)")
+                except Exception as e:
+                    logger.error(f"SMTP error for {student.get('full_name')}: {e}")
             except Exception as e:
                 logger.error(f"SMTP error for {student.get('full_name')}: {e}")
 
