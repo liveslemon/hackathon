@@ -460,10 +460,9 @@ def submit_app(payload: SubmitApplicationRequest):
                         except Exception as storage_e:
                             logger.error(f"[Email] CV Download error: {storage_e}")
 
-                # Send Email
-                server = smtplib.SMTP("smtp.gmail.com", 587)
-                server.set_debuglevel(1)  # Enable debug tracking
-                server.starttls()
+                # Send Email via SSL (Port 465) for better compatibility
+                server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
+                # server.set_debuglevel(1)  # Enable debug tracking if needed for troubleshooting
                 server.login(SMTP_EMAIL, SMTP_PASSWORD)
                 server.send_message(msg)
                 server.quit()
