@@ -409,15 +409,32 @@ def build_cover_letter(payload: DraftCoverLetterRequest):
 @app.post("/api/submit-application")
 def submit_app(payload: SubmitApplicationRequest):
     try:
-        student = get_user_profile(payload.user_id)
-        job_res = supabase.table("internships").select("*").eq("id", payload.internship_id).single().execute()
-        job = job_res.data
-        if not job: return JSONResponse({"error": "Internship not found"}, status_code=404)
+        logger.info(f"[SubmitApp] {payload.user_id} applying for {payload.internship_id}")
         
-        score_res = supabase.table("match_results").select("match_score").eq("user_id", payload.user_id).eq("internship_id", payload.internship_id).maybe_single().execute()
-        match_score = score_res.data.get("match_score") if score_res.data else 0
+        # 1. Fetch Student Profile
+        student = get_user_profile(payload.user_id)
+        logger.info(f"[SubmitApp] Student: {student.get('full_name')}")
+        
+        # 2. Fetch Internship
+        job_query = supabase.table("internships").select("*").eq("id", payload.internship_id).execute()
+        if not job_query.data:
+             logger.warning(f"[SubmitApp] Internship {payload.internship_id} not found.")
+             return JSONResponse({"error": "Internship not found"}, status_code=404)
+        job = job_query.data[0]
+        logger.info(f"[SubmitApp] Job: {job.get('role')}")
+        
+        # 3. Fetch Match Score (Standard select instead of maybe_single for compatibility)
+        score_query = supabase.table("match_results").select("match_score").eq("user_id", payload.user_id).eq("internship_id", payload.internship_id).execute()
+        match_score = score_query.data[0].get("match_score", 0) if score_query.data else 0
+        logger.info(f"[SubmitApp] Match Score: {match_score}%")
 
-        # Create record
+        # 4. Check for existing application
+        existing = supabase.table("applied_internships").select("*").eq("user_id", payload.user_id).eq("internship_id", payload.internship_id).execute()
+        if existing.data:
+            logger.info("[SubmitApp] Already applied.")
+            return {"success": True, "message": "Already applied."}
+
+        # 5. Create record
         supabase.table("applied_internships").insert({
             "user_id": payload.user_id,
             "internship_id": payload.internship_id,
@@ -425,8 +442,9 @@ def submit_app(payload: SubmitApplicationRequest):
             "status": "pending",
             "match_score": match_score
         }).execute()
+        logger.info("[SubmitApp] Application record created.")
         
-        # Email Notification (SMTP)
+        # 6. Email Notification (SMTP)
         SMTP_EMAIL = os.getenv("SMTP_EMAIL")
         SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
         if SMTP_EMAIL and SMTP_PASSWORD:
@@ -434,7 +452,8 @@ def submit_app(payload: SubmitApplicationRequest):
                 msg = MIMEMultipart()
                 msg["Subject"] = f"Application: {job.get('role')} - {student.get('full_name')}"
                 msg["From"] = SMTP_EMAIL
-                target_email = job.get('employer_email') or "admin@example.com"
+                # Use employer email, or fallback to the site owner (you) to avoid bounces
+                target_email = job.get('employer_email') or SMTP_EMAIL
                 msg["To"] = target_email
                 
                 # Add Reply-To so employer can reply directly to the student
