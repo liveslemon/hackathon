@@ -52,7 +52,11 @@ export default function SearchOverlay({ onClose }: SearchOverlayProps) {
     }
   };
 
-  const hasResults = results && (results.students.length > 0 || results.employers.length > 0 || results.internships.length > 0);
+  const hasResults = !!results && (
+    (results.students?.length || 0) > 0 || 
+    (results.employers?.length || 0) > 0 || 
+    (results.internships?.length || 0) > 0
+  );
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[10vh] px-4 backdrop-blur-md bg-slate-900/40 animate-in fade-in duration-200">
@@ -101,13 +105,13 @@ export default function SearchOverlay({ onClose }: SearchOverlayProps) {
           ) : (
             <div className="p-2 space-y-6">
               {/* Students Section */}
-              {results?.students?.length > 0 && (
+              {(results?.students || []).length > 0 && (
                 <div className="space-y-2">
                   <div className="px-4 py-1 flex items-center justify-between">
                     <Typography variant="caption" weight="extrabold" color="muted" className="uppercase tracking-widest">Students</Typography>
-                    <Badge variant="emerald" size="sm">{results.students.length}</Badge>
+                    <Badge variant="emerald" size="sm">{(results.students || []).length}</Badge>
                   </div>
-                  {results.students.map((stu: any) => (
+                  {(results.students || []).map((stu: any) => (
                     <div key={stu.id} className="p-4 hover:bg-slate-50 rounded-2xl transition-colors cursor-pointer group flex items-center justify-between">
                       <Stack direction="row" spacing={4} align="center">
                         <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
@@ -125,13 +129,13 @@ export default function SearchOverlay({ onClose }: SearchOverlayProps) {
               )}
 
               {/* Employers Section */}
-              {results?.employers?.length > 0 && (
+              {(results?.employers || []).length > 0 && (
                 <div className="space-y-2">
                   <div className="px-4 py-1 flex items-center justify-between">
                     <Typography variant="caption" weight="extrabold" color="muted" className="uppercase tracking-widest">Companies</Typography>
-                    <Badge variant="indigo" size="sm">{results.employers.length}</Badge>
+                    <Badge variant="indigo" size="sm">{(results.employers || []).length}</Badge>
                   </div>
-                  {results.employers.map((emp: any) => (
+                  {(results.employers || []).map((emp: any) => (
                     <div key={emp.id} className="p-4 hover:bg-slate-50 rounded-2xl transition-colors cursor-pointer group flex items-center justify-between">
                       <Stack direction="row" spacing={4} align="center">
                         <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
@@ -149,13 +153,13 @@ export default function SearchOverlay({ onClose }: SearchOverlayProps) {
               )}
 
               {/* Internships Section */}
-              {results?.internships?.length > 0 && (
+              {(results?.internships || []).length > 0 && (
                 <div className="space-y-2">
                   <div className="px-4 py-1 flex items-center justify-between">
                     <Typography variant="caption" weight="extrabold" color="muted" className="uppercase tracking-widest">Internships</Typography>
-                    <Badge variant="pink" size="sm">{results.internships.length}</Badge>
+                    <Badge variant="pink" size="sm">{(results.internships || []).length}</Badge>
                   </div>
-                  {results.internships.map((job: any) => (
+                  {(results.internships || []).map((job: any) => (
                     <div key={job.id} className="p-4 hover:bg-slate-50 rounded-2xl transition-colors cursor-pointer group flex items-center justify-between">
                       <Stack direction="row" spacing={4} align="center">
                         <div className="w-10 h-10 rounded-lg bg-pink-50 text-pink-500 flex items-center justify-center">

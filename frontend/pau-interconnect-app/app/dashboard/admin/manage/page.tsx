@@ -50,8 +50,8 @@ export default function ManagePlatformView() {
     );
   }
 
-  const employers = profiles.filter(p => p.role === "employer");
-  const students = profiles.filter(p => !p.role || p.role === "student" || p.role === "admin");
+  const employers = (profiles || []).filter(p => !!p && p.role === "employer");
+  const students = (profiles || []).filter(p => !!p && (!p.role || p.role === "student" || p.role === "admin"));
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-500">

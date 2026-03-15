@@ -33,11 +33,11 @@ export default function AnalyticsView() {
       
       const data = await res.json();
       
-      setTotalInternships(data.total_internships);
-      setTotalApplications(data.total_applications);
-      setAvgApplications(data.avg_applications);
-      setCategories(data.categories);
-      setInternshipStats(data.internship_stats);
+      setTotalInternships(data.total_internships || 0);
+      setTotalApplications(data.total_applications || 0);
+      setAvgApplications(data.avg_applications || "0.0");
+      setCategories(data.categories || []);
+      setInternshipStats(data.internship_stats || []);
       
     } catch (e: any) {
       console.error("Error fetching analytics:", e);
@@ -106,7 +106,7 @@ export default function AnalyticsView() {
           <CardContent className="p-8">
             <Typography variant="h4" weight="bold" className="mb-8">Internships by Category</Typography>
             <div className="space-y-6">
-              {categories.map((cat, idx) => {
+              {(categories || []).map((cat, idx) => {
                 const percentage = totalInternships > 0 ? (cat.value / totalInternships) * 100 : 0;
                 return (
                   <div key={idx} className="space-y-2">
@@ -131,7 +131,7 @@ export default function AnalyticsView() {
           <CardContent className="p-8">
             <Typography variant="h4" weight="bold" className="mb-8">Most Applied Internships</Typography>
             <div className="space-y-4">
-              {internshipStats.slice(0, 5).map((item, idx) => (
+              {(internshipStats || []).slice(0, 5).map((item, idx) => (
                 <div key={idx} className="group p-4 bg-slate-50/50 rounded-2xl border border-transparent hover:border-indigo-100 hover:bg-indigo-50/30 transition-all duration-300">
                   <Stack direction="row" align="center" justify="between">
                     <Stack direction="row" spacing={4} align="center">
@@ -172,7 +172,7 @@ export default function AnalyticsView() {
               </tr>
             </thead>
             <tbody>
-              {internshipStats.map((row, idx) => (
+              {(internshipStats || []).map((row, idx) => (
                 <tr key={idx} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
                   <td className="px-8 py-5"><Typography variant="body2" weight="semibold">{row.company}</Typography></td>
                   <td className="px-8 py-5"><Typography variant="body2">{row.title}</Typography></td>
