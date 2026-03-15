@@ -462,6 +462,7 @@ def submit_app(payload: SubmitApplicationRequest):
                 # Use employer email, or fallback to the site owner (you) to avoid bounces
                 target_email = job.get('employer_email') or SMTP_EMAIL
                 msg["To"] = target_email
+                logger.info(f"[Email] Sending notification to: {target_email} (Employer: {job.get('employer_email')}, Fallback: {SMTP_EMAIL})")
                 
                 # Add Reply-To so employer can reply directly to the student
                 if payload.student_email:
@@ -495,14 +496,20 @@ def submit_app(payload: SubmitApplicationRequest):
 
                 # Send Email via SSL (Port 465)
                 # Force IPv4 to avoid "Network is unreachable" issues on Render
-                host = "smtp.gmail.com"
-                port = 465
                 try:
+                    host = "smtp.gmail.com"
+                    port = 465
+                    logger.info(f"[SMTP] Resolving {host}...")
                     addr_info = socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM)
                     ipv4_host = addr_info[0][4][0]
-                    server = smtplib.SMTP_SSL(ipv4_host, port, timeout=15)
-                    # server.set_debuglevel(1)  # Enable debug tracking if needed for troubleshooting
+                    logger.info(f"[SMTP] Resolved to {ipv4_host}. Connecting via SSL (Port 465)...")
+                    
+                    server = smtplib.SMTP_SSL(ipv4_host, port, timeout=20)
+                    logger.info("[SMTP] Connected. Logging in...")
+                    
                     server.login(SMTP_EMAIL, SMTP_PASSWORD)
+                    logger.info("[SMTP] Login successful. Sending message...")
+                    
                     server.send_message(msg)
                     server.quit()
                     logger.info(f"Email notification successfully sent to {target_email} (via {ipv4_host}:465)")
