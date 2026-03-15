@@ -66,8 +66,6 @@ class AnalyzeNewInternshipRequest(BaseModel):
 class DraftCoverLetterRequest(BaseModel):
     user_id: str
     internship_id: str
-    email: str = ""
-    phone: str = ""
 
 class SubmitApplicationRequest(BaseModel):
     user_id: str
@@ -396,19 +394,29 @@ def build_cover_letter(payload: DraftCoverLetterRequest):
         job = job_res.data
         if not job: return JSONResponse({"error": "Not found"}, status_code=404)
 
+        # Try to fetch actual email from Supabase Auth
+        user_email = "[email]"
+        try:
+            auth_user = supabase.auth.admin.get_user_by_id(payload.user_id)
+            if auth_user and auth_user.user:
+                user_email = auth_user.user.email or "[email]"
+        except Exception as auth_e:
+            logger.warning(f"[Draft] Could not fetch auth email for {payload.user_id}: {auth_e}")
+
         prompt = (
             f"Write a professional Motivation Letter for {job.get('company')} - {job.get('role')}.\n"
             f"The letter should be addressed from:\n"
             f"Name: {profile.get('full_name')}\n"
-            f"Email: {payload.email}\n"
-            f"Phone: {payload.phone}\n\n"
+            f"Email: {user_email}\n"
+            f"Phone: [phone number]\n\n"
             f"CV CONTENT:\n{cv_text}\n\n"
             f"IMPORTANT INSTRUCTIONS:\n"
             f"1. Format it as a Motivation Letter, NOT an email.\n"
             f"2. Place the student's Name, Email, and Phone number at the very top of the document.\n"
-            f"3. Do NOT include email-specific headers like 'Subject:', 'To:', or 'From:'.\n"
-            f"4. Do NOT include email signatures at the bottom.\n"
-            f"5. Start directly with the professional salutation after the contact info."
+            f"3. Use the literal string '[phone number]' for the phone field.\n"
+            f"4. Do NOT include email-specific headers like 'Subject:', 'To:', or 'From:'.\n"
+            f"5. Do NOT include email signatures at the bottom.\n"
+            f"6. Start directly with the professional salutation after the contact info."
         )
         if not NVIDIA_API_KEY: return {"cover_letter": "Placeholder Motivation Letter (Local/Dev)."}
 
