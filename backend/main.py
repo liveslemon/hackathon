@@ -68,6 +68,7 @@ class SubmitApplicationRequest(BaseModel):
     user_id: str
     internship_id: str
     cover_letter: str
+    student_email: str = "" # Added to support Reply-To
 
 class ApplicationStatusUpdate(BaseModel):
     status: str
@@ -435,6 +436,12 @@ def submit_app(payload: SubmitApplicationRequest):
                 msg["From"] = SMTP_EMAIL
                 target_email = job.get('employer_email') or "admin@example.com"
                 msg["To"] = target_email
+                
+                # Add Reply-To so employer can reply directly to the student
+                if payload.student_email:
+                    msg["Reply-To"] = payload.student_email
+                elif student.get("email"):
+                    msg["Reply-To"] = student.get("email")
                 
                 body = f"A student has applied for {job.get('role')}.\n\nName: {student.get('full_name')}\nMatch Score: {match_score}%\n\nCover Letter:\n{payload.cover_letter}"
                 msg.attach(MIMEText(body, "plain"))

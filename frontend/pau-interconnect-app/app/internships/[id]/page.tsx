@@ -155,6 +155,7 @@ export default function InternshipDetailsPage() {
            user_id: userId,
            internship_id: internship.id,
            cover_letter: coverLetter,
+           student_email: user?.email,
         })
       });
       
