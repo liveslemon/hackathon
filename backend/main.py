@@ -32,6 +32,8 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
 
+# Deployment Info: v4.1.1-stable | Last Email & Stability Update: 2026-03-15
+
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
