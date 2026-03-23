@@ -15,6 +15,7 @@ import {
   Select,
   Badge,
   Textarea,
+  Skeleton,
 } from "@/components/ui";
 import { FiPlus, FiBriefcase, FiUsers, FiClock, FiSearch } from "react-icons/fi";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -163,8 +164,18 @@ export default function EmployerDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#667eea]"></div>
+      <div className="min-h-screen bg-[#f8fafc] p-6 md:p-10">
+        <Skeleton className="h-12 w-1/3 mb-10" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12">
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-40 w-full" />
+        </div>
+        <Skeleton className="h-8 w-1/4 mb-6" />
+        <div className="space-y-4">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
       </div>
     );
   }

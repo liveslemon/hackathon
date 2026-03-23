@@ -3,6 +3,9 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import {
   Button,
   Card,
@@ -14,16 +17,25 @@ import {
   Container,
 } from "@/components/ui";
 
+const loginSchema = z.object({
+  email: z.string().email("Please enter a valid email address."),
+  password: z.string().min(6, "Password must be at least 6 characters."),
+});
+
+type LoginForm = z.infer<typeof loginSchema>;
+
 const Login = () => {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+  });
   const [user, setUser] = useState<User | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
     "success",
   );
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -36,10 +48,11 @@ const Login = () => {
     checkUser();
   }, []);
 
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAuth = async (data: LoginForm) => {
+    setIsLoading(true);
+    const { email, password } = data;
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data: authData, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -49,7 +62,7 @@ const Login = () => {
       setSnackbarSeverity("error");
       setSnackbarOpen(true);
     } else {
-      const { user } = data;
+      const { user } = authData;
       const userName = user?.user_metadata?.name || user?.email;
 
       localStorage.setItem("userName", userName);
@@ -106,6 +119,7 @@ const Login = () => {
         router.push("/dashboard/student");
       }, 800);
     }
+    setIsLoading(false);
   };
 
   return (
@@ -117,15 +131,14 @@ const Login = () => {
         </CardHeader>
         
         <CardContent className="pt-6">
-          <form onSubmit={handleAuth} className="space-y-6">
+          <form onSubmit={handleSubmit(handleAuth)} className="space-y-6">
             <Input
               id="email"
               label="Email"
               type="email"
               placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+              error={errors.email?.message}
+              {...register("email")}
             />
 
             <Input
@@ -133,12 +146,11 @@ const Login = () => {
               label="Password"
               type="password"
               placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
+              error={errors.password?.message}
+              {...register("password")}
             />
 
-            <Button type="submit" className="w-full" size="lg">
+            <Button type="submit" className="w-full" size="lg" isLoading={isLoading}>
               Sign In
             </Button>
           </form>

@@ -70,6 +70,7 @@ function simulateUploadProgress(
 export default function Onboarding() {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [optimisticMessage, setOptimisticMessage] = useState("");
   const [formData, setFormData] = useState<{
     name: string;
     email: string;
@@ -211,6 +212,7 @@ export default function Onboarding() {
       return;
     }
     setIsSubmitting(true);
+    setOptimisticMessage("Authenticating user...");
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
@@ -231,6 +233,7 @@ export default function Onboarding() {
         throw new Error("User ID not returned from signup");
       }
 
+      setOptimisticMessage("Initializing profile...");
       const { error: profileInsertError } = await supabase
         .from("profiles")
         .insert({
@@ -256,6 +259,7 @@ export default function Onboarding() {
       let cvUrl: string | null = null;
 
       if (formData.cvFile && user_id) {
+        setOptimisticMessage("Uploading Document & Analyzing CV (This takes a moment)...");
         const backendFormData = new FormData();
         backendFormData.append("user_id", user_id);
         backendFormData.append("file", formData.cvFile);
@@ -278,6 +282,7 @@ export default function Onboarding() {
         }
       }
 
+      setOptimisticMessage("Finalizing Setup...");
       const pendingProfile = {
         full_name: formData.name,
         course: formData.course,
@@ -305,6 +310,7 @@ export default function Onboarding() {
       });
     } finally {
       setIsSubmitting(false);
+      setOptimisticMessage("");
     }
   }
 
@@ -540,7 +546,7 @@ export default function Onboarding() {
                      (uploadedFiles.length > 0 && uploadedFiles.some((f) => f.progress < 100))
                    }
                  >
-                   {isSubmitting ? "Creating Account..." : "Complete Setup"}
+                   {isSubmitting ? (optimisticMessage || "Creating Account...") : "Complete Setup"}
                  </Button>
                )}
             </div>

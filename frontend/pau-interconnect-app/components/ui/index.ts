@@ -9,3 +9,4 @@ export * from "./Textarea";
 export * from "./Modal";
 export * from "./Select";
 export * from "./Divider";
+export * from "./Skeleton";

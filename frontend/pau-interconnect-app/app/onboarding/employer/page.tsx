@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { supabase } from "@/lib/supabaseClient";
 import {
   Button,
@@ -14,21 +17,28 @@ import {
   Stack,
 } from "@/components/ui";
 
+const employerSchema = z.object({
+  companyName: z.string().min(2, "Company name must be at least 2 characters."),
+  email: z.string().email("Please enter a valid work email."),
+  password: z.string().min(8, "Password must be at least 8 characters."),
+  companyDescription: z.string().min(15, "Please provide a slightly longer description."),
+});
+type EmployerForm = z.infer<typeof employerSchema>;
+
 export default function EmployerOnboarding() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [companyDescription, setCompanyDescription] = useState("");
+  const { register, handleSubmit, formState: { errors } } = useForm<EmployerForm>({
+    resolver: zodResolver(employerSchema),
+  });
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const router = useRouter();
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRegister = async (data: EmployerForm) => {
     setLoading(true);
     setErrorMsg("");
 
     try {
+      const { email, password, companyName, companyDescription } = data;
       // 1. Create Auth User
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -75,14 +85,13 @@ export default function EmployerOnboarding() {
             </div>
           )}
 
-          <form onSubmit={handleRegister} className="space-y-6">
+          <form onSubmit={handleSubmit(handleRegister)} className="space-y-6">
             <Input
               id="companyName"
               label="Company Name"
               placeholder="Google, Inc."
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              required
+              error={errors.companyName?.message}
+              {...register("companyName")}
             />
 
             <Input
@@ -90,9 +99,8 @@ export default function EmployerOnboarding() {
               label="Work Email Address"
               type="email"
               placeholder="name@company.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+              error={errors.email?.message}
+              {...register("email")}
             />
 
             <Input
@@ -100,9 +108,8 @@ export default function EmployerOnboarding() {
               label="Password"
               type="password"
               placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
+              error={errors.password?.message}
+              {...register("password")}
             />
 
             <Textarea
@@ -110,9 +117,8 @@ export default function EmployerOnboarding() {
               label="Short Company Description"
               placeholder="Tell us about your company..."
               rows={3}
-              value={companyDescription}
-              onChange={(e) => setCompanyDescription(e.target.value)}
-              required
+              error={errors.companyDescription?.message}
+              {...register("companyDescription")}
             />
 
             <Button 
