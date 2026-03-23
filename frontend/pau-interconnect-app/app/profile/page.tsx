@@ -23,6 +23,7 @@ import {
   FiCheckCircle,
   FiAlertCircle,
 } from "react-icons/fi";
+import { authenticatedFetch } from "@/lib/api";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
@@ -92,15 +93,10 @@ const Profile = () => {
           backendFormData.append("file", profile.cvFile);
 
           try {
-            const response = await fetch(`${BACKEND_URL}/upload-and-analyze`, {
+            const result = await authenticatedFetch("/upload-and-analyze", {
               method: "POST",
               body: backendFormData,
             });
-            const result = await response.json();
-            
-            if (!response.ok) {
-              throw new Error(result?.error || "Backend upload failed");
-            }
             
             if (result.text_length === 0) {
               setStatus({ 
@@ -121,15 +117,10 @@ const Profile = () => {
             }));
             
           } catch (cvErr: any) {
-            console.error("CV Upload/Analysis failed. Full error:", cvErr);
-            const errorMsg = cvErr.message || "Unknown error";
-            const detailedMsg = cvErr.name === "TypeError" && cvErr.message === "Failed to fetch" 
-              ? "Network error: The backend may be down, use an invalid URL, or have CORS issues."
-              : `Backend error: ${errorMsg}`;
-            
+            console.error("CV Upload/Analysis failed:", cvErr);
             setStatus({ 
               type: 'warning', 
-              message: `Profile saved, but CV analysis failed. ${detailedMsg}` 
+              message: `Profile saved, but CV analysis failed: ${cvErr.message}` 
             });
           }
         } else {
@@ -305,13 +296,11 @@ const Profile = () => {
                           const userId = sessionData?.session?.user?.id;
                           if (!userId) throw new Error("Not logged in");
 
-                          const response = await fetch(`${BACKEND_URL}/refresh-cv-url`, {
+                          const data = await authenticatedFetch("/refresh-cv-url", {
                              method: "POST",
-                             headers: { "Content-Type": "application/json" },
                              body: JSON.stringify({ user_id: userId })
                           });
                           
-                          const data = await response.json();
                           if (data.cv_url) {
                              setProfile((prev: any) => ({ ...prev, cv_url: data.cv_url }));
                              window.open(data.cv_url, "_blank");

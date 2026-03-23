@@ -32,6 +32,7 @@ import {
   FiAlertTriangle,
   FiZap
 } from "react-icons/fi";
+import { authenticatedFetch } from "@/lib/api";
 
 export default function InternshipDetailsPage() {
   const params = useParams();
@@ -148,9 +149,8 @@ export default function InternshipDetailsPage() {
         return;
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/submit-application`, {
+      const result = await authenticatedFetch("/submit-application", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
            user_id: userId,
            internship_id: internship.id,
@@ -158,11 +158,6 @@ export default function InternshipDetailsPage() {
            student_email: user?.email,
         })
       });
-      
-      const result = await response.json();
-      if (!response.ok) {
-         throw new Error(result.error || "Failed to submit application");
-      }
 
       setHasApplied(true);
       setApplyModalOpen(false);
@@ -188,18 +183,11 @@ export default function InternshipDetailsPage() {
         return;
       }
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/draft-cover-letter`, {
+      const data = await authenticatedFetch("/draft-cover-letter", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: user.id, internship_id: internship.id }),
       });
       
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || "Failed to generate cover letter.");
-      }
-      
-      const data = await response.json();
       if (data.cover_letter) {
         setCoverLetter(data.cover_letter);
       }

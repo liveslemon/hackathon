@@ -18,9 +18,10 @@ from email.mime.text import MIMEText
 import pdfplumber
 import requests
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi import FastAPI, File, Form, Request, UploadFile, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from supabase import Client, ClientOptions, create_client
 
@@ -77,7 +78,31 @@ class ApplicationStatusUpdate(BaseModel):
     status: str
 
 # ------------------------------------------------------------------------------
-# 3. Helper Functions
+# 3. Security & Auth
+# ------------------------------------------------------------------------------
+
+auth_scheme = HTTPBearer()
+
+async def get_current_user(token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
+    """Validates the Supabase JWT and returns the user object."""
+    try:
+        # token.credentials is the raw JWT string
+        res = supabase.auth.get_user(token.credentials)
+        if not res or not res.user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired session.",
+            )
+        return res.user
+    except Exception as e:
+        logger.error(f"[Auth] Token verification failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication failed.",
+        )
+
+# ------------------------------------------------------------------------------
+# 4. Helper Functions
 # ------------------------------------------------------------------------------
 
 def extract_text(file_path: str) -> str:
@@ -205,8 +230,9 @@ app = FastAPI(title="PAU Interconnect API", version="4.1")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    # In production, replace "*" with your specific Vercel/Frontend URL
+    allow_origins=[os.getenv("FRONTEND_URL", "*")],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -241,7 +267,7 @@ def health():
     return {"status": "ok", "version": "v4.1-stable"}
 
 @app.get("/test-supabase")
-def test_supabase():
+def test_supabase(current_user = Depends(get_current_user)):
     """Test Supabase connection."""
     try:
         res = supabase.table("profiles").select("*").limit(1).execute()
@@ -251,8 +277,16 @@ def test_supabase():
 
 @app.post("/upload-and-analyze")
 @app.post("/api/upload-and-analyze")
-def upload_and_analyze(user_id: str = Form(...), file: UploadFile = File(...)):
+def upload_and_analyze(
+    user_id: str = Form(...), 
+    file: UploadFile = File(...),
+    current_user = Depends(get_current_user)
+):
     """Handles CV upload, storage, text extraction, and AI analysis."""
+    # Verify that the user_id matches the authenticated user
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden: User ID mismatch.")
+        
     logger.info(f"[/upload-and-analyze] Start: {user_id}, {file.filename}")
     temp_path = None
     
@@ -299,8 +333,9 @@ def upload_and_analyze(user_id: str = Form(...), file: UploadFile = File(...)):
 
 @app.post("/analyze-new-internship")
 @app.post("/api/analyze-new-internship")
-def analyze_new_internship(payload: AnalyzeNewInternshipRequest):
+def analyze_new_internship(payload: AnalyzeNewInternshipRequest, current_user = Depends(get_current_user)):
     """Trigger scoring of all existing student CVs against a new internship."""
+    # In a real app, check if current_user is an admin
     try:
         iid = payload.internship_id
         res_job = supabase.table("internships").select("*").eq("id", iid).execute()
@@ -325,8 +360,11 @@ def analyze_new_internship(payload: AnalyzeNewInternshipRequest):
 
 @app.post("/analyze-existing-cv")
 @app.post("/api/analyze-existing-cv")
-def analyze_existing(payload: AnalyzeRequest):
+def analyze_existing(payload: AnalyzeRequest, current_user = Depends(get_current_user)):
     """Re-run AI analysis for a user who already has a CV on file."""
+    if payload.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden: User ID mismatch.")
+
     try:
         p = get_user_profile(payload.user_id)
         if not p.get("cv_text"): return JSONResponse({"error": "No CV"}, status_code=400)
@@ -340,8 +378,11 @@ def analyze_existing(payload: AnalyzeRequest):
 
 @app.post("/refresh-cv-url")
 @app.post("/api/refresh-cv-url")
-def refresh_url(payload: AnalyzeRequest):
+def refresh_url(payload: AnalyzeRequest, current_user = Depends(get_current_user)):
     """Regenerate a signed URL for a user's CV if the old one expired."""
+    if payload.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden: User ID mismatch.")
+        
     try:
         p = get_user_profile(payload.user_id)
         url = p.get("cv_url", "")
@@ -363,7 +404,9 @@ def refresh_url(payload: AnalyzeRequest):
 
 @app.get("/my-matches")
 @app.get("/api/my-matches")
-def get_my_matches(user_id: str):
+def get_my_matches(user_id: str, current_user = Depends(get_current_user)):
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden: User ID mismatch.")
     try:
         res = supabase.table("match_results").select("*").eq("user_id", user_id).execute()
         return {"matches": res.data or []}
@@ -384,7 +427,9 @@ def debug_results(user_id: str):
 
 @app.post("/draft-cover-letter")
 @app.post("/api/draft-cover-letter")
-def build_cover_letter(payload: DraftCoverLetterRequest):
+def build_cover_letter(payload: DraftCoverLetterRequest, current_user = Depends(get_current_user)):
+    if payload.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden: User ID mismatch.")
     try:
         profile = get_user_profile(payload.user_id)
         cv_text = profile.get("cv_text")
@@ -433,7 +478,9 @@ def build_cover_letter(payload: DraftCoverLetterRequest):
 
 @app.post("/submit-application")
 @app.post("/api/submit-application")
-def submit_app(payload: SubmitApplicationRequest):
+def submit_app(payload: SubmitApplicationRequest, current_user = Depends(get_current_user)):
+    if payload.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden: User ID mismatch.")
     try:
         logger.info(f"[SubmitApp] {payload.user_id} applying for {payload.internship_id}")
         
@@ -449,7 +496,7 @@ def submit_app(payload: SubmitApplicationRequest):
         job = job_query.data[0]
         logger.info(f"[SubmitApp] Job: {job.get('role')}")
         
-        # 3. Fetch Match Score (Standard select instead of maybe_single for compatibility)
+        # 3. Fetch Match Score
         score_query = supabase.table("match_results").select("match_score").eq("user_id", payload.user_id).eq("internship_id", payload.internship_id).execute()
         match_score = score_query.data[0].get("match_score", 0) if score_query.data else 0
         logger.info(f"[SubmitApp] Match Score: {match_score}%")
@@ -470,20 +517,18 @@ def submit_app(payload: SubmitApplicationRequest):
         }).execute()
         logger.info("[SubmitApp] Application record created.")
         
-        # Send Email via Resend API (HTTP-based, bypasses Render SMTP block)
+        # 6. Send Email via Resend
         resend_api_key = os.getenv("RESEND_API_KEY")
         resend_from = os.getenv("RESEND_FROM_EMAIL", "PAU Interconnect <onboarding@resend.dev>")
         
         if not resend_api_key:
-            logger.warning("[SubmitApp] RESEND_API_KEY not found. Skipping email notification.")
+            logger.warning("[SubmitApp] RESEND_API_KEY not found. Skipping email.")
         else:
             try:
                 resend.api_key = resend_api_key
                 student_name = student.get('full_name', 'Student')
                 job_role = job.get('role', 'Internship')
-                target_email = job.get('employer_email') or os.getenv("SMTP_EMAIL")
-                
-                logger.info(f"[Resend] Preparing email for {student_name} applying to {job_role}...")
+                target_email = job.get('employer_email') or "noreply@pau.edu.ng"
                 
                 # Attachment handling
                 attachments = []
@@ -502,11 +547,10 @@ def submit_app(payload: SubmitApplicationRequest):
                                     "filename": f"{student_name.replace(' ','_')}_CV.pdf",
                                     "content": list(cv_bytes)
                                 })
-                                logger.info(f"[Resend] Attached CV: {filename}")
                     except Exception as storage_e:
                         logger.error(f"[Resend] CV Attachment error: {storage_e}")
 
-                reply_to = payload.student_email or student.get("email") or os.getenv("SMTP_EMAIL")
+                reply_to = payload.student_email or student.get("email") or "noreply@pau.edu.ng"
                 
                 params = {
                     "from": resend_from,
@@ -517,19 +561,19 @@ def submit_app(payload: SubmitApplicationRequest):
                     "attachments": attachments
                 }
                 
-                sent_email = resend.Emails.send(params)
-                logger.info(f"Email notification successfully sent via Resend: {sent_email.get('id')}")
+                resend.Emails.send(params)
+                logger.info(f"Email sent via Resend.")
             except Exception as email_e:
-                logger.error(f"[Resend] Failed to send email for {student_name}: {email_e}")
+                logger.error(f"[Resend] Failed: {email_e}")
 
         return {"success": True}
     except Exception as e:
-        logger.error(f"[/submit-application] Error: {e}")
+        logger.error(f"[/submit-application] Fatal: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.put("/applications/{app_id}/status")
 @app.put("/api/applications/{app_id}/status")
-def update_status(app_id: str, payload: ApplicationStatusUpdate):
+def update_status(app_id: str, payload: ApplicationStatusUpdate, current_user = Depends(get_current_user)):
     try:
         supabase.table("applied_internships").update({"status": payload.status}).eq("id", app_id).execute()
         return {"success": True}
@@ -538,7 +582,7 @@ def update_status(app_id: str, payload: ApplicationStatusUpdate):
 
 @app.get("/internships/{internship_id}/applicants")
 @app.get("/api/internships/{internship_id}/applicants")
-def get_applicants(internship_id: str):
+def get_applicants(internship_id: str, current_user = Depends(get_current_user)):
     try:
         res_apps = supabase.table("applied_internships").select("*").eq("internship_id", internship_id).order("match_score", desc=True).execute()
         apps = res_apps.data or []
@@ -560,7 +604,7 @@ def get_applicants(internship_id: str):
 
 @app.get("/admin/stats")
 @app.get("/api/admin/stats")
-def fetch_admin_stats():
+def fetch_admin_stats(current_user = Depends(get_current_user)):
     try:
         t_students = supabase.table("profiles").select("id", count="exact").eq("role", "student").execute().count or 0
         t_jobs = supabase.table("internships").select("id", count="exact").execute().count or 0
@@ -571,7 +615,7 @@ def fetch_admin_stats():
 
 @app.get("/admin/search")
 @app.get("/api/admin/search")
-def run_admin_search(q: str = ""):
+def run_admin_search(q: str = "", current_user = Depends(get_current_user)):
     if len(q) < 2: return {"students": [], "internships": []}
     try:
         students = supabase.table("profiles").select("*").eq("role", "student").ilike("full_name", f"%{q}%").execute().data or []
@@ -582,7 +626,7 @@ def run_admin_search(q: str = ""):
 
 @app.get("/admin/directory")
 @app.get("/api/admin/directory")
-def fetch_admin_directory():
+def fetch_admin_directory(current_user = Depends(get_current_user)):
     try:
         res = supabase.table("profiles").select("*").order("created_at", desc=True).execute()
         return res.data or []
@@ -591,7 +635,7 @@ def fetch_admin_directory():
 
 @app.get("/admin/analytics")
 @app.get("/api/admin/analytics")
-def fetch_admin_analytics():
+def fetch_admin_analytics(current_user = Depends(get_current_user)):
     try:
         jobs = supabase.table("internships").select("id, role, company, category").execute().data or []
         apps = supabase.table("applied_internships").select("id, internship_id").execute().data or []

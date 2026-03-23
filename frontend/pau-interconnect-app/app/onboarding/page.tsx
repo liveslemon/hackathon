@@ -14,6 +14,7 @@ import {
 } from "@/components/ui";
 import { AiOutlineArrowLeft, AiOutlineArrowRight } from "react-icons/ai";
 import { FileUpload } from "@/components/application/file-upload/file-upload-base";
+import { authenticatedFetch } from "@/lib/api";
 
 // --- Data ---
 const courses = [
@@ -260,19 +261,10 @@ export default function Onboarding() {
         backendFormData.append("file", formData.cvFile);
 
         try {
-          const response = await fetch(
-            `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/upload-and-analyze`,
-            {
-              method: "POST",
-              body: backendFormData,
-            },
-          );
-
-          const result = await response.json();
-
-          if (!response.ok) {
-            throw new Error(result?.error || "Backend upload failed");
-          }
+          const result = await authenticatedFetch("/upload-and-analyze", {
+            method: "POST",
+            body: backendFormData,
+          });
 
           cvUrl = result?.cv_url ?? null;
         } catch (err: any) {
