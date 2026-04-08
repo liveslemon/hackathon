@@ -71,21 +71,22 @@ export default function EmployerOnboarding() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6">
-      <Card className="max-w-xl w-full p-2">
-        <CardHeader className="text-center pt-8">
-          <Typography variant="h3" className="mb-2">Register Your Company</Typography>
-          <Typography variant="body2" color="muted">Create an employer account to post internships and discover talent.</Typography>
-        </CardHeader>
-        
-        <CardContent className="pt-6">
+    <div className="min-h-screen bg-white md:bg-[#f8fafc] flex items-center justify-center">
+      <div className="w-full max-w-xl md:mx-6">
+        <div className="px-6 py-10 md:p-10 md:bg-white md:rounded-3xl md:shadow-2xl md:border md:border-slate-100">
+          <div className="flex flex-col items-center mb-8">
+            <img src="/favicon.ico" alt="PAU Logo" className="w-14 h-14 mb-4 rounded-xl" />
+            <Typography variant="h3" weight="bold" className="mb-1">Register Your Company</Typography>
+            <Typography variant="body2" color="muted">Create an employer account to post internships and discover talent.</Typography>
+          </div>
+
           {errorMsg && (
             <div className="mb-6 px-4 py-3 rounded-xl bg-red-50 text-red-700 border border-red-100 text-sm font-medium">
               {errorMsg}
             </div>
           )}
 
-          <form onSubmit={handleSubmit(handleRegister)} className="space-y-6">
+          <form onSubmit={handleSubmit(handleRegister)} className="space-y-5">
             <Input
               id="companyName"
               label="Company Name"
@@ -123,7 +124,7 @@ export default function EmployerOnboarding() {
 
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full !rounded-full" 
               size="lg"
               isLoading={loading}
             >
@@ -134,7 +135,7 @@ export default function EmployerOnboarding() {
           <Typography variant="body2" className="text-center mt-8">
             Already registered?{" "}
             <span 
-              className="text-[#667eea] cursor-pointer font-bold hover:underline" 
+              className="text-brand cursor-pointer font-bold hover:underline" 
               onClick={() => router.push("/login/employer")}
             >
               Sign in
@@ -148,8 +149,8 @@ export default function EmployerOnboarding() {
           >
             Back to Home
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

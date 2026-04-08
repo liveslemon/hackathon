@@ -20,7 +20,7 @@ export const Textarea: React.FC<TextareaProps> = ({ label, error, helperText, cl
           "w-full py-2.5 px-4 rounded-xl border transition-all duration-200 focus:outline-none focus:ring-2",
           error
             ? "border-red-500 focus:ring-red-500/20"
-            : "border-slate-200 focus:border-[#667eea] focus:ring-[#667eea]/20",
+            : "border-slate-200 focus:border-brand focus:ring-brand/20",
           "placeholder:text-slate-400 text-slate-900",
           className
         )}

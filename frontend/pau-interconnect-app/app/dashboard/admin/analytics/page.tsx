@@ -8,7 +8,22 @@ import {
   Stack,
   Badge,
 } from "@/components/ui";
-import { FiBriefcase, FiUsers, FiTrendingUp, FiArrowRight } from "react-icons/fi";
+import {
+  FiBriefcase,
+  FiUsers,
+  FiTrendingUp,
+  FiArrowRight,
+} from "react-icons/fi";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 export default function AnalyticsView() {
@@ -50,7 +65,7 @@ export default function AnalyticsView() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#667eea]"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
       </div>
     );
   }
@@ -104,25 +119,30 @@ export default function AnalyticsView() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         <Card className="border-slate-100 shadow-sm">
           <CardContent className="p-8">
-            <Typography variant="h4" weight="bold" className="mb-8">Internships by Category</Typography>
-            <div className="space-y-6">
-              {(categories || []).map((cat, idx) => {
-                const percentage = totalInternships > 0 ? (cat.value / totalInternships) * 100 : 0;
-                return (
-                  <div key={idx} className="space-y-2">
-                    <div className="flex justify-between items-center px-1">
-                      <Typography variant="body2" weight="bold" color="muted">{cat.label}</Typography>
-                      <Typography variant="body2" weight="bold">{cat.value}</Typography>
-                    </div>
-                    <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-indigo-500 transition-all duration-1000 ease-out rounded-full"
-                        style={{ width: `${percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+            <Typography variant="h4" weight="bold" className="mb-8">Application Volume (Top 10 Roles)</Typography>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={(internshipStats || []).slice(0, 10)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis 
+                    dataKey="title" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 12, fill: '#94a3b8' }} 
+                    tickFormatter={(value) => value.length > 15 ? value.substring(0, 15) + '...' : value}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 12, fill: '#94a3b8' }}
+                  />
+                  <Tooltip 
+                    cursor={{ fill: '#f8fafc' }}
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }}
+                  />
+                  <Bar dataKey="applications" fill="var(--brand)" radius={[6, 6, 0, 0]} barSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>

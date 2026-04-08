@@ -28,7 +28,7 @@ export const Input: React.FC<InputProps> = ({ label, error, helperText, leftIcon
             leftIcon ? "pl-10 pr-4" : "px-4",
             error
               ? "border-red-500 focus:ring-red-500/20"
-              : "border-slate-200 focus:border-[#667eea] focus:ring-[#667eea]/20",
+              : "border-slate-200 focus:border-brand focus:ring-brand/20",
             "placeholder:text-slate-400 text-slate-900",
             className
           )}

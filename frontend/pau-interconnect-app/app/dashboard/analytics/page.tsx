@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import crossFetch from "cross-fetch";
 import AnalyticsView from "../AnalyticsView";
 
 export default async function AnalyticsPage() {
@@ -8,6 +9,7 @@ export default async function AnalyticsPage() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      global: { fetch: crossFetch },
       cookies: {
         getAll() {
           return cookieStore.getAll();

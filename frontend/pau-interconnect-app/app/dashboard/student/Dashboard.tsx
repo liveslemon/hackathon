@@ -16,6 +16,7 @@ import {
 } from "@/components/ui";
 import InternshipCard from "@/components/InternshipCard";
 import DashboardHeader from "@/components/DashboardHeader";
+import LogbookWidget from "@/components/LogbookWidget";
 
 interface Internship {
   id: string;
@@ -45,10 +46,24 @@ const Dashboard = ({
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInterest, setSelectedInterest] = useState("All");
-  const [statusFilter, setStatusFilter] = useState("All"); // "All", "Applied", "Accepted", "Rejected"
-  const [matchFilter, setMatchFilter] = useState("All"); // "All", "70", "40"
-  const [sortBy, setSortBy] = useState("match"); // "match", "deadline", "company"
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [matchFilter, setMatchFilter] = useState("All");
+  const [sortBy, setSortBy] = useState("match");
   const [availableFilters, setAvailableFilters] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(8);
+
+  useEffect(() => {
+    const updateItemsPerPage = () => {
+      const width = window.innerWidth;
+      if (width < 640) setItemsPerPage(4);       // mobile: 4 cards
+      else if (width < 1024) setItemsPerPage(6);  // tablet: 6 cards
+      else setItemsPerPage(8);                     // desktop: 8 cards
+    };
+    updateItemsPerPage();
+    window.addEventListener("resize", updateItemsPerPage);
+    return () => window.removeEventListener("resize", updateItemsPerPage);
+  }, []);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationSeverity, setNotificationSeverity] = useState<
@@ -172,6 +187,7 @@ const Dashboard = ({
 
       return filtered;
     });
+    setCurrentPage(1);
   }, [selectedInterest, statusFilter, matchFilter, sortBy, searchQuery, internships]);
 
   const handleOpenAnalysis = () => {
@@ -236,7 +252,8 @@ const Dashboard = ({
         onOpenAnalysis={handleOpenAnalysis} 
       />
 
-      <main className="max-w-7xl mx-auto px-6 py-12">
+      <main className="max-w-7xl mx-auto px-0 sm:px-6 py-8 sm:py-12 pb-24 md:pb-12">
+        {userProfile?.id && <div className="px-4 sm:px-0"><LogbookWidget userId={userProfile.id} /></div>}
         <Stack spacing={6} className="mb-12">
           <div className="w-full">
             <Input
@@ -246,6 +263,18 @@ const Dashboard = ({
               leftIcon={<FiSearch className="w-5 h-5" />}
               className="bg-white shadow-sm border-slate-100 h-14"
             />
+            <div className="mt-4 flex overflow-x-auto pb-4 sm:pb-0 sm:flex-wrap gap-2 items-center hide-scrollbar px-5 sm:px-0">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-2 shrink-0">Quick Filters:</span>
+              {["Remote", "Hybrid", "Software Engineering", "Data Science", "Design", "Business"].map(tag => (
+                <button
+                  key={tag}
+                  onClick={() => setSearchQuery(tag)}
+                  className="text-xs shrink-0 whitespace-nowrap bg-brand/10 text-brand hover:bg-brand hover:text-white transition-colors px-3 py-1.5 rounded-full font-semibold"
+                >
+                  #{tag}
+                </button>
+              ))}
+            </div>
           </div>
           
           <div className="flex flex-wrap items-center gap-4">
@@ -306,28 +335,83 @@ const Dashboard = ({
           </div>
         </Stack>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {(filteredInternships || []).length > 0 ? (
-            (filteredInternships || []).map((internship, index) => (
-              <div 
-                key={internship.id}
-                className="animate-in fade-in slide-in-from-bottom-8 duration-500 ease-out"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <InternshipCard internship={internship} />
+        {(() => {
+          const totalItems = (filteredInternships || []).length;
+          const totalPages = Math.ceil(totalItems / itemsPerPage);
+          const startIndex = (currentPage - 1) * itemsPerPage;
+          const paginatedItems = (filteredInternships || []).slice(startIndex, startIndex + itemsPerPage);
+
+          return (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                {paginatedItems.length > 0 ? (
+                  paginatedItems.map((internship, index) => (
+                    <div 
+                      key={internship.id}
+                      className="animate-in fade-in slide-in-from-bottom-8 duration-500 ease-out"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      <InternshipCard internship={internship} />
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-full py-20 text-center bg-white rounded-3xl border border-dashed border-slate-200">
+                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <FiSearch className="w-10 h-10 text-slate-300" />
+                    </div>
+                    <Typography variant="h5" color="muted">
+                      No internships found. Try adjusting your filters.
+                    </Typography>
+                  </div>
+                )}
               </div>
-            ))
-          ) : (
-            <div className="col-span-full py-20 text-center bg-white rounded-3xl border border-dashed border-slate-200">
-              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <FiSearch className="w-10 h-10 text-slate-300" />
-              </div>
-              <Typography variant="h5" color="muted">
-                No internships found. Try adjusting your filters.
-              </Typography>
-            </div>
-          )}
-        </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-3 mt-12 pb-4">
+                  <button
+                    onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    disabled={currentPage === 1}
+                    className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 border border-slate-200 bg-white text-slate-600 hover:border-brand hover:text-brand disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-slate-200 disabled:hover:text-slate-600"
+                  >
+                    ← Previous
+                  </button>
+
+                  <div className="flex items-center gap-1.5">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        onClick={() => { setCurrentPage(page); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                        className={`w-10 h-10 rounded-xl text-sm font-bold transition-all duration-200 ${
+                          currentPage === page
+                            ? 'bg-gradient-to-br from-brand to-brand-secondary text-white shadow-lg shadow-indigo-200'
+                            : 'bg-white text-slate-500 border border-slate-200 hover:border-brand hover:text-brand'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    disabled={currentPage === totalPages}
+                    className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 border border-slate-200 bg-white text-slate-600 hover:border-brand hover:text-brand disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-slate-200 disabled:hover:text-slate-600"
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+
+              {totalItems > 0 && (
+                <div className="text-center mt-4">
+                  <Typography variant="caption" color="muted">
+                    Showing {startIndex + 1}–{Math.min(startIndex + itemsPerPage, totalItems)} of {totalItems} internships
+                  </Typography>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </main>
 
       <Modal
@@ -347,7 +431,7 @@ const Dashboard = ({
               <div key={internship.id} className="group">
                 <Stack direction="row" justify="between" align="center" className="mb-4">
                   <div>
-                    <Typography variant="h5" weight="bold" className="group-hover:text-[#667eea] transition-colors">
+                    <Typography variant="h5" weight="bold" className="group-hover:text-brand transition-colors">
                       {internship.role}
                     </Typography>
                     <Typography variant="body2" color="muted">

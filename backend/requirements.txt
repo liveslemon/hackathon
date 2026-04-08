@@ -7,3 +7,11 @@ supabase
 resend
 python-multipart
 pydantic
+numpy
+tenacity
+httpx
+openai
+redis
+sentence-transformers
+torch
+pydantic-settings

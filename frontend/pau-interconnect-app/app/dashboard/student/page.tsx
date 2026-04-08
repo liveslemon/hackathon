@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import crossFetch from "cross-fetch";
 import Dashboard from "./Dashboard";
 
 interface Internship {
@@ -31,6 +32,7 @@ export default async function StudentDashboardPage() {
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
+      global: { fetch: crossFetch },
       cookies: {
         getAll() {
           return cookieStore.getAll();

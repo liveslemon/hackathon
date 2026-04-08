@@ -52,12 +52,12 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-[#667eea] bg-gradient-to-br from-[#667eea] via-[#764ba2] to-[#667eea]">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-brand bg-gradient-to-br from-brand via-brand-secondary to-brand">
       <div className="w-full max-w-md animate-in fade-in zoom-in duration-500">
         <Card className="rounded-[40px] shadow-2xl border-none overflow-hidden">
           <CardContent className="p-10 md:p-12">
             <div className="flex justify-center mb-8">
-              <div className="w-20 h-20 bg-[#667eea] rounded-[32px] flex items-center justify-center shadow-xl shadow-indigo-100/50 transform -rotate-6">
+              <div className="w-20 h-20 bg-brand rounded-[32px] flex items-center justify-center shadow-xl shadow-indigo-100/50 transform -rotate-6">
                 <FiLock size={32} className="text-white" />
               </div>
             </div>

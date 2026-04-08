@@ -1,14 +1,32 @@
 
 @import "tailwindcss";
 
+/* ========================================
+   THEME: CSS Variables
+   ======================================== */
 :root {
+  --brand: #667eea;
+  --brand-secondary: #764ba2;
   --background: #ffffff;
-  --foreground: #171717;
+  --background-subtle: #f8fafc;
+  --foreground: #0f172a;
+  --foreground-muted: #64748b;
 }
 
+/* ========================================
+   Register colors with Tailwind v4
+   ======================================== */
 @theme inline {
+  --color-brand: #667eea;
+  --color-brand-dark: #5a6fd6;
+  --color-brand-light: #8fa0f0;
+  --color-brand-secondary: #764ba2;
+  --color-brand-secondary-dark: #523471;
+  --color-brand-secondary-light: #9c6dc5;
   --color-background: var(--background);
+  --color-background-subtle: var(--background-subtle);
   --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

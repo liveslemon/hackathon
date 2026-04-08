@@ -283,18 +283,7 @@ export default function Onboarding() {
       }
 
       setOptimisticMessage("Finalizing Setup...");
-      const pendingProfile = {
-        full_name: formData.name,
-        course: formData.course,
-        level: formData.level,
-        interests: formData.interests,
-        cv_url: cvUrl,
-      };
-      try {
-        localStorage.setItem("pendingProfile", JSON.stringify(pendingProfile));
-      } catch (e) {
-        console.warn("Could not write pendingProfile to localStorage", e);
-      }
+
       setSnackbar({
         open: true,
         message: "Sign up successful! Please check your email.",
@@ -319,9 +308,9 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center p-6 overflow-y-auto">
-      <Container className="max-w-3xl w-full">
-        <Card className="p-8 md:p-12 overflow-hidden shadow-2xl transition-all duration-500">
+    <div className="min-h-screen bg-white md:bg-gradient-to-br md:from-brand md:to-brand-secondary flex items-center justify-center md:p-6 overflow-y-auto">
+      <div className="w-full max-w-3xl md:mx-6">
+        <div className="px-6 py-8 md:p-12 md:bg-white md:rounded-3xl md:shadow-2xl transition-all duration-500">
           <div className="mb-10">
             <Typography variant="h2" weight="bold" className="mb-3 text-slate-800">
               {step === 1 && "Personal Information"}
@@ -340,7 +329,7 @@ export default function Onboarding() {
             </div>
             <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
                <div 
-                 className="h-full bg-gradient-to-r from-[#667eea] to-[#764ba2] transition-all duration-700 ease-out"
+                 className="h-full bg-gradient-to-r from-brand to-brand-secondary transition-all duration-700 ease-out"
                  style={{ width: `${(step / 5) * 100}%` }}
                />
             </div>
@@ -551,7 +540,7 @@ export default function Onboarding() {
                )}
             </div>
           </div>
-        </Card>
+        </div>
 
         {/* Custom Snackbar/Toast */}
         {snackbar.open && (
@@ -570,7 +559,7 @@ export default function Onboarding() {
              </div>
           </div>
         )}
-      </Container>
+      </div>
     </div>
   );
 }

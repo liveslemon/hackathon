@@ -18,24 +18,19 @@ export default function LandingPage() {
   return (
     <div className="bg-[#f8fafc] min-h-screen text-slate-900 overflow-x-hidden">
       {/* Navbar Minimalist */}
-      <nav className="px-6 lg:px-20 py-6 flex justify-between items-center bg-white/50 backdrop-blur-md sticky top-0 z-50">
-        <a href="/" className="flex items-center gap-3 no-underline">
-          <img src="/favicon.ico" alt="PAU Logo" className="w-9 h-9 rounded-lg" />
-          <Typography variant="h6" weight="bold" color="secondary">
+      <nav className="px-4 sm:px-6 lg:px-20 py-4 sm:py-6 flex justify-between items-center bg-white/50 backdrop-blur-md sticky top-0 z-50">
+        <a href="/" className="flex items-center gap-2 sm:gap-3 no-underline">
+          <img src="/favicon.ico" alt="PAU Logo" className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg" />
+          <Typography variant="h6" weight="bold" color="secondary" className="text-sm sm:text-base">
             PAU InterConnect
           </Typography>
         </a>
         
-        <div className="hidden md:flex gap-12">
-          <a href="/login/admin" className="text-sm font-medium text-slate-900 no-underline hover:text-[#667eea] transition-colors">
-            Admin Access
-          </a>
+        <div className="flex items-center gap-1.5 sm:gap-3">
+          <Button variant="ghost" href="/login/admin" className="hidden lg:inline-flex text-xs sm:text-sm px-2 sm:px-4">Admin</Button>
+          <Button variant="outline" href="/login/employer" className="text-xs sm:text-sm px-2 sm:px-4">Employer</Button>
+          <Button href="/login/student" className="text-xs sm:text-sm px-2 sm:px-4">Student</Button>
         </div>
-        
-        <Stack direction="row" spacing={3} className="hidden sm:flex">
-          <Button variant="outline" href="/login/employer">Employer</Button>
-          <Button href="/login/student">Sign in</Button>
-        </Stack>
       </nav>
 
       {/* Hero Section */}
@@ -47,7 +42,7 @@ export default function LandingPage() {
          <Container maxWidth="md" className="text-center relative z-10">
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: "easeOut" }}>
                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white shadow-xl mb-10">
-                   <MdBusiness size={32} color="#667eea" />
+                   <MdBusiness size={32} color="var(--brand)" />
                </div>
                <Typography variant="h1" className="mb-6 leading-tight">
                  Internships and Recruiting<br/>
@@ -110,7 +105,7 @@ export default function LandingPage() {
                transition={{ opacity: { duration: 1, delay: 0.2 }, y: { repeat: Infinity, duration: 4.5, ease: "easeInOut", delay: 0.5 } }}
                className="absolute bottom-[10%] left-[12%] z-5"
             >
-               <Card className="w-[300px] p-6 -rotate-2 border-t-[20px] border-[#667eea]">
+               <Card className="w-[300px] p-6 -rotate-2 border-t-[20px] border-brand">
                   <Typography variant="h6" weight="bold" className="mb-6">Employer Queue</Typography>
                   <Stack spacing={6}>
                      <div>
@@ -147,7 +142,7 @@ export default function LandingPage() {
                transition={{ opacity: { duration: 1, delay: 0.4 }, y: { repeat: Infinity, duration: 5.5, ease: "easeInOut", delay: 1.5 } }}
                className="absolute bottom-[15%] right-[12%] z-5"
             >
-               <Card className="w-[320px] p-6 border-t-[20px] border-[#764ba2]">
+               <Card className="w-[320px] p-6 border-t-[20px] border-brand-secondary">
                   <Typography variant="body1" weight="bold" className="mb-4">Live Platform Stats</Typography>
                   <div className="flex justify-center -space-x-4 mt-8 mb-2">
                      <div className="w-[70px] h-[70px] rounded-2xl bg-white shadow-xl border border-slate-100 flex items-center justify-center relative z-30">
@@ -184,7 +179,7 @@ export default function LandingPage() {
       </div>
 
       {/* Joint gradient container for Continuous Flow */}
-      <div className="bg-gradient-to-br from-[#667eea] to-[#764ba2]">
+      <div className="bg-gradient-to-br from-brand to-brand-secondary">
          {/* Deep Green CTA Banner (Grid overlay) */}
          <div className="pt-24 pb-24 text-center" 
               style={{ 
@@ -198,7 +193,7 @@ export default function LandingPage() {
                <Typography variant="body1" className="text-white/70 mb-10 max-w-[600px] mx-auto leading-relaxed">
                   Accelerate your hiring with our technology. Reduce downtime and optimize headcount. Get a special offer now!
                </Typography>
-               <Button size="lg" colorType="secondary" href="/onboarding/employer" className="bg-white text-[#667eea] hover:bg-slate-50">
+               <Button size="lg" colorType="secondary" href="/onboarding/employer" className="bg-white text-brand hover:bg-slate-50">
                   Work With Us
                </Button>
             </Container>
@@ -221,7 +216,7 @@ export default function LandingPage() {
                   { title: "Employer Application Review", desc: "Employers log in to see ranked applicants, review CV scores, and accept or reject candidates directly from their dashboard.", icon: <MdBusiness /> },
                ].map((svc, i) => (
                   <Card key={i} className="flex-1 p-8">
-                     <div className="w-12 h-12 rounded-xl bg-[#667eea] flex items-center justify-center mb-6 text-white text-2xl">
+                     <div className="w-12 h-12 rounded-xl bg-brand flex items-center justify-center mb-6 text-white text-2xl">
                         {svc.icon}
                      </div>
                      <Typography variant="h6" weight="bold" className="mb-3">{svc.title}</Typography>
@@ -241,8 +236,8 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-20 mb-20">
                <div className="md:col-span-4">
                   <Stack direction="row" align="center" spacing={3} className="mb-8">
-                     <div className="w-7 h-7 rounded-full bg-[#764ba2] relative">
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-[#667eea]" />
+                     <div className="w-7 h-7 rounded-full bg-brand-secondary relative">
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-brand" />
                      </div>
                      <Typography variant="h6" weight="bold">
                         PAU Interconnect
@@ -276,10 +271,10 @@ export default function LandingPage() {
                      hello@pauinterconnect.edu
                   </Typography>
                   <Stack direction="row" spacing={2}>
-                     <div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center hover:bg-[#764ba2] hover:text-[#667eea] transition-all cursor-pointer">
+                     <div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center hover:bg-brand-secondary hover:text-brand transition-all cursor-pointer">
                         <MdWork size={20} />
                      </div>
-                     <div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center hover:bg-[#764ba2] hover:text-[#667eea] transition-all cursor-pointer">
+                     <div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center hover:bg-brand-secondary hover:text-brand transition-all cursor-pointer">
                         <MdTrendingUp size={20} />
                      </div>
                   </Stack>

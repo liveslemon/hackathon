@@ -14,26 +14,23 @@ import { FiBriefcase, FiHeart, FiCalendar, FiClock } from "react-icons/fi";
 import InternshipCard from "@/components/InternshipCard";
 import DashboardHeader from "@/components/DashboardHeader";
 
+import { useAuth } from "@/context/AuthContext";
+
 const MyInternshipsPage = () => {
   const router = useRouter();
-  const [profile, setProfile] = useState<any>({});
+  const { user, profile, loading } = useAuth();
   const [savedInternships, setSavedInternships] = useState<any[]>([]);
   const [appliedInternships, setAppliedInternships] = useState<any[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
+    if (loading) return;
+    
     (async () => {
       try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const userId = sessionData?.session?.user?.id ?? null;
+        const userId = user?.id ?? null;
 
         if (userId) {
-          const { data: profileRow } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", userId)
-            .maybeSingle();
-          setProfile(profileRow ?? {});
 
           const { data: matchData } = await supabase
             .from("match_results")
@@ -96,7 +93,6 @@ const MyInternshipsPage = () => {
             setAppliedInternships([]);
           }
         } else {
-          setProfile({});
           setSavedInternships([]);
           setAppliedInternships([]);
           router.push("/login/student");
@@ -107,12 +103,12 @@ const MyInternshipsPage = () => {
         setIsLoaded(true);
       }
     })();
-  }, [router]);
+  }, [loading, user, router]);
 
-  if (!isLoaded) {
+  if (loading || !isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#667eea]"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
       </div>
     );
   }

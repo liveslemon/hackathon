@@ -97,7 +97,7 @@ export default function TestComponentsPage() {
                 <Card key={i} hoverable>
                   <CardContent>
                     <Stack spacing={4}>
-                      <div className="w-12 h-12 rounded-xl bg-[#667eea]/10 flex items-center justify-center text-[#667eea]">
+                      <div className="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
                         <MdCheckCircle size={24} />
                       </div>
                       <Typography variant="h5">Feature Item {i}</Typography>

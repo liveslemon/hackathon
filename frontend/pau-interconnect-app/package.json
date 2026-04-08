@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "NODE_OPTIONS=--dns-result-order=ipv4first next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -20,6 +20,7 @@
     "@supabase/supabase-js": "^2.99.1",
     "@untitledui/file-icons": "^0.0.9",
     "@untitledui/icons": "^0.0.21",
+    "cross-fetch": "^4.1.0",
     "date-fns": "^4.1.0",
     "formidable": "^3.5.4",
     "motion": "^12.36.0",
@@ -31,6 +32,7 @@
     "react-dom": "19.2.4",
     "react-hook-form": "^7.72.0",
     "react-icons": "^5.6.0",
+    "recharts": "^3.8.0",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6"
   },

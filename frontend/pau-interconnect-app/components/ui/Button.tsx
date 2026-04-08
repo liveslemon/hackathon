@@ -30,30 +30,30 @@ export const Button: React.FC<ButtonProps> = ({
   const baseStyles = "inline-flex items-center justify-center rounded-full font-semibold transition-all duration-200 focus:outline-none active:scale-95 disabled:opacity-50 disabled:pointer-events-none cursor-pointer";
   
   const sizes = {
-    sm: "px-4 py-2 text-sm",
-    md: "px-6 py-2.5 text-base",
-    lg: "px-8 py-3 text-lg",
+    sm: "px-3 py-1.5 text-xs md:px-4 md:py-2 md:text-sm",
+    md: "px-4 py-2 text-sm md:px-6 md:py-2.5 md:text-base",
+    lg: "px-6 py-2.5 text-base md:px-8 md:py-3 md:text-lg",
   };
 
   const variants = {
     solid: {
-      primary: "bg-[#667eea] text-white hover:bg-[#4758a3] shadow-md hover:shadow-lg",
-      secondary: "bg-[#764ba2] text-white hover:bg-[#523471] shadow-md hover:shadow-lg",
-      danger: "bg-red-500 text-white hover:bg-red-600 shadow-md",
+      primary: "bg-gradient-to-r from-brand to-brand-secondary text-white hover:opacity-95 shadow-lg shadow-brand/30 hover:-translate-y-0.5 hover:shadow-xl transition-all",
+      secondary: "bg-gradient-to-r from-brand-secondary to-brand-secondary-dark text-white hover:opacity-95 shadow-lg shadow-brand-secondary/30 hover:-translate-y-0.5 hover:shadow-xl transition-all",
+      danger: "bg-gradient-to-r from-red-500 to-rose-600 text-white hover:opacity-95 shadow-lg shadow-red-200/50 hover:-translate-y-0.5 hover:shadow-xl transition-all",
     },
     outline: {
-      primary: "border-2 border-[#667eea] text-[#667eea] hover:bg-[#667eea]/5",
-      secondary: "border-2 border-[#764ba2] text-[#764ba2] hover:bg-[#764ba2]/5",
+      primary: "border-2 border-brand text-brand hover:bg-brand/5",
+      secondary: "border-2 border-brand-secondary text-brand-secondary hover:bg-brand-secondary/5",
       danger: "border-2 border-red-500 text-red-500 hover:bg-red-50/50",
     },
     ghost: {
-      primary: "text-[#667eea] hover:bg-[#667eea]/5",
-      secondary: "text-[#764ba2] hover:bg-[#764ba2]/5",
+      primary: "text-brand hover:bg-brand/5",
+      secondary: "text-brand-secondary hover:bg-brand-secondary/5",
       danger: "text-red-500 hover:bg-red-50",
     },
     link: {
-      primary: "text-[#667eea] hover:underline p-0!",
-      secondary: "text-[#764ba2] hover:underline p-0!",
+      primary: "text-brand hover:underline p-0!",
+      secondary: "text-brand-secondary hover:underline p-0!",
       danger: "text-red-500 hover:underline p-0!",
     },
   };

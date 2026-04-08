@@ -185,7 +185,11 @@ export default function InternshipDetailsPage() {
       
       const data = await authenticatedFetch("/draft-cover-letter", {
         method: "POST",
-        body: JSON.stringify({ user_id: user.id, internship_id: internship.id }),
+        body: JSON.stringify({ 
+          user_id: user.id, 
+          internship_id: internship.id,
+          existing_letter: coverLetter 
+        }),
       });
       
       if (data.cover_letter) {
@@ -203,7 +207,7 @@ export default function InternshipDetailsPage() {
   if (isPageLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#667eea]"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
       </div>
     );
   }
@@ -322,7 +326,7 @@ export default function InternshipDetailsPage() {
           {/* Sidebar */}
           <div className="space-y-6">
             <Card className="sticky top-28 overflow-hidden rounded-[32px] border-slate-100 shadow-2xl shadow-indigo-100/30">
-              <div className="bg-gradient-to-br from-[#667eea] to-[#764ba2] p-8 text-white relative">
+              <div className="bg-gradient-to-br from-brand to-brand-secondary p-8 text-white relative">
                 <div className="absolute top-0 right-0 p-4 opacity-10">
                   <FiBriefcase size={80} />
                 </div>
@@ -400,7 +404,10 @@ export default function InternshipDetailsPage() {
               disabled={isDrafting || isSubmitting}
               className="flex-1"
             >
-              {isDrafting ? "Drafting..." : "Draft with AI"}
+              {isDrafting 
+                ? (coverLetter.trim() ? "Enhancing..." : "Drafting...") 
+                : (coverLetter.trim() ? "✨ Enhance with AI" : "⚡ Draft with AI")
+              }
             </Button>
             <Button 
               onClick={handleApply} 

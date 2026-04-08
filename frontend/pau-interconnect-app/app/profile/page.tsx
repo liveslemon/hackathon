@@ -24,6 +24,7 @@ import {
   FiAlertCircle,
 } from "react-icons/fi";
 import { authenticatedFetch } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
@@ -35,32 +36,20 @@ const Profile = () => {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'warning', message: string } | null>(null);
   const [isProfileLoaded, setIsProfileLoaded] = useState(false);
+  const { user, profile: authProfile, loading } = useAuth();
 
   useEffect(() => {
-    (async () => {
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const userId = sessionData?.session?.user?.id ?? null;
-
-        if (userId) {
-          setUserEmail(sessionData?.session?.user?.email ?? null);
-          const { data: profileRow } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", userId)
-            .maybeSingle();
-          setProfile(profileRow ?? {});
-        } else {
-          setProfile({});
-        }
-      } catch (err) {
-        console.error("Error loading profile data:", err);
-        setProfile({});
-      } finally {
-        setIsProfileLoaded(true);
-      }
-    })();
-  }, []);
+    if (loading) return;
+    
+    if (user) {
+      setUserEmail(user.email ?? null);
+      // Ensure we clone the context profile so user edits don't mutate context immediately
+      setProfile(authProfile ? { ...authProfile } : {});
+    } else {
+      setProfile({});
+    }
+    setIsProfileLoaded(true);
+  }, [loading, user, authProfile]);
 
   const handleSave = async () => {
     try {
@@ -128,7 +117,6 @@ const Profile = () => {
         }
         setIsEditing(false);
       } else {
-        localStorage.setItem("userProfile", JSON.stringify(profile));
         setIsEditing(false);
         setStatus({ type: 'success', message: "Profile updated locally." });
       }
@@ -143,14 +131,14 @@ const Profile = () => {
   if (!isProfileLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#667eea]"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] py-12 px-6 md:px-12 lg:px-24">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="min-h-screen bg-[#f8fafc] py-6 md:py-12 px-4 md:px-12 lg:px-24">
+      <div className="max-w-4xl mx-auto space-y-4 md:space-y-8">
         <Button
           variant="outline"
           leftIcon={<FiArrowLeft />}
@@ -160,22 +148,22 @@ const Profile = () => {
           Back to Dashboard
         </Button>
 
-        <Card className="overflow-hidden border-slate-100 shadow-2xl shadow-indigo-50/50 rounded-[40px]">
-          <div className="bg-gradient-to-r from-[#667eea] to-[#764ba2] px-10 py-12 text-white relative overflow-hidden">
+        <Card className="overflow-hidden border-slate-100 shadow-2xl shadow-indigo-50/50 rounded-2xl md:rounded-[40px]">
+          <div className="bg-gradient-to-r from-brand to-brand-secondary px-6 py-8 md:px-10 md:py-12 text-white relative overflow-hidden">
             {/* Decorative circles */}
             <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl animate-pulse" />
             <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-indigo-200/20 rounded-full blur-2xl" />
             
-            <Stack direction="row" align="center" justify="between">
-              <Stack direction="row" align="center" spacing={6}>
-                <div className="w-24 h-24 bg-white/20 backdrop-blur-md rounded-[32px] flex items-center justify-center border border-white/30 shadow-2xl">
-                  <FiUser className="w-12 h-12 text-white" />
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+              <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-4 md:gap-6">
+                <div className="w-16 h-16 md:w-24 md:h-24 bg-white/20 backdrop-blur-md rounded-2xl md:rounded-[32px] flex items-center justify-center border border-white/30 shadow-2xl shrink-0">
+                  <FiUser className="w-8 h-8 md:w-12 md:h-12 text-white" />
                 </div>
-                <div>
+                <div className="flex flex-col justify-center">
                   <Typography variant="h2" weight="bold">{profile.full_name || "Guest User"}</Typography>
-                  <Typography variant="body1" className="opacity-80 font-medium">{userEmail || "Log in to save your profile"}</Typography>
+                  <Typography variant="body1" className="opacity-80 font-medium break-all">{userEmail || "Log in to save your profile"}</Typography>
                 </div>
-              </Stack>
+              </div>
               {!isEditing ? (
                 <Button
                   onClick={() => setIsEditing(true)}
@@ -189,15 +177,15 @@ const Profile = () => {
                   isLoading={isSaving}
                   onClick={handleSave}
                   leftIcon={<FiSave />}
-                  className="bg-white text-[#667eea] hover:bg-white/90 shadow-xl font-bold rounded-2xl"
+                  className="bg-white text-brand hover:bg-white/90 shadow-xl font-bold rounded-2xl"
                 >
                   {isSaving ? "Saving..." : "Save Changes"}
                 </Button>
               )}
-            </Stack>
+            </div>
           </div>
 
-          <CardContent className="p-10 space-y-10">
+          <CardContent className="p-6 md:p-10 space-y-8 md:space-y-10">
             {status && (
               <div className={`p-4 rounded-2xl flex items-center gap-3 animate-in fade-in zoom-in duration-300 ${
                 status.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 
@@ -209,7 +197,7 @@ const Profile = () => {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
               <Input
                 label="Full Name"
                 value={profile.full_name || ""}
@@ -256,23 +244,23 @@ const Profile = () => {
 
             <div className="space-y-6">
               <Typography variant="h4" weight="bold">Curriculum Vitae (CV)</Typography>
-              <div className="bg-slate-50/50 border border-dashed border-slate-200 rounded-[32px] p-8 flex flex-col items-center justify-center space-y-6">
-                <div className="w-16 h-16 bg-white rounded-2xl shadow-md flex items-center justify-center">
-                  <FiUploadCloud className="w-8 h-8 text-[#667eea]" />
+              <div className="bg-slate-50/50 border border-dashed border-slate-200 rounded-2xl md:rounded-[32px] p-6 md:p-8 flex flex-col items-center justify-center space-y-4 md:space-y-6">
+                <div className="w-12 h-12 md:w-16 md:h-16 bg-white rounded-xl md:rounded-2xl shadow-md flex items-center justify-center">
+                  <FiUploadCloud className="w-6 h-6 md:w-8 md:h-8 text-brand" />
                 </div>
-                <div className="text-center space-y-1">
-                  <Typography variant="body1" weight="bold">
+                <div className="text-center space-y-1 px-4">
+                  <Typography variant="body2" weight="bold" className="break-words">
                     {profile.cvFile ? profile.cvFile.name : "Professional CV Document"}
                   </Typography>
                   <Typography variant="caption" color="muted">PDF, DOCX up to 5MB</Typography>
                 </div>
                 
-                <Stack direction="row" spacing={4}>
+                <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-3 sm:gap-4 justify-center">
                   <Button 
                     as="label"
                     variant="outline" 
                     disabled={!isEditing}
-                    className={`rounded-xl font-bold px-6 ${!isEditing ? 'opacity-50 cursor-not-allowed' : 'bg-white hover:border-[#667eea] hover:text-[#667eea]'}`}
+                    className={`rounded-xl font-bold px-6 ${!isEditing ? 'opacity-50 cursor-not-allowed' : 'bg-white hover:border-brand hover:text-brand'}`}
                   >
                     {profile.cvFile ? "Change File" : "Upload New CV"}
                     <input
@@ -317,7 +305,7 @@ const Profile = () => {
                       View Current CV
                     </Button>
                   )}
-                </Stack>
+                </div>
               </div>
             </div>
           </CardContent>

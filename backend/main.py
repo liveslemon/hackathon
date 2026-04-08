@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings
 
 # Import modular routers
-from routers import system, cv, applications, admin
+from routers import system, cv, applications, admin, logbook
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -41,6 +41,7 @@ app.include_router(system.router, tags=["System"])
 app.include_router(cv.router, tags=["CV Profile Operations"])
 app.include_router(applications.router, tags=["Applications"])
 app.include_router(admin.router, tags=["Admin Dashboard"])
+app.include_router(logbook.router, tags=["Logbook"])
 
 # ------------------------------------------------------------------------------
 # Global Error Handler (MUST BE LAST)

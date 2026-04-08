@@ -218,7 +218,7 @@ export default function PostInternshipView() {
 
         <div className="space-y-6 relative z-10">
           <div className="space-y-2">
-            <Typography variant="body2" weight="bold" className="ml-1 text-[#667eea]">Related Interests * (Select at least one)</Typography>
+            <Typography variant="body2" weight="bold" className="ml-1 text-brand">Related Interests * (Select at least one)</Typography>
             <div className="flex flex-wrap gap-2.5">
               {INTERESTS_OPTIONS.map((option) => {
                 const isSelected = interests.includes(option);
@@ -228,7 +228,7 @@ export default function PostInternshipView() {
                     onClick={() => toggleInterest(option)}
                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 border ${
                       isSelected
-                        ? "bg-[#667eea] text-white border-[#667eea] shadow-lg shadow-indigo-100 scale-105"
+                        ? "bg-brand text-white border-brand shadow-lg shadow-indigo-100 scale-105"
                         : "bg-white text-slate-500 border-slate-100 hover:border-indigo-200 hover:text-indigo-500"
                     }`}
                   >

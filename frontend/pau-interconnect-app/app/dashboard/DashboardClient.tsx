@@ -55,7 +55,7 @@ export default function DashboardClient({ session }: { session: any }) {
   if (!session?.user || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#667eea]"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
       </div>
     );
   }
@@ -65,7 +65,7 @@ export default function DashboardClient({ session }: { session: any }) {
       <div className="max-w-7xl mx-auto space-y-10">
         <header className="flex justify-between items-center bg-white/60 backdrop-blur-xl p-6 rounded-[32px] border border-white shadow-xl shadow-indigo-50/50">
           <Stack direction="row" align="center" spacing={4}>
-            <div className="w-12 h-12 bg-gradient-to-br from-[#667eea] to-[#764ba2] rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+            <div className="w-12 h-12 bg-gradient-to-br from-brand to-brand-secondary rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
               <img src="/favicon.ico" alt="Logo" className="w-8 h-8 opacity-90" />
             </div>
             <div>
@@ -93,7 +93,7 @@ export default function DashboardClient({ session }: { session: any }) {
             className={`px-8 h-14 rounded-2xl font-bold transition-all duration-300 ${
               activeTab === "analytics" 
                 ? "shadow-xl shadow-indigo-100" 
-                : "bg-white border-slate-100 text-slate-500 hover:border-[#667eea] hover:text-[#667eea]"
+                : "bg-white border-slate-100 text-slate-500 hover:border-brand hover:text-brand"
             }`}
           >
             Analytics Overview
@@ -105,7 +105,7 @@ export default function DashboardClient({ session }: { session: any }) {
             className={`px-8 h-14 rounded-2xl font-bold transition-all duration-300 ${
               activeTab === "post" 
                 ? "shadow-xl shadow-indigo-100" 
-                : "bg-white border-slate-100 text-slate-500 hover:border-[#667eea] hover:text-[#667eea]"
+                : "bg-white border-slate-100 text-slate-500 hover:border-brand hover:text-brand"
             }`}
           >
             Post Internship

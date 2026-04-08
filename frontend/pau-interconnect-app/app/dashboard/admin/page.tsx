@@ -77,7 +77,7 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#667eea]"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
       </div>
     );
   }
@@ -151,7 +151,7 @@ export default function AdminDashboard() {
                 "px-8 rounded-2xl font-bold transition-all duration-300",
                 activeTab === tab.key 
                   ? "shadow-lg shadow-indigo-100" 
-                  : "bg-white border-slate-100 text-slate-600 hover:border-[#667eea] hover:text-[#667eea]"
+                  : "bg-white border-slate-100 text-slate-600 hover:border-brand hover:text-brand"
               )}
             >
               {tab.label}

@@ -52,11 +52,12 @@ export default function EmployerApplicantReview() {
   const fetchReviewData = async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || !session.user) {
         router.push("/login/employer");
         return;
       }
+      const user = session.user;
 
       // Fetch Profile
       const { data: profileData } = await supabase.from("profiles").select("*").eq("id", user.id).single();
@@ -78,7 +79,11 @@ export default function EmployerApplicantReview() {
 
       // Fetch Applications from Backend (bypasses RLS)
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
-      const res = await fetch(`${backendUrl}/internships/${internshipId}/applicants`);
+      const res = await fetch(`${backendUrl}/internships/${internshipId}/applicants`, {
+        headers: {
+          "Authorization": `Bearer ${session.access_token}`
+        }
+      });
       
       if (res.ok) {
          const data = await res.json();
@@ -97,10 +102,16 @@ export default function EmployerApplicantReview() {
 
   const handleStatusChange = async (applicationId: string, newStatus: string) => {
      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Not authenticated");
+
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
         const res = await fetch(`${backendUrl}/applications/${applicationId}/status`, {
            method: "PUT",
-           headers: { "Content-Type": "application/json" },
+           headers: { 
+             "Content-Type": "application/json",
+             "Authorization": `Bearer ${session.access_token}`
+           },
            body: JSON.stringify({ status: newStatus })
         });
         
@@ -119,7 +130,7 @@ export default function EmployerApplicantReview() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#667eea]"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
       </div>
     );
   }
@@ -184,7 +195,7 @@ export default function EmployerApplicantReview() {
                   key={app.id} 
                   className={cx(
                     "transition-all duration-300 overflow-hidden",
-                    isExpanded ? "ring-2 ring-[#667eea] shadow-xl" : "hover:shadow-md"
+                    isExpanded ? "ring-2 ring-brand shadow-xl" : "hover:shadow-md"
                   )}
                 >
                   <CardContent className="p-0">
@@ -193,11 +204,11 @@ export default function EmployerApplicantReview() {
                       className="p-6 md:p-8 flex items-center justify-between cursor-pointer group"
                     >
                       <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 rounded-2xl bg-[#667eea] text-white flex items-center justify-center text-xl font-bold shadow-lg shadow-indigo-100/50 flex-shrink-0">
+                        <div className="w-16 h-16 rounded-2xl bg-brand text-white flex items-center justify-center text-xl font-bold shadow-lg shadow-indigo-100/50 flex-shrink-0">
                            {studentInfo?.full_name?.charAt(0) || "S"}
                         </div>
                         <div className="space-y-1">
-                          <Typography variant="h4" weight="bold" className="group-hover:text-[#667eea] transition-colors">
+                          <Typography variant="h4" weight="bold" className="group-hover:text-brand transition-colors">
                              {studentInfo?.full_name || "Unknown Student"}
                           </Typography>
                           <Typography variant="body2" color="muted" weight="medium">
@@ -230,7 +241,7 @@ export default function EmployerApplicantReview() {
                       
                       <button className={cx(
                         "p-3 rounded-xl transition-all",
-                        isExpanded ? "bg-[#667eea]/10 text-[#667eea]" : "bg-slate-50 text-slate-400 group-hover:text-slate-600"
+                        isExpanded ? "bg-brand/10 text-brand" : "bg-slate-50 text-slate-400 group-hover:text-slate-600"
                       )}>
                         {isExpanded ? <FiChevronUp size={24} /> : <FiChevronDown size={24} />}
                       </button>
@@ -242,7 +253,7 @@ export default function EmployerApplicantReview() {
                           
                           <div className="lg:col-span-2 space-y-6">
                             <div className="flex items-center gap-2 text-slate-900 mb-2">
-                               <FiFileText className="text-[#667eea]" size={20} />
+                               <FiFileText className="text-brand" size={20} />
                                <Typography variant="h4" weight="bold">Cover Letter</Typography>
                             </div>
                             <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm min-h-[200px]">

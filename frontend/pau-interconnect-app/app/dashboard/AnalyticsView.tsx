@@ -80,7 +80,7 @@ export default function AnalyticsView({
                 </div>
                 <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden shadow-inner">
                   <div 
-                    className="h-full bg-gradient-to-r from-[#667eea] to-[#764ba2] rounded-full transition-all duration-1000 ease-out"
+                    className="h-full bg-gradient-to-r from-brand to-brand-secondary rounded-full transition-all duration-1000 ease-out"
                     style={{ width: `${percentage}%` }}
                   />
                 </div>

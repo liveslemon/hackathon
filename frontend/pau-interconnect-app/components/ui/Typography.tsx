@@ -11,14 +11,14 @@ interface TypographyProps {
 }
 
 const variants = {
-  h1: "text-4xl md:text-6xl font-extrabold tracking-tight",
-  h2: "text-3xl md:text-4xl font-bold tracking-tight",
-  h3: "text-2xl md:text-3xl font-semibold",
-  h4: "text-xl md:text-2xl font-semibold",
-  h5: "text-lg md:text-xl font-semibold",
-  h6: "text-base md:text-lg font-semibold",
+  h1: "text-3xl md:text-5xl font-extrabold tracking-tight",
+  h2: "text-2xl md:text-4xl font-bold tracking-tight",
+  h3: "text-xl md:text-3xl font-semibold",
+  h4: "text-lg md:text-2xl font-semibold",
+  h5: "text-base md:text-xl font-semibold",
+  h6: "text-sm md:text-lg font-semibold",
   subtitle1: "text-base md:text-lg font-medium",
-  subtitle2: "text-sm md:text-base font-semibold",
+  subtitle2: "text-xs md:text-base font-semibold",
   body1: "text-base leading-relaxed",
   body2: "text-sm leading-relaxed",
   caption: "text-xs uppercase tracking-wider",
@@ -34,7 +34,7 @@ const weights = {
 
 const colors = {
   primary: "text-slate-900",
-  secondary: "text-[#667eea]",
+  secondary: "text-brand",
   white: "text-white",
   muted: "text-slate-500",
   error: "text-red-500",

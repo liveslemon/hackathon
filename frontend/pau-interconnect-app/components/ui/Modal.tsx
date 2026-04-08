@@ -59,7 +59,7 @@ export const Modal: React.FC<ModalProps> = ({
       {/* Modal Content */}
       <div 
         className={cx(
-          "relative bg-white w-full rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]",
+          "relative bg-white w-full rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh] md:max-h-[85vh]",
           sizes[size]
         )}
         ref={modalRef}

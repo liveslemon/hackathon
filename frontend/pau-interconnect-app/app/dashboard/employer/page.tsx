@@ -164,18 +164,37 @@ export default function EmployerDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f8fafc] p-6 md:p-10">
-        <Skeleton className="h-12 w-1/3 mb-10" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12">
-          <Skeleton className="h-40 w-full" />
-          <Skeleton className="h-40 w-full" />
+      <div className="min-h-screen bg-[#f8fafc]">
+        <div className="h-[88px] bg-white border-b border-slate-100 px-6 md:px-10 flex items-center justify-between">
+          <Skeleton className="h-8 w-40" />
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <Skeleton className="h-10 w-32 rounded-xl" />
+          </div>
         </div>
-        <Skeleton className="h-8 w-1/4 mb-6" />
-        <div className="space-y-4">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-        </div>
+        
+        <main className="max-w-6xl mx-auto p-6 md:p-10">
+          <div className="flex justify-between items-center mb-10">
+            <div>
+              <Skeleton className="h-10 w-64 mb-2" />
+              <Skeleton className="h-6 w-48" />
+            </div>
+            <Skeleton className="h-12 w-40 rounded-xl" />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12">
+            <Skeleton className="h-40 w-full rounded-3xl" />
+            <Skeleton className="h-40 w-full rounded-3xl" />
+          </div>
+
+          <Skeleton className="h-8 w-56 mb-6" />
+
+          <div className="space-y-4">
+            <Skeleton className="h-32 w-full rounded-3xl" />
+            <Skeleton className="h-32 w-full rounded-3xl" />
+            <Skeleton className="h-32 w-full rounded-3xl" />
+          </div>
+        </main>
       </div>
     );
   }
@@ -188,7 +207,7 @@ export default function EmployerDashboard() {
         <Stack direction="row" justify="between" align="center" className="mb-10">
           <div>
             <Typography variant="h2" weight="bold">Company Dashboard</Typography>
-            <Typography variant="body1" color="muted">Welcome back, <span className="text-[#667eea] font-semibold">{profile?.company_name}</span></Typography>
+            <Typography variant="body1" color="muted">Welcome back, <span className="text-brand font-semibold">{profile?.company_name}</span></Typography>
           </div>
           <Button 
             onClick={() => setCreateModalOpen(true)}
@@ -207,7 +226,7 @@ export default function EmployerDashboard() {
                    <Typography variant="body2" color="muted" weight="bold" className="uppercase tracking-wider mb-2">Active Postings</Typography>
                    <Typography variant="h1" className="text-slate-800">{internships.length}</Typography>
                  </div>
-                 <div className="w-16 h-16 bg-[#667eea]/10 rounded-2xl flex items-center justify-center text-[#667eea]">
+                 <div className="w-16 h-16 bg-brand/10 rounded-2xl flex items-center justify-center text-brand">
                    <FiBriefcase className="w-8 h-8" />
                  </div>
                </Stack>
@@ -221,7 +240,7 @@ export default function EmployerDashboard() {
                    <Typography variant="body2" color="muted" weight="bold" className="uppercase tracking-wider mb-2">Total Applicants</Typography>
                    <Typography variant="h1" className="text-slate-800">{applications.length}</Typography>
                  </div>
-                 <div className="w-16 h-16 bg-[#764ba2]/10 rounded-2xl flex items-center justify-center text-[#764ba2]">
+                 <div className="w-16 h-16 bg-brand-secondary/10 rounded-2xl flex items-center justify-center text-brand-secondary">
                    <FiUsers className="w-8 h-8" />
                  </div>
                </Stack>
@@ -245,12 +264,12 @@ export default function EmployerDashboard() {
                  return (
                     <Card 
                       key={job.id} 
-                      className="group p-2 hover:border-[#667eea] hover:shadow-xl hover:shadow-indigo-100 transition-all duration-300 cursor-pointer border-slate-100" 
+                      className="group p-2 hover:border-brand hover:shadow-xl hover:shadow-indigo-100 transition-all duration-300 cursor-pointer border-slate-100" 
                       onClick={() => router.push(`/dashboard/employer/internships/${job.id}`)}
                     >
                        <CardContent className="flex flex-col md:flex-row justify-between items-start md:items-center p-6 gap-6">
                           <div>
-                             <Typography variant="h4" weight="bold" className="group-hover:text-[#667eea] transition-colors mb-2">{job.role}</Typography>
+                             <Typography variant="h4" weight="bold" className="group-hover:text-brand transition-colors mb-2">{job.role}</Typography>
                              <Stack direction="row" spacing={4} align="center">
                                 <Badge variant="primary" size="sm">{job.field}</Badge>
                                 <Badge variant="slate" size="sm">{job.category}</Badge>
@@ -299,7 +318,7 @@ export default function EmployerDashboard() {
       >
         <div className="space-y-10">
            <div>
-             <Typography variant="body2" weight="bold" className="text-[#667eea] uppercase tracking-widest mb-6">Basic Details</Typography>
+             <Typography variant="body2" weight="bold" className="text-brand uppercase tracking-widest mb-6">Basic Details</Typography>
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                <Input
                  label="Job Role"
@@ -332,7 +351,7 @@ export default function EmployerDashboard() {
            </div>
 
            <div>
-             <Typography variant="body2" weight="bold" className="text-[#667eea] uppercase tracking-widest mb-6">Job Description & Requirements</Typography>
+             <Typography variant="body2" weight="bold" className="text-brand uppercase tracking-widest mb-6">Job Description & Requirements</Typography>
              <Stack spacing={6}>
                <Textarea
                  label="Detailed Job Description"
@@ -353,7 +372,7 @@ export default function EmployerDashboard() {
            </div>
 
            <div>
-             <Typography variant="body2" weight="bold" className="text-[#667eea] uppercase tracking-widest mb-6">Tags & External Links</Typography>
+             <Typography variant="body2" weight="bold" className="text-brand uppercase tracking-widest mb-6">Tags & External Links</Typography>
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                <Input
                  label="Related Tags (comma-separated)"

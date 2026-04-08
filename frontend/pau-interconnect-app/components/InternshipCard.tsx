@@ -123,8 +123,8 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
   };
 
   return (
-    <Card className="h-full group hover:shadow-xl transition-all duration-300 border-slate-100 flex flex-col overflow-hidden">
-      <div className="relative h-48 overflow-hidden">
+    <Card className="h-full group hover:shadow-xl transition-all duration-300 border-slate-100 flex flex-col overflow-hidden rounded-2xl md:rounded-3xl hover:-translate-y-0.5 md:hover:-translate-y-1">
+      <div className="relative h-36 md:h-48 overflow-hidden">
         <img
           src={
             internship.imageUrl ||
@@ -163,9 +163,9 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
         </Stack>
       </div>
 
-      <CardContent className="flex-grow p-6">
+      <CardContent className="flex-grow p-4 md:p-6">
         <Stack spacing={2}>
-          <Typography variant="h5" className="group-hover:text-[#667eea] transition-colors line-clamp-1">
+          <Typography variant="h5" className="group-hover:text-brand transition-colors line-clamp-1">
             <a href={`/internships/${internship.id}`} className="hover:underline">
               {internship.role}
             </a>
@@ -187,7 +187,7 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
         </Stack>
       </CardContent>
 
-      <div className="px-6 py-4 bg-slate-50/50 flex justify-between items-center border-t border-slate-100">
+      <div className="px-4 py-3 md:px-6 md:py-4 bg-slate-50/50 flex justify-between items-center border-t border-slate-100">
         <Button
           variant="ghost"
           size="sm"

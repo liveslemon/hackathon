@@ -50,23 +50,23 @@ const Login = () => {
 
   const handleAuth = async (data: LoginForm) => {
     setIsLoading(true);
-    const { email, password } = data;
+    try {
+      const { email, password } = data;
 
-    const { data: authData, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      setSnackbarMessage(error.message);
-      setSnackbarSeverity("error");
-      setSnackbarOpen(true);
-    } else {
+      if (error) {
+        setSnackbarMessage(error.message);
+        setSnackbarSeverity("error");
+        setSnackbarOpen(true);
+        return;
+      }
+
       const { user } = authData;
       const userName = user?.user_metadata?.name || user?.email;
-
-      localStorage.setItem("userName", userName);
-      localStorage.setItem("userEmail", user?.email || "");
 
       setSnackbarMessage(`Welcome back, ${userName}!`);
       setSnackbarSeverity("success");
@@ -118,20 +118,34 @@ const Login = () => {
       setTimeout(() => {
         router.push("/dashboard/student");
       }, 800);
+    } catch (err: any) {
+      console.error("Login exception:", err);
+      setSnackbarMessage(err?.message || "Network error. Please try again.");
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center p-6">
-      <Card className="max-w-md w-full p-2">
-        <CardHeader className="text-center pt-8">
-          <Typography variant="h3" className="mb-2">Welcome Back</Typography>
-          <Typography variant="body2" color="muted">Sign in to your student account</Typography>
-        </CardHeader>
-        
-        <CardContent className="pt-6">
-          <form onSubmit={handleSubmit(handleAuth)} className="space-y-6">
+    <div className="min-h-screen bg-white md:bg-gradient-to-br md:from-brand md:to-brand-secondary flex items-center justify-center">
+      <div className="w-full max-w-md md:mx-6">
+        <div className="px-6 py-10 md:p-10 md:bg-white md:rounded-3xl md:shadow-2xl">
+          {/* Logo - mobile only */}
+          <div className="flex flex-col items-center mb-8">
+            <img src="/favicon.ico" alt="PAU Logo" className="w-14 h-14 mb-4 rounded-xl" />
+            <Typography variant="h3" weight="bold" className="mb-1">Welcome Back</Typography>
+            <Typography variant="body2" color="muted">Sign in to your student account</Typography>
+          </div>
+
+          {snackbarOpen && snackbarSeverity === "error" && (
+            <div className="mb-6 px-4 py-3 rounded-xl bg-red-50 text-red-700 border border-red-100 text-sm font-medium">
+              {snackbarMessage}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit(handleAuth)} className="space-y-5">
             <Input
               id="email"
               label="Email"
@@ -150,8 +164,8 @@ const Login = () => {
               {...register("password")}
             />
 
-            <Button type="submit" className="w-full" size="lg" isLoading={isLoading}>
-              Sign In
+            <Button type="submit" className="w-full !rounded-full" size="lg" isLoading={isLoading}>
+              Log In
             </Button>
           </form>
 
@@ -162,7 +176,7 @@ const Login = () => {
               onClick={() => router.push("/onboarding")}
               className="text-sm"
             >
-              Don't have an account? Sign up
+              Don't have an account? <span className="underline font-bold ml-1">Sign Up</span>
             </Button>
             
             <div className="grid grid-cols-2 gap-4">
@@ -177,14 +191,14 @@ const Login = () => {
                 variant="outline"
                 colorType="secondary"
                 onClick={() => router.push("/login/admin")}
-                className="text-xs"
+                className="text-xs hidden md:inline-flex"
               >
                 Admin Login
               </Button>
             </div>
           </Stack>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {snackbarOpen && (
         <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300 z-[100] border ${
