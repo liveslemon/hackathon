@@ -4,6 +4,12 @@
 
 import logging
 import re
+import sys
+import os
+
+# Ensure the backend directory is in the Python path for Render deployments
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
