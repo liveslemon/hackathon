@@ -23,8 +23,8 @@ backend/.env
 backend/uploads/
 backend/backend.log
 
-# Scratch scripts
-*.js
-*.py
+# Scratch scripts (root-level only, don't block project code)
+/*.js
+/*.py
 !frontend/pau-interconnect-app/**
-!backend/main.py
+!backend/**
