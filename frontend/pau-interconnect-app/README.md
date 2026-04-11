@@ -34,3 +34,6 @@ npm run dev
 - `components/`: Reusable UI elements (Buttons, Cards, Modals).
 - `lib/`: Supabase client and shared utilities.
 - `context/`: React context providers for global state.
+
+## 📄 License
+This project is developed by Hillary Ilona. It is not an official Pan-Atlantic University project.

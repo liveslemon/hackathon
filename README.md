@@ -103,4 +103,4 @@ The project is configured for deployment on **Render** using the `render.yaml` f
 
 ## 📄 License
 
-This project is developed for the Pan-Atlantic University Hackathon.
+This project is developed by Hillary Ilona.

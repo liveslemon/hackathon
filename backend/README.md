@@ -31,4 +31,7 @@ python -m uvicorn main:app --reload
 - **Routers**: API endpoints organized by feature.
 - **Services**: Integration with Supabase, OpenAI, and Resend.
 - **Schemas**: Pydantic models for data validation.
-- **Core**: App configuration and security settings.
+- `core/`: App configuration and security settings.
+
+## 📄 License
+This project is developed by Hillary Ilona. It is not an official Pan-Atlantic University project.
