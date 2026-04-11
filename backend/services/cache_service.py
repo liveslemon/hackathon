@@ -2,7 +2,7 @@ import time
 import json
 import logging
 import redis
-from backend.core.config import settings
+from core.config import settings
 
 logger = logging.getLogger(__name__)
 

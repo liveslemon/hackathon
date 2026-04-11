@@ -2,7 +2,7 @@ import logging
 import json
 import re
 from openai import AsyncOpenAI
-from backend.core.config import settings
+from core.config import settings
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)

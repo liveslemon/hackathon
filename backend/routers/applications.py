@@ -2,12 +2,12 @@ import logging
 import resend
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
-from backend.core.config import settings
-from backend.core.security import get_current_user
-from backend.core.db import supabase
-from backend.schemas.requests import DraftCoverLetterRequest, SubmitApplicationRequest, ApplicationStatusUpdate
-from backend.services.supabase_service import get_user_profile
-from backend.services.routing_service import generate_cover_letter
+from core.config import settings
+from core.security import get_current_user
+from core.db import supabase
+from schemas.requests import DraftCoverLetterRequest, SubmitApplicationRequest, ApplicationStatusUpdate
+from services.supabase_service import get_user_profile
+from services.routing_service import generate_cover_letter
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

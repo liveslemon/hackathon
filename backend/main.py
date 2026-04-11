@@ -7,10 +7,10 @@ import re
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from backend.core.config import settings
+from core.config import settings
 
 # Import modular routers
-from backend.routers import system, cv, applications, admin, logbook
+from routers import system, cv, applications, admin, logbook
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
