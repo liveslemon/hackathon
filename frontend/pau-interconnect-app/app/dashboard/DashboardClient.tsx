@@ -26,30 +26,46 @@ export default function DashboardClient({ session }: { session: any }) {
     }
 
     const fetchData = async () => {
-      setLoading(true);
-      const { data, error } = await supabase.from("internships").select("category");
-      
-      if (!error && data) {
-        const counts: Record<string, number> = {};
-        data.forEach((item) => {
-          const category = item.category || "Unknown";
-          counts[category] = (counts[category] || 0) + 1;
-        });
-        const categoryArray = Object.entries(counts).map(([label, value]) => ({
-          label,
-          value,
-        }));
-        setCategories(categoryArray);
+      try {
+        setLoading(true);
+        const { data, error } = await supabase.from("internships").select("category");
+        
+        if (!error && data) {
+          const counts: Record<string, number> = {};
+          data.forEach((item) => {
+            const category = item.category || "Unknown";
+            counts[category] = (counts[category] || 0) + 1;
+          });
+          const categoryArray = Object.entries(counts).map(([label, value]) => ({
+            label,
+            value,
+          }));
+          setCategories(categoryArray);
+        }
+      } catch (err) {
+        console.error("Dashboard fetch error:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchData();
   }, [session, router]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/");
+    // Add a safety timeout for logout so the user isn't stuck if Supabase hangs
+    const logoutTimeout = setTimeout(() => {
+      router.push("/");
+    }, 2000);
+
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Sign out error:", err);
+    } finally {
+      clearTimeout(logoutTimeout);
+      router.push("/");
+    }
   };
 
   if (!session?.user || loading) {

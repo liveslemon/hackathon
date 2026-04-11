@@ -32,19 +32,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           if (session?.user) {
             setUser(session.user);
-            const { data: profileData } = await supabase
+            const { data: profileData, error: profileError } = await supabase
               .from("profiles")
               .select("*")
               .eq("id", session.user.id)
               .single();
+            
+            if (profileError) {
+              console.error("Failed to fetch profile in auth change:", profileError);
+            }
             setProfile(profileData);
           } else {
             setUser(null);
             setProfile(null);
           }
         } catch (err) {
-          console.error("Auth change error:", err);
+          console.error("Auth change error handled:", err);
         } finally {
+          // Explicitly clear safety timeout if we finished naturally
+          clearTimeout(safetyTimeout);
           setLoading(false);
         }
       }

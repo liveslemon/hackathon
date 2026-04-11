@@ -213,25 +213,25 @@ export default function Onboarding() {
     }
     setIsSubmitting(true);
     setOptimisticMessage("Authenticating user...");
+    
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: { emailRedirectTo: `${window.location.origin}/dashboard` },
       });
+      
       if (authError) {
         setSnackbar({
           open: true,
           message: authError.message,
           severity: "error",
         });
-        setIsSubmitting(false);
         return;
       }
+      
       const user_id = authData?.user?.id;
-      if (!user_id) {
-        throw new Error("User ID not returned from signup");
-      }
+      if (!user_id) throw new Error("User registration failed - no ID returned.");
 
       setOptimisticMessage("Initializing profile...");
       const { error: profileInsertError } = await supabase
@@ -247,43 +247,33 @@ export default function Onboarding() {
         });
 
       if (profileInsertError) {
-        console.error("Failed to create profile row:", profileInsertError);
-        setSnackbar({
-          open: true,
-          message: "Failed to initialize profile. Please try again.",
-          severity: "error",
-        });
-        setIsSubmitting(false);
-        return;
+        throw new Error(`Profile initialization failed: ${profileInsertError.message}`);
       }
-      let cvUrl: string | null = null;
 
-      if (formData.cvFile && user_id) {
-        setOptimisticMessage("Uploading Document & Analyzing CV (This takes a moment)...");
+      if (formData.cvFile) {
+        setOptimisticMessage("Analyzing CV (This takes a moment)...");
         const backendFormData = new FormData();
         backendFormData.append("user_id", user_id);
         backendFormData.append("file", formData.cvFile);
 
         try {
-          const result = await authenticatedFetch("/upload-and-analyze", {
+          // authenticatedFetch now has a 30s timeout
+          await authenticatedFetch("/upload-and-analyze", {
             method: "POST",
             body: backendFormData,
           });
-
-          cvUrl = result?.cv_url ?? null;
         } catch (err: any) {
-          console.error("Backend CV upload failed:", err);
+          console.error("Non-critical backend CV upload failed:", err);
           setSnackbar({
             open: true,
-            message:
-              "CV uploaded but analysis failed. You can retry later from dashboard.",
+            message: "CV analysis failed. You can retry later from your profile.",
             severity: "warning",
           });
+          // We don't throw here because user registration/profile succeeded
         }
       }
 
       setOptimisticMessage("Finalizing Setup...");
-
       setSnackbar({
         open: true,
         message: "Sign up successful! Please check your email.",
@@ -291,10 +281,10 @@ export default function Onboarding() {
       });
       setStep(5);
     } catch (error: any) {
-      console.error("Unexpected error during onboarding submit:", error);
+      console.error("Onboarding submission failed:", error);
       setSnackbar({
         open: true,
-        message: "An unexpected error occurred. Please try again.",
+        message: error.message || "An unexpected error occurred. Please try again.",
         severity: "error",
       });
     } finally {

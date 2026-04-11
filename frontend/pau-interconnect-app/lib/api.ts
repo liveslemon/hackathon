@@ -33,16 +33,32 @@ export async function authenticatedFetch(endpoint: string, options: RequestInit 
 
   const url = endpoint.startsWith("http") ? endpoint : `${BACKEND_URL}${endpoint}`;
   
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  // Implement 30-second timeout
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), 30000);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
 
-  const data = await response.json().catch(() => ({}));
+    clearTimeout(id);
 
-  if (!response.ok) {
-    throw new Error(data.error || `Request failed with status ${response.status}`);
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || `Request failed with status ${response.status}`);
+    }
+
+    return data;
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error("Request timed out after 30 seconds. Please try again.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(id);
   }
-
-  return data;
 }

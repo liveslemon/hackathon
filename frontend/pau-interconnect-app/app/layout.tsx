@@ -14,6 +14,8 @@ export const metadata: Metadata = {
   description: "AI-powered internship matching for students and employers",
 };
 
+import GlobalErrorBoundary from "@/components/ErrorBoundary";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -22,7 +24,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Providers>{children}</Providers>
+        <GlobalErrorBoundary>
+          <Providers>{children}</Providers>
+        </GlobalErrorBoundary>
       </body>
     </html>
   );
