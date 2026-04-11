@@ -9,7 +9,12 @@ logger = logging.getLogger(__name__)
 redis_client = None
 if settings.REDIS_URL:
     try:
-        redis_client = redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
+        redis_client = redis.Redis.from_url(
+            settings.REDIS_URL,
+            decode_responses=True,
+            socket_timeout=2,
+            socket_connect_timeout=2,
+        )
         redis_client.ping()
     except Exception as e:
         logger.warning(f"[Cache] Redis connection failed, falling back to memory-only: {e}")

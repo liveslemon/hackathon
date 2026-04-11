@@ -45,7 +45,7 @@ class UnifiedLLMClient:
                 "name": "NVIDIA"
             })
 
-    async def generate_text(self, prompt: str, system_message: str = "You are a helpful assistant.") -> str:
+    async def generate_text(self, prompt: str, system_message: str = "You are a helpful assistant.", model: str = "") -> str:
         if not self.providers:
             logger.warning("[AI/LLM] No API keys provided. Returning mock response.")
             return "Placeholder Generation (No API Key Configured)."
@@ -59,8 +59,9 @@ class UnifiedLLMClient:
         for provider in self.providers:
             try:
                 logger.info(f"[LLM] Attempting generation with {provider['name']}...")
+                use_model = model if model else provider["model"]
                 response = await provider["client"].chat.completions.create(
-                    model=provider["model"],
+                    model=use_model,
                     messages=messages,
                     temperature=0.3,
                     max_tokens=600
@@ -77,5 +78,5 @@ class UnifiedLLMClient:
 llm_client = UnifiedLLMClient()
 
 @retry(stop=stop_after_attempt(1))
-async def generate_completion(prompt: str, system_message: str = "You are a helpful assistant.") -> str:
-    return await llm_client.generate_text(prompt, system_message)
+async def generate_completion(prompt: str, system_message: str = "You are a helpful assistant.", model: str = "") -> str:
+    return await llm_client.generate_text(prompt, system_message, model=model)

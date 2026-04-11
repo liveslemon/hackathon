@@ -53,10 +53,10 @@ class GlobalErrorBoundary extends React.Component<Props, State> {
             </Typography>
             
             <Stack spacing={3}>
-              <Button onClick={this.handleReload} fullWidth className="h-14 rounded-2xl shadow-lg shadow-indigo-100">
+              <Button onClick={this.handleReload} className="w-full h-14 rounded-2xl shadow-lg shadow-indigo-100">
                 Reload Page
               </Button>
-              <Button variant="ghost" onClick={this.handleGoHome} fullWidth className="h-14 rounded-2xl text-slate-500">
+              <Button variant="ghost" onClick={this.handleGoHome} className="w-full h-14 rounded-2xl text-slate-500">
                 Back to Home
               </Button>
             </Stack>

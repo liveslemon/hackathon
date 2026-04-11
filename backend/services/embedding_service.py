@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 # Lazy loaded local model
 _local_model = None
+LOCAL_EMBEDDING_DIM = 384  # all-MiniLM-L6-v2 output dimension
 
 def get_local_embedding(text: str) -> list[float]:
     global _local_model
@@ -23,7 +24,7 @@ def get_local_embedding(text: str) -> list[float]:
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 async def get_embedding(text: str) -> list[float]:
     if not text or not text.strip():
-        return [0.0] * 1024
+        return [0.0] * LOCAL_EMBEDDING_DIM
         
     if not settings.COHERE_API_KEY:
         logger.warning("[AI/Embed] No COHERE API KEY. Using local fallback.")

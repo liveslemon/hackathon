@@ -73,11 +73,16 @@ const StudentLogbookPage = () => {
 
       // Fetch Logbook Entries via backend
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
-      const res = await fetch(`${backendUrl}/api/logbook/student?student_id=${session.user.id}`, {
-         headers: {
-           "Authorization": `Bearer ${session.access_token}`
-         }
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      try {
+        const res = await fetch(`${backendUrl}/api/logbook/student?student_id=${session.user.id}`, {
+           headers: {
+             "Authorization": `Bearer ${session.access_token}`
+           },
+           signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
       if (res.ok) {
         const data = await res.json();
         const allEntries: LogbookEntry[] = data.entries || [];
@@ -90,9 +95,15 @@ const StudentLogbookPage = () => {
           setRawText(todays.activities_raw);
           setEnhancedText(todays.activities_enhanced || "");
         }
+      } finally {
+        clearTimeout(timeoutId);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        console.error("Backend request timed out when fetching logbook entries.");
+      } else {
+        console.error("Logbook fetch error:", err);
+      }
     } finally {
       setLoading(false);
     }
@@ -116,11 +127,11 @@ const StudentLogbookPage = () => {
       if (res.ok && data.enhanced_text) {
         setEnhancedText(data.enhanced_text);
       } else {
-        alert("Failed to enhance text.");
+        alert(data.detail || data.error || "Failed to enhance text. Please try again.");
       }
-    } catch (err) {
-      console.error(err);
-      alert("Error enhancing text.");
+    } catch (err: any) {
+      console.error("Enhance error:", err);
+      alert(err?.message || "Could not connect to the server. Is the backend running?");
     } finally {
       setIsEnhancing(false);
     }
@@ -150,11 +161,11 @@ const StudentLogbookPage = () => {
         alert("Logbook entry saved for today!");
         fetchData(); // Refresh list
       } else {
-        alert(data.detail || "Failed to save entry.");
+        alert(data.detail || data.error || "Failed to save entry.");
       }
-    } catch (err) {
-      console.error(err);
-      alert("Error saving logbook entry.");
+    } catch (err: any) {
+      console.error("Logbook submit error:", err);
+      alert(err?.message || "Could not connect to the server. Is the backend running?");
     } finally {
       setIsSubmitting(false);
     }

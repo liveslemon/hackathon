@@ -17,8 +17,9 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
  * Reusable fetch wrapper that automatically attaches the Supabase JWT.
  * @param endpoint - The API endpoint (e.g., '/api/upload-and-analyze') or full URL.
  * @param options - Standard RequestInit options.
+ * @param timeoutMs - Request timeout in milliseconds (default: 120000 = 2 minutes).
  */
-export async function authenticatedFetch(endpoint: string, options: RequestInit = {}) {
+export async function authenticatedFetch(endpoint: string, options: RequestInit = {}, timeoutMs: number = 120000) {
   const authHeaders = await getAuthHeaders();
   
   const headers: Record<string, string> = {
@@ -33,9 +34,8 @@ export async function authenticatedFetch(endpoint: string, options: RequestInit 
 
   const url = endpoint.startsWith("http") ? endpoint : `${BACKEND_URL}${endpoint}`;
   
-  // Implement 30-second timeout
   const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), 30000);
+  const id = setTimeout(() => controller.abort(), timeoutMs);
   
   try {
     const response = await fetch(url, {
@@ -49,16 +49,17 @@ export async function authenticatedFetch(endpoint: string, options: RequestInit 
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(data.error || `Request failed with status ${response.status}`);
+      throw new Error(data.detail || data.error || `Request failed with status ${response.status}`);
     }
 
     return data;
   } catch (error: any) {
     if (error.name === 'AbortError') {
-      throw new Error("Request timed out after 30 seconds. Please try again.");
+      throw new Error("Request timed out. The server may be busy — please try again.");
     }
     throw error;
   } finally {
     clearTimeout(id);
   }
 }
+
