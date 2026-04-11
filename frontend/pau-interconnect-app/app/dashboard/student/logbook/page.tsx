@@ -75,25 +75,27 @@ const StudentLogbookPage = () => {
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
+      
       try {
         const res = await fetch(`${backendUrl}/api/logbook/student?student_id=${session.user.id}`, {
-           headers: {
-             "Authorization": `Bearer ${session.access_token}`
-           },
-           signal: controller.signal,
+          headers: {
+            "Authorization": `Bearer ${session.access_token}`
+          },
+          signal: controller.signal,
         });
-        clearTimeout(timeoutId);
-      if (res.ok) {
-        const data = await res.json();
-        const allEntries: LogbookEntry[] = data.entries || [];
-        setEntries(allEntries);
-        
-        const todayStr = new Date().toISOString().split("T")[0];
-        const todays = allEntries.find(e => e.date === todayStr);
-        if (todays) {
-          setTodayEntry(todays);
-          setRawText(todays.activities_raw);
-          setEnhancedText(todays.activities_enhanced || "");
+
+        if (res.ok) {
+          const data = await res.json();
+          const allEntries: LogbookEntry[] = data.entries || [];
+          setEntries(allEntries);
+          
+          const todayStr = new Date().toISOString().split("T")[0];
+          const todays = allEntries.find(e => e.date === todayStr);
+          if (todays) {
+            setTodayEntry(todays);
+            setRawText(todays.activities_raw);
+            setEnhancedText(todays.activities_enhanced || "");
+          }
         }
       } finally {
         clearTimeout(timeoutId);
