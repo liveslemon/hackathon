@@ -40,11 +40,8 @@ export default function SearchOverlay({ onClose }: SearchOverlayProps) {
   const performSearch = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${BACKEND_URL}/admin/search?q=${encodeURIComponent(query)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setResults(data);
-      }
+      const data = await authenticatedFetch(`/admin/search?q=${encodeURIComponent(query)}`);
+      setResults(data);
     } catch (err) {
       console.error("Search failed:", err);
     } finally {
