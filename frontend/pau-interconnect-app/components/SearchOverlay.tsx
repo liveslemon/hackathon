@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FiSearch, FiX, FiUser, FiBriefcase, FiArrowRight, FiCommand } from "react-icons/fi";
 import { Typography, Stack, Badge } from "@/components/ui";
+import { authenticatedFetch } from "@/lib/api";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
