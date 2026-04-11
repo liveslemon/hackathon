@@ -23,10 +23,13 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { authenticatedFetch } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 export default function AnalyticsView() {
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [totalInternships, setTotalInternships] = useState(0);
   const [totalApplications, setTotalApplications] = useState(0);
@@ -36,17 +39,21 @@ export default function AnalyticsView() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchLiveAnalytics();
-  }, []);
+    if (!authLoading) {
+      if (user) {
+        fetchLiveAnalytics();
+      } else {
+        setLoading(false);
+        setError("You must be logged in as an administrator to view this page.");
+      }
+    }
+  }, [authLoading, user]);
 
   const fetchLiveAnalytics = async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(`${BACKEND_URL}/admin/analytics`);
-      if (!res.ok) throw new Error("Failed to fetch analytics from backend");
-      
-      const data = await res.json();
+      const data = await authenticatedFetch("/admin/analytics");
       
       setTotalInternships(data.total_internships || 0);
       setTotalApplications(data.total_applications || 0);

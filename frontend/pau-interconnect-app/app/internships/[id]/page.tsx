@@ -18,6 +18,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import DashboardHeader from "@/components/DashboardHeader";
+import { useAuth } from "@/context/AuthContext";
 
 // Icons
 import { 
@@ -57,82 +58,79 @@ export default function InternshipDetailsPage() {
   const [isReviewing, setIsReviewing] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
 
+  // --- AUTH CONTEXT ---
+  const { user, profile: authProfile, loading: authLoading } = useAuth();
+  const [hasCheckedStatus, setHasCheckedStatus] = useState(false);
+
   // --- FETCH REAL DATA FROM SUPABASE ---
   useEffect(() => {
     async function fetchInternshipData() {
       if (!internshipId) return;
 
       try {
-        const { data, error } = await supabase
+        setIsPageLoading(true);
+        
+        // Fetch the Internship details immediately (doesn't depend on user)
+        const { data: internshipData, error: internshipError } = await supabase
           .from("internships")
           .select("*")
           .eq("id", internshipId)
           .single();
 
-        if (error) throw error;
-        setInternship(data);
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          try {
-            const { data: profileData } = await supabase
-              .from("profiles")
-              .select("*")
-              .eq("id", user.id)
-              .single();
-            if (profileData) {
-               setUserProfile(profileData);
-            }
-          } catch(e) {
-             console.log("no profile data");
-          }
-
-          const { data: appliedData } = await supabase
-            .from("applied_internships")
-            .select("id, status")
-            .eq("user_id", user.id)
-            .eq("internship_id", internshipId)
-            .maybeSingle();
-
-          if (appliedData) {
-            setHasApplied(true);
-            // We can repurpose userProfile or add a new state, but for simplicity let's use a local variable or update a state if needed
-            // Actually, let's add a state for status to be cleaner
-            setApplicationStatus(appliedData.status);
-          }
-
-          try {
-            const { data: matchData, error: matchError } = await supabase
-              .from("match_results")
-              .select("match_score, matching_skills, missing_skills")
-              .eq("user_id", user.id)
-              .eq("internship_id", internshipId)
-              .maybeSingle();
-
-            if (matchData) {
-              setMatchScore(matchData.match_score);
-              
-              if (matchData.matching_skills && Array.isArray(matchData.matching_skills)) {
-                  setMatchingSkills(matchData.matching_skills);
-              }
-              
-              if (matchData.missing_skills && Array.isArray(matchData.missing_skills)) {
-                  setMissingSkills(matchData.missing_skills);
-              }
-            }
-          } catch (err) {
-            console.error("Failed to fetch match score:", err);
-          }
-        }
+        if (internshipError) throw internshipError;
+        setInternship(internshipData);
       } catch (error) {
         console.error("Error fetching internship details:", error);
       } finally {
-        setIsPageLoading(false);
+        // We only stop showing the "full page" spinner once we have the internship
+        // User specific data can "pop in" slightly later
+        if (!authLoading) setIsPageLoading(false);
       }
     }
 
     fetchInternshipData();
-  }, [internshipId]);
+  }, [internshipId, authLoading]);
+
+  // Secondary fetch for user-specific relationship data (Matches, Applications)
+  useEffect(() => {
+    if (authLoading || !user || !internshipId || hasCheckedStatus) return;
+
+    async function fetchUserSpecificData() {
+      try {
+        // Fetch Application and Match Results in parallel using the ID from AuthContext
+        const [appliedRes, matchRes] = await Promise.all([
+          supabase.from("applied_internships")
+            .select("id, status")
+            .eq("user_id", user!.id)
+            .eq("internship_id", internshipId)
+            .maybeSingle(),
+          supabase.from("match_results")
+            .select("match_score, matching_skills, missing_skills")
+            .eq("user_id", user!.id)
+            .eq("internship_id", internshipId)
+            .maybeSingle()
+        ]);
+
+        if (appliedRes.data) {
+          setHasApplied(true);
+          setApplicationStatus(appliedRes.data.status);
+        }
+
+        if (matchRes.data) {
+          setMatchScore(matchRes.data.match_score);
+          if (matchRes.data.matching_skills) setMatchingSkills(matchRes.data.matching_skills);
+          if (matchRes.data.missing_skills) setMissingSkills(matchRes.data.missing_skills);
+        }
+        
+        setHasCheckedStatus(true);
+      } catch (err) {
+        console.error("Error fetching user-specific internship data:", err);
+      }
+    }
+
+    fetchUserSpecificData();
+    if (authProfile) setUserProfile(authProfile);
+  }, [authLoading, user, authProfile, internshipId, hasCheckedStatus]);
 
   // --- HANDLERS ---
   const handleApply = async () => {

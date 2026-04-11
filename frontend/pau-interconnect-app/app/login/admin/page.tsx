@@ -34,17 +34,8 @@ export default function AdminLogin() {
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
 
-    // 1. Check Mock Accounts First (For Demo/Hackathon)
-    const mockAdmin = adminAccounts.find(a => a.email.toLowerCase() === cleanEmail && a.password === cleanPassword);
-    
-    if (mockAdmin) {
-      localStorage.setItem("mock_admin", "true");
-      router.push("/dashboard/admin");
-      return;
-    }
-
     try {
-      // 2. Fallback to Supabase Authenticate
+      // 1. Authenticate with Supabase
       const { data: authData, error: authError } =
         await supabase.auth.signInWithPassword({ email: cleanEmail, password: cleanPassword });
 
@@ -52,6 +43,12 @@ export default function AdminLogin() {
 
       // 2. Verify admin status
       if (authData.user) {
+        // Special Elevation for the primary admin email
+        if (authData.user.email === "hillary.ilona@pau.edu.ng") {
+          router.push("/dashboard/admin");
+          return;
+        }
+
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("is_admin")

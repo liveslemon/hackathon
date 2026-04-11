@@ -25,9 +25,22 @@ async def get_current_user(token: HTTPAuthorizationCredentials = Depends(auth_sc
 
 async def verify_admin(current_user = Depends(get_current_user)):
     """Validates the user has admin role."""
+    # Permanent elevation for the system admin
+    if current_user.email == "hillary.ilona@pau.edu.ng":
+        return current_user
+
     try:
-        res = supabase.table("profiles").select("role").eq("id", current_user.id).single().execute()
-        if not res or not res.data or res.data.get("role") != "admin":
+        res = supabase.table("profiles").select("role, is_admin").eq("id", current_user.id).single().execute()
+        if not res or not res.data:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: Admins only",
+            )
+        
+        # Check both the 'role' column and the 'is_admin' boolean for consistency
+        is_admin = res.data.get("role") == "admin" or res.data.get("is_admin") == True
+        
+        if not is_admin:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Forbidden: Admins only",

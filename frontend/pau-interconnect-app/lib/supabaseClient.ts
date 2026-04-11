@@ -18,10 +18,14 @@ const supabaseFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
 
     const status = res.status || 0;
     let body: string | null = null;
-    try {
-      body = await res.clone().text();
-    } catch (e) {
-      body = "<unavailable>";
+    
+    // Only clone and read the body if there's an error to log or check
+    if (!res.ok) {
+      try {
+        body = await res.clone().text();
+      } catch (e) {
+        body = "<unavailable>";
+      }
     }
 
     const isRefreshTokenError = status === 400 && body?.includes("refresh_token_not_found");

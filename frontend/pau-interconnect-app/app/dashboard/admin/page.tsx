@@ -26,13 +26,6 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const checkAdmin = async () => {
-      // Allow bypass for mock accounts during demo
-      if (typeof window !== "undefined" && localStorage.getItem("mock_admin") === "true") {
-        setAuthorized(true);
-        setLoading(false);
-        return;
-      }
-
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
@@ -40,6 +33,15 @@ export default function AdminDashboard() {
         return;
       }
 
+      // 1. Authorized Admin Emails (Bootstrap)
+      const ALLOWED_ADMINS = ["hillary.ilona@pau.edu.ng"];
+      if (user.email && ALLOWED_ADMINS.includes(user.email)) {
+        setAuthorized(true);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Check Profile Column
       const { data: profile } = await supabase
         .from("profiles")
         .select("is_admin")

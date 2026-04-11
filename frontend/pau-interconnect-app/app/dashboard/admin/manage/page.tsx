@@ -7,6 +7,8 @@ import {
   Badge,
 } from "@/components/ui";
 import { FiUsers, FiBriefcase, FiShield, FiUser, FiActivity } from "react-icons/fi";
+import { authenticatedFetch } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 const Avatar = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
   <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${className}`}>
@@ -17,22 +19,27 @@ const Avatar = ({ children, className = "" }: { children: React.ReactNode; class
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 export default function ManagePlatformView() {
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchProfiles();
-  }, []);
+    if (!authLoading) {
+      if (user) {
+        fetchProfiles();
+      } else {
+        setLoading(false);
+        setError("Unauthorized: Session missing.");
+      }
+    }
+  }, [authLoading, user]);
 
   const fetchProfiles = async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(`${BACKEND_URL}/admin/directory`);
-      if (!res.ok) throw new Error("Failed to fetch platform directory");
-      
-      const data = await res.json();
+      const data = await authenticatedFetch("/admin/directory");
       setProfiles(data || []);
     } catch (err: any) {
       console.error("Failed to fetch profiles:", err);

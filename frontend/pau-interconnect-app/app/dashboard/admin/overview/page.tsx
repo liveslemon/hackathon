@@ -7,6 +7,8 @@ import {
   CardContent,
 } from "@/components/ui";
 import { FiUsers, FiBriefcase, FiFileText, FiCalendar, FiUserPlus, FiActivity } from "react-icons/fi";
+import { authenticatedFetch } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface Stats {
   total_students: number;
@@ -78,25 +80,31 @@ const metricCards = [
 ];
 
 export default function OverviewView() {
+  const { user, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await fetch(`${BACKEND_URL}/admin/stats`);
-        if (!res.ok) throw new Error("Failed to fetch stats");
-        const data: Stats = await res.json();
-        setStats(data);
-      } catch (err: any) {
-        setError(err.message || "Something went wrong");
-      } finally {
+    if (!authLoading) {
+      if (user) {
+        const fetchStats = async () => {
+          try {
+            const data: Stats = await authenticatedFetch("/admin/stats");
+            setStats(data);
+          } catch (err: any) {
+            setError(err.message || "Something went wrong");
+          } finally {
+            setLoading(false);
+          }
+        };
+        fetchStats();
+      } else {
         setLoading(false);
+        setError("Unauthorized: Admin access required.");
       }
-    };
-    fetchStats();
-  }, []);
+    }
+  }, [authLoading, user]);
 
   if (loading) {
     return (
