@@ -1,8 +1,8 @@
 import logging
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-from core.security import verify_admin
-from core.db import supabase
+from backend.core.security import verify_admin
+from backend.core.db import supabase
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

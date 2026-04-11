@@ -4,11 +4,11 @@ import tempfile
 import logging
 from fastapi import APIRouter, Depends, Form, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
-from core.security import get_current_user
-from core.db import supabase
-from schemas.requests import AnalyzeRequest, AnalyzeNewInternshipRequest
-from services.supabase_service import get_user_profile, extract_text, save_cv_text_and_url, fetch_internships, upsert_match_result
-from services.routing_service import compute_match_score
+from backend.core.security import get_current_user
+from backend.core.db import supabase
+from backend.schemas.requests import AnalyzeRequest, AnalyzeNewInternshipRequest
+from backend.services.supabase_service import get_user_profile, extract_text, save_cv_text_and_url, fetch_internships, upsert_match_result
+from backend.services.routing_service import compute_match_score
 import asyncio
 
 router = APIRouter()

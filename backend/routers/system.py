@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 from datetime import datetime, timezone
-from core.config import settings
-from core.security import get_current_user
-from core.db import supabase
+from backend.core.config import settings
+from backend.core.security import get_current_user
+from backend.core.db import supabase
 
 router = APIRouter()
 

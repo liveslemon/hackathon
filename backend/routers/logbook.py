@@ -5,9 +5,9 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from datetime import datetime, date
 
-from core.db import supabase
-from core.security import get_current_user
-from services.routing_service import enhance_logbook_entry
+from backend.core.db import supabase
+from backend.core.security import get_current_user
+from backend.services.routing_service import enhance_logbook_entry
 
 logger = logging.getLogger(__name__)
 

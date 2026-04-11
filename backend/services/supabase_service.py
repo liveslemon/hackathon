@@ -1,7 +1,7 @@
 import logging
 import pdfplumber
 from datetime import datetime, timezone
-from core.db import supabase
+from backend.core.db import supabase
 
 logger = logging.getLogger(__name__)
 

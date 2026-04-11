@@ -2,21 +2,15 @@
 # PAU Interconnect Backend API (v4.2-async-modular)
 # ==============================================================================
 
-import sys
-import os
-
-# Render deployment path fix: ensure current directory is in python path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 import logging
 import re
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from core.config import settings
+from backend.core.config import settings
 
 # Import modular routers
-from routers import system, cv, applications, admin, logbook
+from backend.routers import system, cv, applications, admin, logbook
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger(__name__)

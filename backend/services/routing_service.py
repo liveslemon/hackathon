@@ -1,9 +1,9 @@
 import logging
 import hashlib
-from services.embedding_service import get_embedding
-from services.llm_service import generate_completion
-from services.matching_service import compute_cosine_similarity, analyze_skills
-from services.cache_service import embedding_cache, match_result_cache
+from backend.services.embedding_service import get_embedding
+from backend.services.llm_service import generate_completion
+from backend.services.matching_service import compute_cosine_similarity, analyze_skills
+from backend.services.cache_service import embedding_cache, match_result_cache
 
 logger = logging.getLogger(__name__)
 

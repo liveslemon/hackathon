@@ -12,7 +12,7 @@ tenacity
 httpx
 openai
 redis
-sentence-transformers
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch
+torch==2.2.2
+sentence-transformers==2.7.0
 pydantic-settings
