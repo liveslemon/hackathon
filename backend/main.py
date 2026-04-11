@@ -4,12 +4,6 @@
 
 import logging
 import re
-import sys
-import os
-
-# Ensure the backend directory is in the Python path for Render deployments
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -61,3 +55,7 @@ async def resource_not_found(request: Request, path_name: str):
         "requested_path": path_name,
         "api_version": "v4.2-async-modular"
     }, status_code=404)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

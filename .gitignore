@@ -26,5 +26,5 @@ backend/backend.log
 # Scratch scripts (root-level only, don't block project code)
 /*.js
 /*.py
-!frontend/pau-interconnect-app/**
-!backend/**
+# !frontend/pau-interconnect-app/**
+# !backend/**
