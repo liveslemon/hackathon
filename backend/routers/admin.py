@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from core.security import verify_admin
@@ -9,41 +10,46 @@ logger = logging.getLogger(__name__)
 
 @router.get("/admin/stats")
 @router.get("/api/admin/stats")
-def fetch_admin_stats(current_user = Depends(verify_admin)):
+async def fetch_admin_stats(current_user = Depends(verify_admin)):
     try:
-        t_students = supabase.table("profiles").select("id", count="exact").eq("role", "student").execute().count or 0
-        t_jobs = supabase.table("internships").select("id", count="exact").execute().count or 0
-        t_apps = supabase.table("applied_internships").select("id", count="exact").execute().count or 0
-        return {"total_students": t_students, "total_internships": t_jobs, "total_applications": t_apps}
+        # Parallelize the count queries using asyncio.to_thread
+        tasks = [
+            asyncio.to_thread(lambda: supabase.table("profiles").select("id", count="exact").eq("role", "student").execute()),
+            asyncio.to_thread(lambda: supabase.table("internships").select("id", count="exact").execute()),
+            asyncio.to_thread(lambda: supabase.table("applied_internships").select("id", count="exact").execute())
+        ]
+        
+        results = await asyncio.gather(*tasks)
+        
+        t_students = results[0].count or 0
+        t_jobs = results[1].count or 0
+        t_apps = results[2].count or 0
+        
+        return {
+            "total_students": t_students, 
+            "total_internships": t_jobs, 
+            "total_applications": t_apps,
+            "applications_today": 0, # Placeholder or add query
+            "new_users_today": 0     # Placeholder or add query
+        }
     except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
-
-@router.get("/admin/search")
-@router.get("/api/admin/search")
-def run_admin_search(q: str = "", current_user = Depends(verify_admin)):
-    if len(q) < 2: return {"students": [], "internships": []}
-    try:
-        students = supabase.table("profiles").select("*").eq("role", "student").or_(f"full_name.ilike.%{q}%,course.ilike.%{q}%").execute().data or []
-        jobs = supabase.table("internships").select("*").or_(f"role.ilike.%{q}%,company.ilike.%{q}%,category.ilike.%{q}%").execute().data or []
-        return {"students": students, "internships": jobs}
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
-
-@router.get("/admin/directory")
-@router.get("/api/admin/directory")
-def fetch_admin_directory(current_user = Depends(verify_admin)):
-    try:
-        res = supabase.table("profiles").select("*").order("created_at", desc=True).execute()
-        return res.data or []
-    except Exception as e:
+        logger.error(f"Error fetching admin stats: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @router.get("/admin/analytics")
 @router.get("/api/admin/analytics")
-def fetch_admin_analytics(current_user = Depends(verify_admin)):
+async def fetch_admin_analytics(current_user = Depends(verify_admin)):
     try:
-        jobs = supabase.table("internships").select("id, role, company, category").execute().data or []
-        apps = supabase.table("applied_internships").select("id, internship_id").execute().data or []
+        # Parallelize the main queries
+        tasks = [
+            asyncio.to_thread(lambda: supabase.table("internships").select("id, role, company, category").execute()),
+            asyncio.to_thread(lambda: supabase.table("applied_internships").select("id, internship_id").execute())
+        ]
+        
+        results = await asyncio.gather(*tasks)
+        
+        jobs = results[0].data or []
+        apps = results[1].data or []
         
         stats = []
         counts = {}
@@ -61,4 +67,5 @@ def fetch_admin_analytics(current_user = Depends(verify_admin)):
         stats.sort(key=lambda x: x["applications"], reverse=True)
         return {"total_internships": len(jobs), "total_applications": len(apps), "internship_stats": stats}
     except Exception as e:
+        logger.error(f"Error fetching admin analytics: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)

@@ -61,6 +61,9 @@ export default async function StudentDashboardPage() {
     redirect("/login/student");
   }
 
+  // --- Parallelized Data Fetching ---
+  // We fetch the profile first because it defines the user consistency, 
+  // but we can fetch internships, matches, and applications in parallel.
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("*")
@@ -72,47 +75,28 @@ export default async function StudentDashboardPage() {
     redirect("/onboarding");
   }
 
-  const { data: internshipsData, error: internshipsError } = await supabase
-    .from("internships")
-    .select("*");
+  // Parallelize the three heavy data fetches
+  const [internshipsResult, matchesResult, appliedResult] = await Promise.all([
+    supabase.from("internships").select("*"),
+    supabase.from("match_results").select("internship_id, match_score").eq("user_id", profile.id),
+    supabase.from("applied_internships").select("internship_id, status").eq("user_id", profile.id)
+  ]);
 
-  if (internshipsError)
-    console.error("Failed to fetch internships", internshipsError);
+  if (internshipsResult.error) console.error("Failed to fetch internships", internshipsResult.error);
+  if (matchesResult.error) console.error("Failed to fetch matches", matchesResult.error);
+  if (appliedResult.error) console.error("Failed to fetch applications", appliedResult.error);
 
-  const data: Internship[] = internshipsData || [];
-  let internshipsWithMatches: Internship[] = [];
+  const internshipsData = internshipsResult.data || [];
+  const matches = matchesResult.data || [];
+  const applications = appliedResult.data || [];
+  
+  const statusMap = new Map(applications.map(a => [a.internship_id, a.status]));
 
-  try {
-    const { data: matchData, error: matchError } = await supabase
-      .from("match_results")
-      .select("internship_id, match_score")
-      .eq("user_id", profile.id);
-
-    const { data: appliedData, error: appliedError } = await supabase
-      .from("applied_internships")
-      .select("internship_id, status")
-      .eq("user_id", profile.id);
-
-    if (matchError) throw matchError;
-
-    const matches = matchData || [];
-    const applications = appliedData || [];
-    const statusMap = new Map((applications || []).map(a => [a.internship_id, a.status]));
-
-    internshipsWithMatches = data.map((internship) => ({
-      ...internship,
-      matchPercentage:
-        matches.find((m) => m.internship_id === internship.id)?.match_score ??
-        0,
-      applicationStatus: statusMap.get(internship.id)
-    }));
-  } catch (err) {
-    console.error("Failed to fetch internship matches or applications:", err);
-    internshipsWithMatches = data.map((internship) => ({
-      ...internship,
-      matchPercentage: 0,
-    }));
-  }
+  const internshipsWithMatches: Internship[] = internshipsData.map((internship) => ({
+    ...internship,
+    matchPercentage: matches.find((m) => m.internship_id === internship.id)?.match_score ?? 0,
+    applicationStatus: statusMap.get(internship.id)
+  }));
 
   return (
     <Dashboard
