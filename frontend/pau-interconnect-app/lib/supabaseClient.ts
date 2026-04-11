@@ -24,18 +24,21 @@ const supabaseFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       body = "<unavailable>";
     }
 
-    const meta = {
-      url: String(input),
-      status,
-      statusText: res.statusText,
-      init,
-      body,
-    };
+    const isRefreshTokenError = status === 400 && body?.includes("refresh_token_not_found");
 
-    if (status >= 500) console.error("[Supabase fetch] Server error", meta);
-    else if (status >= 400)
-      console.warn("[Supabase fetch] Client error (possible auth/RLS)", meta);
-    else console.debug("[Supabase fetch] Unexpected response", meta);
+    if (!isRefreshTokenError) {
+      const meta = {
+        url: String(input),
+        status,
+        statusText: res.statusText,
+        init,
+        body,
+      };
+
+      if (status >= 500) console.error("[Supabase fetch] Server error", meta);
+      else if (status >= 400)
+        console.warn("[Supabase fetch] Client auth error (suppressed if refresh token missing)", meta);
+    }
 
     return res;
   } catch (err) {

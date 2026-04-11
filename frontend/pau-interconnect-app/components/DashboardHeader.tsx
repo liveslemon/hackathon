@@ -25,21 +25,19 @@ const DashboardHeader = ({ userProfile, onOpenAnalysis }: DashboardHeaderProps) 
   };
 
   const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      await fetch("/api/auth/logout", { method: "POST" });
-    } catch (err) {
-      console.warn("Error signing out:", err);
-    }
+    // Optimistic redirect: Clear state and move to login immediately
     localStorage.clear();
+    
+    // Fire and forget the server-side cleanups so they don't block the UI
+    supabase.auth.signOut().catch(err => console.warn("Sign out background error:", err));
+    fetch("/api/auth/logout", { method: "POST" }).catch(err => console.warn("Logout API error:", err));
 
-    setNotificationMessage("Logged out successfully");
-    setNotificationSeverity("success");
+    setNotificationMessage("Logging out...");
+    setNotificationSeverity("info");
     setNotificationOpen(true);
     
-    setTimeout(() => {
-      window.location.href = isEmployer ? "/login/employer" : "/login/student";
-    }, 500);
+    // Force redirect instantly
+    window.location.href = isEmployer ? "/login/employer" : "/login/student";
   };
 
   const isEmployer = userProfile?.role === "employer";

@@ -46,7 +46,15 @@ async def upload_and_analyze(
         internships = fetch_internships()
         matches_found = 0
         if internships:
-            tasks = [compute_match_score(cv_text, job) for job in internships]
+            # Use a semaphore to process matches in batches of 5
+            # This prevents 50+ threads from starting at once
+            semaphore = asyncio.Semaphore(5)
+            
+            async def bounded_match(cv_t, j):
+                async with semaphore:
+                    return await compute_match_score(cv_t, j)
+
+            tasks = [bounded_match(cv_text, job) for job in internships]
             results = await asyncio.gather(*tasks, return_exceptions=True)
             for res in results:
                 if isinstance(res, dict):
@@ -103,7 +111,13 @@ async def analyze_existing(payload: AnalyzeRequest, current_user = Depends(get_c
         p = get_user_profile(payload.user_id)
         if not p.get("cv_text"): return JSONResponse({"error": "No CV"}, status_code=400)
         jobs = fetch_internships()
-        tasks = [compute_match_score(p["cv_text"], job) for job in jobs]
+        semaphore = asyncio.Semaphore(5)
+            
+        async def bounded_match(cv_t, j):
+            async with semaphore:
+                return await compute_match_score(cv_t, j)
+
+        tasks = [bounded_match(p["cv_text"], job) for job in jobs]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         count = 0
         for r in results:
@@ -112,6 +126,7 @@ async def analyze_existing(payload: AnalyzeRequest, current_user = Depends(get_c
                 count += 1
         return {"message": "Re-analysis complete.", "count": count}
     except Exception as e:
+        logger.error(f"[/analyze-existing-cv] Fatal: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @router.post("/refresh-cv-url")

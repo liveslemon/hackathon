@@ -33,9 +33,16 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  await supabase.auth.getUser()
-
+  try {
+    // getSession is much faster as it only reads the cookie.
+    // getUser validates with the server, which is slow in middleware.
+    await supabase.auth.getSession()
+  } catch (err) {
+    console.debug("[Proxy] Session check failed:", err)
+  }
+  
   return response
+
 }
 
 export const config = {

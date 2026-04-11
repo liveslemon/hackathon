@@ -31,68 +31,53 @@ const MyInternshipsPage = () => {
         const userId = user?.id ?? null;
 
         if (userId) {
+          // Fetch everything in parallel to reduce sequential delay
+          const [matchRes, savedRes, appliedRes] = await Promise.all([
+            supabase.from("match_results").select("internship_id, match_score").eq("user_id", userId),
+            supabase.from("saved_internships").select("internship_id").eq("user_id", userId),
+            supabase.from("applied_internships").select("internship_id, status").eq("user_id", userId)
+          ]);
 
-          const { data: matchData } = await supabase
-            .from("match_results")
-            .select("internship_id, match_score")
-            .eq("user_id", userId);
           const matchMap = new Map();
-          if (matchData) {
-            matchData.forEach((m) => matchMap.set(m.internship_id, m.match_score));
+          if (matchRes.data) {
+            matchRes.data.forEach((m) => matchMap.set(m.internship_id, m.match_score));
           }
-
-          const { data: savedRows } = await supabase
-            .from("saved_internships")
-            .select("internship_id")
-            .eq("user_id", userId);
-
-          const { data: appliedRows } = await supabase
-            .from("applied_internships")
-            .select("internship_id, status")
-            .eq("user_id", userId);
 
           const statusMap = new Map();
-          if (appliedRows) {
-            appliedRows.forEach((r: any) => statusMap.set(r.internship_id, r.status));
+          if (appliedRes.data) {
+            appliedRes.data.forEach((r: any) => statusMap.set(r.internship_id, r.status));
           }
 
-          const savedIds = (savedRows ?? []).map((r: any) => r.internship_id);
-          if (savedIds.length > 0) {
-            const { data: internshipsData } = await supabase
-              .from("internships")
-              .select("*")
-              .in("id", savedIds);
-            
-            const savedWithMatches = (internshipsData ?? []).map((internship: any) => ({
+          // Fetch internship details in parallel
+          const savedIds = (savedRes.data ?? []).map((r: any) => r.internship_id);
+          const appliedIds = (appliedRes.data ?? []).map((r: any) => r.internship_id);
+
+          const [savedInternshipsRes, appliedInternshipsRes] = await Promise.all([
+            savedIds.length > 0 
+              ? supabase.from("internships").select("*").in("id", savedIds)
+              : Promise.resolve({ data: [] }),
+            appliedIds.length > 0
+              ? supabase.from("internships").select("*").in("id", appliedIds)
+              : Promise.resolve({ data: [] })
+          ]);
+
+          if (savedInternshipsRes.data) {
+            setSavedInternships(savedInternshipsRes.data.map((internship: any) => ({
               ...internship,
               matchPercentage: matchMap.get(internship.id) ?? undefined,
               applicationStatus: statusMap.get(internship.id)
-            }));
-            setSavedInternships(savedWithMatches);
-          } else {
-            setSavedInternships([]);
+            })));
           }
 
-          const appliedIds = (appliedRows ?? []).map(
-            (r: any) => r.internship_id,
-          );
-
-          if (appliedIds.length > 0) {
-            const { data: appliedData } = await supabase
-              .from("internships")
-              .select("*")
-              .in("id", appliedIds);
-            
-            const appliedWithMatches = (appliedData ?? []).map((internship: any) => ({
+          if (appliedInternshipsRes.data) {
+            setAppliedInternships(appliedInternshipsRes.data.map((internship: any) => ({
               ...internship,
               matchPercentage: matchMap.get(internship.id) ?? undefined,
               applicationStatus: statusMap.get(internship.id)
-            }));
-            setAppliedInternships(appliedWithMatches);
-          } else {
-            setAppliedInternships([]);
+            })));
           }
-        } else {
+        }
+ else {
           setSavedInternships([]);
           setAppliedInternships([]);
           router.push("/login/student");

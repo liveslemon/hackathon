@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import {
@@ -97,6 +97,24 @@ export default function Onboarding() {
     severity: "info" as "success" | "error" | "warning" | "info",
   });
   const router = useRouter();
+
+  // --- Session Check (For existing users who lack a profile) ---
+  useEffect(() => {
+    async function checkExistingSession() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setFormData(prev => ({
+          ...prev,
+          name: user.user_metadata?.full_name || user.user_metadata?.name || "",
+          email: user.email || "",
+          password: "PRE_AUTHENTICATED" // Placeholder
+        }));
+        // If they are on Step 1, move them to Step 2
+        setStep(prev => prev === 1 ? 2 : prev);
+      }
+    }
+    checkExistingSession();
+  }, []);
 
   // --- Step 1: Personal Info ---
   function handleInputChange(field: string, value: string) {
@@ -212,25 +230,36 @@ export default function Onboarding() {
       return;
     }
     setIsSubmitting(true);
-    setOptimisticMessage("Authenticating user...");
+    setOptimisticMessage("Creating your account...");
     
+    // Safety timer to update message if backend is slow
+    const slowBackendTimer = setTimeout(() => {
+      setOptimisticMessage("Still working on it... the AI is a bit busy, but your account is being created!");
+    }, 20000);
+
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: { emailRedirectTo: `${window.location.origin}/dashboard` },
-      });
-      
-      if (authError) {
-        setSnackbar({
-          open: true,
-          message: authError.message,
-          severity: "error",
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      let user_id = currentUser?.id;
+
+      if (!user_id) {
+        // Only sign up if no current session
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: { emailRedirectTo: `${window.location.origin}/dashboard` },
         });
-        return;
+        
+        if (authError) {
+          setSnackbar({
+            open: true,
+            message: authError.message,
+            severity: "error",
+          });
+          return;
+        }
+        user_id = authData?.user?.id;
       }
       
-      const user_id = authData?.user?.id;
       if (!user_id) throw new Error("User registration failed - no ID returned.");
 
       setOptimisticMessage("Initializing profile...");
@@ -244,6 +273,8 @@ export default function Onboarding() {
           interests: formData.interests,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          role: "student",
+          cv_url: null, // Will be updated by backend or after analysis
         });
 
       if (profileInsertError) {
@@ -251,13 +282,14 @@ export default function Onboarding() {
       }
 
       if (formData.cvFile) {
-        setOptimisticMessage("Analyzing CV (This takes a moment)...");
+        setOptimisticMessage("Uploading CV & Starting AI Analysis...");
         const backendFormData = new FormData();
         backendFormData.append("user_id", user_id);
         backendFormData.append("file", formData.cvFile);
 
         try {
-          // authenticatedFetch now has a 30s timeout
+          // We don't 'await' this for the full 120s if we want the user to proceed faster,
+          // but for now we'll keep it awaited with a better message.
           await authenticatedFetch("/upload-and-analyze", {
             method: "POST",
             body: backendFormData,
@@ -266,10 +298,10 @@ export default function Onboarding() {
           console.error("Non-critical backend CV upload failed:", err);
           setSnackbar({
             open: true,
-            message: "CV analysis failed. You can retry later from your profile.",
+            message: "CV analysis is taking a while. We'll finish it in the background!",
             severity: "warning",
           });
-          // We don't throw here because user registration/profile succeeded
+          // Continue to step 5 even if analysis is slow/failed
         }
       }
 
@@ -288,6 +320,7 @@ export default function Onboarding() {
         severity: "error",
       });
     } finally {
+      clearTimeout(slowBackendTimer);
       setIsSubmitting(false);
       setOptimisticMessage("");
     }

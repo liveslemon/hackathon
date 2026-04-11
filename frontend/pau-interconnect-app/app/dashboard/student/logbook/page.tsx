@@ -46,18 +46,21 @@ const StudentLogbookPage = () => {
         return;
       }
 
-      // Fetch Profile
-      const { data: profile } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
-      setUserProfile(profile);
+      // Fetch Profile and Internship Status in parallel
+      const [profileRes, appliedRes] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", session.user.id).single(),
+        supabase.from("applied_internships")
+          .select("status, internship:internships (employer_id, role, company)")
+          .eq("user_id", session.user.id)
+          .eq("status", "accepted")
+          .limit(1)
+          .maybeSingle()
+      ]);
 
-      // Check if student has an accepted internship
-      const { data: applied } = await supabase
-        .from("applied_internships")
-        .select("status, internship:internships (employer_id, role, company)")
-        .eq("user_id", session.user.id)
-        .eq("status", "accepted")
-        .limit(1)
-        .maybeSingle();
+      const profile = profileRes.data;
+      const applied = appliedRes.data;
+
+      setUserProfile(profile);
 
       const internshipData = Array.isArray(applied?.internship) ? applied?.internship[0] : applied?.internship;
 

@@ -9,7 +9,10 @@ logger = logging.getLogger(__name__)
 _local_model = None
 LOCAL_EMBEDDING_DIM = 384  # all-MiniLM-L6-v2 output dimension
 
-def get_local_embedding(text: str) -> list[float]:
+import asyncio
+
+def _sync_get_local_embedding(text: str) -> list[float]:
+    """Blocking synchronous call to the model encoding."""
     global _local_model
     if _local_model is None:
         try:
@@ -21,6 +24,10 @@ def get_local_embedding(text: str) -> list[float]:
             return [0.0] * 384
     return _local_model.encode(text).tolist()
 
+async def get_local_embedding(text: str) -> list[float]:
+    """Async wrapper that runs the blocking encoding in a worker thread."""
+    return await asyncio.to_thread(_sync_get_local_embedding, text)
+
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 async def get_embedding(text: str) -> list[float]:
     if not text or not text.strip():
@@ -28,7 +35,7 @@ async def get_embedding(text: str) -> list[float]:
         
     if not settings.COHERE_API_KEY:
         logger.warning("[AI/Embed] No COHERE API KEY. Using local fallback.")
-        return get_local_embedding(text)
+        return await get_local_embedding(text)
         
     try:
         async with httpx.AsyncClient(timeout=30) as client:
@@ -50,4 +57,4 @@ async def get_embedding(text: str) -> list[float]:
             return data["embeddings"][0]
     except Exception as e:
         logger.error(f"[get_embedding] Failed to reach Cohere: {e}. Using local fallback.")
-        return get_local_embedding(text)
+        return await get_local_embedding(text)

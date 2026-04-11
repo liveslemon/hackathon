@@ -22,21 +22,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Safeguard: Force loading to false after 3 seconds max if Supabase hangs
+    // Safeguard: Force loading to false after 10 seconds max if Supabase hangs
     const safetyTimeout = setTimeout(() => {
       setLoading(false);
-    }, 3000);
+    }, 10000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         try {
           if (session?.user) {
             setUser(session.user);
+            
+            // Only fetch profile if user has changed or on refresh
             const { data: profileData, error: profileError } = await supabase
               .from("profiles")
               .select("*")
               .eq("id", session.user.id)
-              .single();
+              .maybeSingle(); // Better than .single() as it won't throw 406 on empty
             
             if (profileError) {
               console.error("Failed to fetch profile in auth change:", profileError);
@@ -47,9 +49,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfile(null);
           }
         } catch (err) {
-          console.error("Auth change error handled:", err);
+          console.error("Auth context error handled silently:", err);
         } finally {
-          // Explicitly clear safety timeout if we finished naturally
           clearTimeout(safetyTimeout);
           setLoading(false);
         }

@@ -40,9 +40,9 @@ const Login = () => {
   useEffect(() => {
     const checkUser = async () => {
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
     };
 
     checkUser();
@@ -50,13 +50,23 @@ const Login = () => {
 
   const handleAuth = async (data: LoginForm) => {
     setIsLoading(true);
+    setSnackbarOpen(false);
+    
+    // Add a 60-second logic timeout for the authentication call
+    const authTimeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Login is taking longer than expected. Please check your internet connection or try refreshing.")), 60000);
+    });
+
     try {
       const { email, password } = data;
 
-      const { data: authData, error } = await supabase.auth.signInWithPassword({
+      // Race the auth call against the timeout
+      const authPromise = supabase.auth.signInWithPassword({
         email,
         password,
       });
+
+      const { data: authData, error } = await Promise.race([authPromise, authTimeoutPromise]) as any;
 
       if (error) {
         setSnackbarMessage(error.message);
@@ -72,6 +82,7 @@ const Login = () => {
       setSnackbarSeverity("success");
       setSnackbarOpen(true);
 
+      // --- Profile Check ---
       try {
         const pending = localStorage.getItem("pendingProfile");
         if (pending) {
@@ -82,10 +93,6 @@ const Login = () => {
             .eq("id", user?.id)
             .limit(1)
             .maybeSingle();
-
-          if (selectError) {
-            console.warn("Error checking existing profile:", selectError);
-          }
 
           if (!existing) {
             const { error: insertError } = await supabase
@@ -99,28 +106,24 @@ const Login = () => {
                 cv_url: parsed.cv_url,
               });
 
-            if (insertError) {
-              console.error(
-                "Failed to create profile after sign-in:",
-                insertError,
-              );
-            } else {
+            if (!insertError) {
               localStorage.removeItem("pendingProfile");
             }
           } else {
             localStorage.removeItem("pendingProfile");
           }
         }
-      } catch (e) {
-        console.warn("Error processing pending profile:", e);
+      } catch (profileErr) {
+        console.warn("Non-critical profile sync error:", profileErr);
       }
 
+      // Finish successfully
       setTimeout(() => {
         router.push("/dashboard/student");
       }, 800);
     } catch (err: any) {
-      console.error("Login exception:", err);
-      setSnackbarMessage(err?.message || "Network error. Please try again.");
+      console.error("Login failure:", err);
+      setSnackbarMessage(err?.message || "An unexpected error occurred. Please try again.");
       setSnackbarSeverity("error");
       setSnackbarOpen(true);
     } finally {

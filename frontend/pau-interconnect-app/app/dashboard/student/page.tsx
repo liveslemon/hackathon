@@ -53,18 +53,24 @@ export default async function StudentDashboardPage() {
   );
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) redirect("/login/student");
+  if (!user) {
+    console.warn("[Dashboard] No user found in getUser(), redirecting to login.");
+    redirect("/login/student");
+  }
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("*")
-    .eq("id", session.user.id)
+    .eq("id", user.id)
     .single();
 
-  if (profileError || !profile) redirect("/login/student");
+  if (profileError || !profile) {
+    console.warn("User has a session but no profile row found. Redirecting to onboarding.");
+    redirect("/onboarding");
+  }
 
   const { data: internshipsData, error: internshipsError } = await supabase
     .from("internships")
