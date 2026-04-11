@@ -2,6 +2,12 @@
 # PAU Interconnect Backend API (v4.2-async-modular)
 # ==============================================================================
 
+import sys
+import os
+
+# Render deployment path fix: ensure current directory is in python path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import logging
 import re
 from fastapi import FastAPI, Request
