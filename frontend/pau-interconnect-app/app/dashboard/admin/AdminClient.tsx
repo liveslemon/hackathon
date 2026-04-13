@@ -12,7 +12,7 @@ import DashboardShell from "@/components/DashboardShell";
 export default function AdminClient({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeTab = searchParams.get("tab") || "overview";
+  const activeTab = searchParams?.get("tab") || "overview";
   const [showSearch, setShowSearch] = useState(false);
 
   const tabs = [
