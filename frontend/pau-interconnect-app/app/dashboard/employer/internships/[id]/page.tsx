@@ -3,7 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import crossFetch from "cross-fetch";
-import { Skeleton, Stack } from "@/components/ui";
+import { Skeleton, Stack, Typography } from "@/components/ui";
 import { authenticatedFetchServer } from "@/lib/api-server";
 import DashboardShellWrapper from "../../DashboardShellWrapper";
 import ApplicantReviewClient from "./ApplicantReviewClient";
