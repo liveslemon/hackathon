@@ -23,6 +23,7 @@ const TopBar = ({ onMenuClick, searchQuery, onSearchChange, userProfile }: TopBa
   const isAdmin = userProfile?.role === "admin";
 
   const getSearchPlaceholder = () => {
+    if (!pathname) return "Search Vacancy...";
     if (pathname === "/dashboard/employer") return "Search Activities & Leads...";
     if (pathname.includes("/dashboard/employer/internships/")) return "Search Applicants for this role...";
     if (isEmployer) return "Search Hub & Talent...";

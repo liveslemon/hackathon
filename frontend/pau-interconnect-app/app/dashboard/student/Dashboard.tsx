@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FiLogOut, FiSearch, FiUser, FiBell } from "react-icons/fi";
+import { FiLogOut, FiSearch, FiUser, FiBell, FiBriefcase } from "react-icons/fi";
 import { supabase } from "@/lib/supabaseClient";
 import { cx } from "@/utils/cx";
 import {
@@ -363,7 +363,7 @@ const Dashboard = ({
                     <Typography variant="h5" color="muted">
                       No internships found. Try adjusting your filters.
                     </Typography>
-                  </div>
+                  </Card>
                 )}
               </div>
 
