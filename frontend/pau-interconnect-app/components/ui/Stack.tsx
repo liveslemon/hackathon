@@ -5,7 +5,7 @@ interface StackProps {
   children: React.ReactNode;
   direction?: "row" | "col";
   spacing?: number;
-  align?: "start" | "center" | "end" | "stretch";
+  align?: "start" | "center" | "end" | "stretch" | "baseline";
   justify?: "start" | "center" | "end" | "between";
   className?: string;
 }
@@ -28,6 +28,7 @@ export const Stack: React.FC<StackProps> = ({
     center: "items-center",
     end: "items-end",
     stretch: "items-stretch",
+    baseline: "items-baseline",
   };
 
   const justifications = {
