@@ -1,230 +1,108 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
-import { cx } from "@/utils/cx";
-
-import {
-  Typography,
-  Stack,
-  Button,
-  Badge,
-  Card,
-  CardContent,
-  Divider,
-  Modal,
-  Input,
-  Textarea,
-} from "@/components/ui";
-import DashboardHeader from "@/components/DashboardHeader";
-import { useAuth } from "@/context/AuthContext";
-
-// Icons
+import React from "react";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import crossFetch from "cross-fetch";
+import { redirect } from "next/navigation";
+import Link from "next/link";
 import { 
   FiBriefcase, 
   FiMapPin, 
   FiClock, 
   FiStar, 
-  FiSend, 
-  FiX, 
   FiArrowLeft,
   FiCheckCircle,
-  FiAlertTriangle,
-  FiZap
+  FiZap 
 } from "react-icons/fi";
-import { authenticatedFetch } from "@/lib/api";
 
-export default function InternshipDetailsPage() {
-  const params = useParams();
-  const router = useRouter();
-  const internshipId = params?.id as string;
+import {
+  Typography,
+  Badge,
+  Card,
+  CardContent,
+  Divider,
+} from "@/components/ui";
+import DashboardHeader from "@/components/DashboardHeader";
+import DashboardShell from "@/components/DashboardShell";
+import InternshipClientParts from "./InternshipClientParts";
 
-  // --- DATA STATES ---
-  const [internship, setInternship] = useState<any>(null);
-  const [isPageLoading, setIsPageLoading] = useState(true);
-  const [hasApplied, setHasApplied] = useState(false);
-  const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
-  const [matchScore, setMatchScore] = useState<number | null>(null);
-  const [matchingSkills, setMatchingSkills] = useState<string[]>([]);
-  const [missingSkills, setMissingSkills] = useState<string[]>([]);
-  const [userProfile, setUserProfile] = useState<any>(null);
-
-  // --- MODAL & ACTION STATES ---
-  const [isApplyModalOpen, setApplyModalOpen] = useState(false);
-  const [isCvReviewModalOpen, setCvReviewModalOpen] = useState(false);
-  const [coverLetter, setCoverLetter] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isReviewing, setIsReviewing] = useState(false);
-  const [isDrafting, setIsDrafting] = useState(false);
-
-  // --- AUTH CONTEXT ---
-  const { user, profile: authProfile, loading: authLoading } = useAuth();
-  const [hasCheckedStatus, setHasCheckedStatus] = useState(false);
-
-  // --- FETCH REAL DATA FROM SUPABASE ---
-  useEffect(() => {
-    async function fetchInternshipData() {
-      if (!internshipId) return;
-
-      try {
-        setIsPageLoading(true);
-        
-        // Fetch the Internship details immediately (doesn't depend on user)
-        const { data: internshipData, error: internshipError } = await supabase
-          .from("internships")
-          .select("*")
-          .eq("id", internshipId)
-          .single();
-
-        if (internshipError) throw internshipError;
-        setInternship(internshipData);
-      } catch (error) {
-        console.error("Error fetching internship details:", error);
-      } finally {
-        // We only stop showing the "full page" spinner once we have the internship
-        // User specific data can "pop in" slightly later
-        if (!authLoading) setIsPageLoading(false);
-      }
+export default async function InternshipDetailsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id: internshipId } = await params;
+  const cookieStore = await cookies();
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: { fetch: crossFetch },
+      cookies: {
+        getAll() { return cookieStore.getAll(); },
+        setAll() {}
+      },
     }
+  );
 
-    fetchInternshipData();
-  }, [internshipId, authLoading]);
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  // Fetch internship data
+  const { data: internship, error: internshipError } = await supabase
+    .from("internships")
+    .select("*")
+    .eq("id", internshipId)
+    .single();
 
-  // Secondary fetch for user-specific relationship data (Matches, Applications)
-  useEffect(() => {
-    if (authLoading || !user || !internshipId || hasCheckedStatus) return;
-
-    async function fetchUserSpecificData() {
-      try {
-        // Fetch Application and Match Results in parallel using the ID from AuthContext
-        const [appliedRes, matchRes] = await Promise.all([
-          supabase.from("applied_internships")
-            .select("id, status")
-            .eq("user_id", user!.id)
-            .eq("internship_id", internshipId)
-            .maybeSingle(),
-          supabase.from("match_results")
-            .select("match_score, matching_skills, missing_skills")
-            .eq("user_id", user!.id)
-            .eq("internship_id", internshipId)
-            .maybeSingle()
-        ]);
-
-        if (appliedRes.data) {
-          setHasApplied(true);
-          setApplicationStatus(appliedRes.data.status);
-        }
-
-        if (matchRes.data) {
-          setMatchScore(matchRes.data.match_score);
-          if (matchRes.data.matching_skills) setMatchingSkills(matchRes.data.matching_skills);
-          if (matchRes.data.missing_skills) setMissingSkills(matchRes.data.missing_skills);
-        }
-        
-        setHasCheckedStatus(true);
-      } catch (err) {
-        console.error("Error fetching user-specific internship data:", err);
-      }
-    }
-
-    fetchUserSpecificData();
-    if (authProfile) setUserProfile(authProfile);
-  }, [authLoading, user, authProfile, internshipId, hasCheckedStatus]);
-
-  // --- HANDLERS ---
-  const handleApply = async () => {
-    setIsSubmitting(true);
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const userId = user?.id;
-
-      if (!userId) {
-        alert("Please sign in to apply.");
-        setIsSubmitting(false);
-        return;
-      }
-
-      const result = await authenticatedFetch("/submit-application", {
-        method: "POST",
-        body: JSON.stringify({
-           user_id: userId,
-           internship_id: internship.id,
-           cover_letter: coverLetter,
-           student_email: user?.email,
-        })
-      });
-
-      setHasApplied(true);
-      setApplyModalOpen(false);
-      alert("Application submitted successfully! The employer has been notified.");
-    } catch (error: any) {
-      console.error("Application error:", error);
-      alert(error?.message || "Failed to submit application.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleCvReview = () => {
-    setCvReviewModalOpen(true);
-  };
-
-  const handleDraftCoverLetter = async () => {
-    setIsDrafting(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        alert("Please sign in to use this feature.");
-        return;
-      }
-      
-      const data = await authenticatedFetch("/draft-cover-letter", {
-        method: "POST",
-        body: JSON.stringify({ 
-          user_id: user.id, 
-          internship_id: internship.id,
-          existing_letter: coverLetter 
-        }),
-      });
-      
-      if (data.cover_letter) {
-        setCoverLetter(data.cover_letter);
-      }
-    } catch (error: any) {
-      console.error("Drafting error:", error);
-      alert(error.message || "An error occurred while drafting the cover letter.");
-    } finally {
-      setIsDrafting(false);
-    }
-  };
-
-  // --- LOADING & FALLBACK STATES ---
-  if (isPageLoading) {
+  if (internshipError || !internship) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
+      <div className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center p-6 text-center">
+        <Typography variant="h2" weight="bold">Internship not found</Typography>
+        <Link href="/dashboard/student">
+          <button className="mt-8 px-6 py-3 bg-brand text-white rounded-2xl font-bold">Back to Dashboard</button>
+        </Link>
       </div>
     );
   }
 
-  if (!internship) {
-    return (
-      <div className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[32px] flex items-center justify-center mb-6">
-          <FiX className="w-10 h-10" />
-        </div>
-        <Typography variant="h2" weight="bold">Internship not found</Typography>
-        <Typography variant="body1" color="muted" className="mt-2 max-w-md">
-          The internship you are looking for does not exist or has been removed.
-        </Typography>
-        <Button onClick={() => router.push("/dashboard/student")} className="mt-8">
-          Back to Dashboard
-        </Button>
-      </div>
-    );
+  // Fetch user-specific data if logged in
+  let hasApplied = false;
+  let applicationStatus: string | null = null;
+  let matchScore: number | null = null;
+  let matchingSkills: string[] = [];
+  let missingSkills: string[] = [];
+  let userProfile: any = null;
+
+  if (session) {
+    const [appliedRes, matchRes, profileRes] = await Promise.all([
+      supabase.from("applied_internships")
+        .select("id, status")
+        .eq("user_id", session.user.id)
+        .eq("internship_id", internshipId)
+        .maybeSingle(),
+      supabase.from("match_results")
+        .select("match_score, matching_skills, missing_skills")
+        .eq("user_id", session.user.id)
+        .eq("internship_id", internshipId)
+        .maybeSingle(),
+      supabase.from("profiles")
+        .select("*")
+        .eq("id", session.user.id)
+        .single()
+    ]);
+
+    if (appliedRes.data) {
+      hasApplied = true;
+      applicationStatus = appliedRes.data.status;
+    }
+
+    if (matchRes.data) {
+      matchScore = matchRes.data.match_score;
+      matchingSkills = matchRes.data.matching_skills || [];
+      missingSkills = matchRes.data.missing_skills || [];
+    }
+    
+    userProfile = profileRes.data;
   }
 
   const requirementsList = Array.isArray(internship.requirements)
@@ -238,18 +116,16 @@ export default function InternshipDetailsPage() {
   const displayScore = matchScore !== null ? matchScore : (internship.matchPercentage || 0);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc]">
-      <DashboardHeader userProfile={userProfile} />
-
-      <main className="max-w-5xl mx-auto px-6 md:px-10 py-12">
-        <Button
-          variant="ghost"
-          leftIcon={<FiArrowLeft />}
-          onClick={() => router.push("/dashboard/student")}
-          className="mb-8 -ml-4"
-        >
-          Back to Listings
-        </Button>
+    <DashboardShell userProfile={userProfile}>
+      <div className="max-w-5xl mx-auto px-4 md:px-0 py-12">
+        <Link href="/dashboard/student">
+          <div className="flex items-center gap-3 text-slate-400 hover:text-brand mb-10 font-bold transition-all group w-fit">
+            <div className="w-8 h-8 rounded-xl bg-white border border-slate-100 flex items-center justify-center p-2 shadow-sm group-hover:border-brand/20">
+              <FiArrowLeft className="group-hover:-translate-x-1 transition-transform" />
+            </div>
+            Back to Dashboard
+          </div>
+        </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           {/* Main Content */}
@@ -328,7 +204,7 @@ export default function InternshipDetailsPage() {
                 <div className="absolute top-0 right-0 p-4 opacity-10">
                   <FiBriefcase size={80} />
                 </div>
-                <Typography variant="h4" color="white" weight="bold" className="mb-1 text-center">Compatibility</Typography>
+                <Typography variant="h4" color="white" weight="bold" className="mb-1 text-center font-bold">Compatibility</Typography>
                 <div className="flex flex-col items-center">
                   <div className="text-5xl font-black mb-1">{displayScore}%</div>
                   <Typography variant="caption" color="white" className="opacity-80 font-bold uppercase tracking-widest">Profile Match</Typography>
@@ -336,36 +212,21 @@ export default function InternshipDetailsPage() {
               </div>
               
               <CardContent className="p-8 space-y-4">
-                <Button
-                  size="lg"
-                  onClick={() => setApplyModalOpen(true)}
-                  disabled={hasApplied}
-                  leftIcon={hasApplied ? (
-                    applicationStatus?.toLowerCase() === 'accepted' ? <FiCheckCircle /> :
-                    applicationStatus?.toLowerCase() === 'rejected' ? <FiX /> : <FiClock />
-                  ) : <FiSend />}
-                  className={cx(
-                    "w-full", 
-                    hasApplied && applicationStatus?.toLowerCase() === 'accepted' ? "bg-emerald-500 text-white" :
-                    hasApplied && applicationStatus?.toLowerCase() === 'rejected' ? "bg-rose-500 text-white" :
-                    hasApplied ? "bg-indigo-500 text-white" : ""
-                  )}
-                >
-                  {hasApplied ? (
-                    applicationStatus?.toLowerCase() === 'accepted' ? "Application Approved" :
-                    applicationStatus?.toLowerCase() === 'rejected' ? "Application Denied" : "Application Pending"
-                  ) : "Apply Now"}
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  size="lg"
-                  leftIcon={<FiZap className="text-amber-500" />}
-                  onClick={handleCvReview}
-                  className="w-full border-amber-100 hover:border-amber-200 hover:bg-amber-50"
-                >
-                  AI CV Review
-                </Button>
+                {session ? (
+                  <InternshipClientParts 
+                    internship={internship}
+                    hasApplied={hasApplied}
+                    applicationStatus={applicationStatus}
+                    matchingSkills={matchingSkills}
+                    missingSkills={missingSkills}
+                    userId={session.user.id}
+                    studentEmail={session.user.email}
+                  />
+                ) : (
+                  <Link href="/login/student">
+                    <button className="w-full py-4 bg-brand text-white rounded-2xl font-bold">Sign in to Apply</button>
+                  </Link>
+                )}
 
                 <div className="pt-4 px-2 space-y-4">
                   <div className="flex items-center gap-3">
@@ -385,122 +246,7 @@ export default function InternshipDetailsPage() {
             </Card>
           </div>
         </div>
-      </main>
-
-      {/* Apply Modal */}
-      <Modal
-        isOpen={isApplyModalOpen}
-        onClose={() => !isSubmitting && setApplyModalOpen(false)}
-        title="Quick Application"
-        size="md"
-        footer={
-          <Stack direction="row" spacing={3} className="w-full">
-            <Button 
-              variant="outline" 
-              leftIcon={<FiZap className="text-indigo-500" />}
-              onClick={handleDraftCoverLetter} 
-              disabled={isDrafting || isSubmitting}
-              className="flex-1"
-            >
-              {isDrafting 
-                ? (coverLetter.trim() ? "Enhancing..." : "Drafting...") 
-                : (coverLetter.trim() ? "✨ Enhance with AI" : "⚡ Draft with AI")
-              }
-            </Button>
-            <Button 
-              onClick={handleApply} 
-              disabled={isSubmitting || isDrafting} 
-              isLoading={isSubmitting}
-              rightIcon={<FiSend />}
-              className="flex-1"
-            >
-              Submit Application
-            </Button>
-          </Stack>
-        }
-      >
-        <div className="space-y-6">
-          <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
-            <Typography variant="body2" weight="bold" color="primary" className="mb-2">WHY YOU'RE A FIT</Typography>
-            <Typography variant="body1" className="text-slate-700">
-              Share a brief cover letter or statement about why you're interested in {internship.company}.
-            </Typography>
-          </div>
-          
-          <Textarea
-            label="Cover Letter"
-            placeholder="Tell us about yourself and why you're perfect for this role..."
-            value={coverLetter}
-            onChange={(e) => setCoverLetter(e.target.value)}
-            disabled={isSubmitting}
-            rows={6}
-          />
-        </div>
-      </Modal>
-
-      {/* AI Review Modal */}
-      <Modal
-        isOpen={isCvReviewModalOpen}
-        onClose={() => !isReviewing && setCvReviewModalOpen(false)}
-        title="AI Keyword Analysis"
-        size="md"
-      >
-        <div className="space-y-8">
-          <Typography variant="body1" color="muted">
-            I've compared your profile keywords with the requirements for this {internship.role || "position"}.
-          </Typography>
-
-          {isReviewing ? (
-            <div className="flex flex-col items-center py-10 space-y-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
-              <Typography variant="body2">Deep scanning requirements...</Typography>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {matchingSkills.length > 0 && (
-                <div className="bg-emerald-50/50 border border-emerald-100 p-6 rounded-[32px] space-y-4">
-                  <div className="flex items-center gap-2 text-emerald-600">
-                    <FiCheckCircle size={20} />
-                    <Typography variant="h4" weight="bold">Matched Strengths</Typography>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {matchingSkills.map((skill, index) => (
-                      <Badge key={index} variant="success" size="md" className="rounded-xl px-4 py-1.5 font-bold">
-                        {skill}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {missingSkills.length > 0 && (
-                <div className="bg-amber-50/50 border border-amber-100 p-6 rounded-[32px] space-y-4">
-                  <div className="flex items-center gap-2 text-amber-600">
-                    <FiAlertTriangle size={20} />
-                    <Typography variant="h4" weight="bold">Missing Keywords</Typography>
-                  </div>
-                  <Typography variant="body1" className="text-amber-900/70 leading-relaxed">
-                    Recruiters for this role are looking for <strong>{missingSkills.join(", ")}</strong>. 
-                    Consider highlighting these in your profile or CV if you have the experience.
-                  </Typography>
-                </div>
-              )}
-              
-              {matchingSkills.length === 0 && missingSkills.length === 0 && (
-                <div className="bg-slate-50 border border-slate-100 p-8 rounded-[32px] text-center">
-                  <Typography variant="body1" color="muted">
-                    Resume data is still processing or unavailable for this listing.
-                  </Typography>
-                </div>
-              )}
-
-              <Button onClick={() => setCvReviewModalOpen(false)} variant="solid" className="mt-4 w-full">
-                Got it, Thanks!
-              </Button>
-            </div>
-          )}
-        </div>
-      </Modal>
-    </div>
+      </div>
+    </DashboardShell>
   );
 }

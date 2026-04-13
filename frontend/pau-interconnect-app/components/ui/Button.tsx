@@ -27,7 +27,7 @@ export const Button: React.FC<ButtonProps> = ({
   as: Component = "button",
   ...props
 }) => {
-  const baseStyles = "inline-flex items-center justify-center rounded-full font-semibold transition-all duration-200 focus:outline-none active:scale-95 disabled:opacity-50 disabled:pointer-events-none cursor-pointer";
+  const baseStyles = "inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-200 focus:outline-none disabled:opacity-50 disabled:pointer-events-none cursor-pointer";
   
   const sizes = {
     sm: "px-3 py-1.5 text-xs md:px-4 md:py-2 md:text-sm",
@@ -37,9 +37,9 @@ export const Button: React.FC<ButtonProps> = ({
 
   const variants = {
     solid: {
-      primary: "bg-gradient-to-r from-brand to-brand-secondary text-white hover:opacity-95 shadow-lg shadow-brand/30 hover:-translate-y-0.5 hover:shadow-xl transition-all",
-      secondary: "bg-gradient-to-r from-brand-secondary to-brand-secondary-dark text-white hover:opacity-95 shadow-lg shadow-brand-secondary/30 hover:-translate-y-0.5 hover:shadow-xl transition-all",
-      danger: "bg-gradient-to-r from-red-500 to-rose-600 text-white hover:opacity-95 shadow-lg shadow-red-200/50 hover:-translate-y-0.5 hover:shadow-xl transition-all",
+      primary: "bg-brand text-white hover:bg-brand-dark shadow-sm shadow-brand/20",
+      secondary: "bg-brand-secondary text-white hover:bg-brand-secondary-dark shadow-sm shadow-brand-secondary/20",
+      danger: "bg-red-600 text-white hover:bg-red-700 shadow-sm shadow-red-100",
     },
     outline: {
       primary: "border-2 border-brand text-brand hover:bg-brand/5",

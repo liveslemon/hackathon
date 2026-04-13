@@ -1,58 +1,62 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import { Card, Typography, Button, Stack } from "@/components/ui";
 import { FiBook, FiCheckCircle, FiAlertCircle } from "react-icons/fi";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import crossFetch from "cross-fetch";
 
-export default function LogbookWidget({ userId }: { userId: string }) {
-  const router = useRouter();
-  const [hasStarted, setHasStarted] = useState(false);
-  const [todayStatus, setTodayStatus] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+async function getSupabase() {
+  const cookieStore = await cookies();
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: { fetch: crossFetch },
+      cookies: {
+        getAll() { return cookieStore.getAll(); },
+        setAll() {}
+      },
+    }
+  );
+}
 
-  useEffect(() => {
-    async function checkLogbook() {
-      try {
-        setLoading(true);
-        // Check if student has an accepted internship
-        const { data: applied } = await supabase
-          .from("applied_internships")
-          .select("status")
-          .eq("user_id", userId)
-          .eq("status", "accepted")
-          .limit(1)
-          .maybeSingle();
+export default async function LogbookWidget({ userId }: { userId: string }) {
+  const supabase = await getSupabase();
+  let hasStarted = false;
+  let todayStatus: string | null = null;
 
-        if (applied) {
-          setHasStarted(true);
-          // Check today's logbook entry
-          const todayStr = new Date().toISOString().split("T")[0];
-          const { data: entry } = await supabase
-            .from("logbook_entries")
-            .select("status")
-            .eq("student_id", userId)
-            .eq("date", todayStr)
-            .maybeSingle();
+  try {
+    // 1. Check if student has an accepted internship
+    const { data: applied } = await supabase
+      .from("applied_internships")
+      .select("status")
+      .eq("user_id", userId)
+      .eq("status", "accepted")
+      .limit(1)
+      .maybeSingle();
 
-          if (entry) {
-             setTodayStatus(entry.status); // 'pending', 'approved', 'flagged'
-          } else {
-             setTodayStatus("missing");
-          }
-        } else {
-          setHasStarted(false);
-        }
-      } catch (err) {
-        console.error("Logbook widget error:", err);
-      } finally {
-        setLoading(false);
+    if (applied) {
+      hasStarted = true;
+      // 2. Check today's logbook entry
+      const todayStr = new Date().toISOString().split("T")[0];
+      const { data: entry } = await supabase
+        .from("logbook_entries")
+        .select("status")
+        .eq("student_id", userId)
+        .eq("date", todayStr)
+        .maybeSingle();
+
+      if (entry) {
+        todayStatus = entry.status; // 'pending', 'approved', 'flagged'
+      } else {
+        todayStatus = "missing";
       }
     }
-    
-    if (userId) checkLogbook();
-  }, [userId]);
+  } catch (err) {
+    console.error("Logbook widget server-side error:", err);
+  }
 
-  if (loading || !hasStarted) return null;
+  if (!hasStarted) return null;
 
   return (
     <Card className="mb-8 p-6 bg-gradient-to-r from-brand/10 to-brand-secondary/10 border border-brand/20 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm hover:shadow-md transition-shadow">
@@ -71,13 +75,14 @@ export default function LogbookWidget({ userId }: { userId: string }) {
           </Typography>
         </div>
       </Stack>
-      <Button 
-        variant={todayStatus === 'missing' ? "solid" : "outline"} 
-        onClick={() => router.push("/dashboard/student/logbook")}
-        className="whitespace-nowrap rounded-xl shadow-sm"
-      >
-        <FiBook className="mr-2 inline" /> Go to Logbook
-      </Button>
+      <Link href="/dashboard/student/logbook" className="no-underline">
+        <Button 
+          variant={todayStatus === 'missing' ? "solid" : "outline"} 
+          className="whitespace-nowrap rounded-xl shadow-sm"
+        >
+          <FiBook className="mr-2 inline" /> Go to Logbook
+        </Button>
+      </Link>
     </Card>
   );
 }

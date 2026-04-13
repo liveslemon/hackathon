@@ -1,318 +1,54 @@
-"use client";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import crossFetch from "cross-fetch";
+import ProfileClient from "./ProfileClient";
+import DashboardShell from "@/components/DashboardShell";
+import { Typography } from "@/components/ui";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
-import {
-  Button,
-  Input,
-  Badge,
-  Card,
-  CardContent,
-  Typography,
-  Stack,
-  Divider,
-} from "@/components/ui";
-import {
-  FiArrowLeft,
-  FiEdit2,
-  FiSave,
-  FiDownload,
-  FiUser,
-  FiUploadCloud,
-  FiCheckCircle,
-  FiAlertCircle,
-} from "react-icons/fi";
-import { authenticatedFetch } from "@/lib/api";
-import { useAuth } from "@/context/AuthContext";
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
-
-const Profile = () => {
-  const router = useRouter();
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [profile, setProfile] = useState<any>({});
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [status, setStatus] = useState<{ type: 'success' | 'error' | 'warning', message: string } | null>(null);
-  const [isProfileLoaded, setIsProfileLoaded] = useState(false);
-  const { user, profile: authProfile, loading } = useAuth();
-
-  useEffect(() => {
-    if (loading) return;
-    
-    if (user) {
-      setUserEmail(user.email ?? null);
-      // Ensure we clone the context profile so user edits don't mutate context immediately
-      setProfile(authProfile ? { ...authProfile } : {});
-    } else {
-      setProfile({});
+export default async function ProfilePage() {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: { fetch: crossFetch },
+      cookies: {
+        getAll() { return cookieStore.getAll(); },
+        setAll() {}
+      },
     }
-    setIsProfileLoaded(true);
-  }, [loading, user, authProfile]);
+  );
 
-  const handleSave = async () => {
-    try {
-      setIsSaving(true);
-      setStatus(null);
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData?.session?.user?.id ?? null;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) redirect("/login/student");
 
-      if (userId) {
-        const upsertPayload = {
-          id: userId,
-          full_name: profile.full_name ?? null,
-          course: profile.course ?? null,
-          level: profile.level ?? null,
-          interests: profile.interests ?? [],
-          cv_url: profile.cv_url ?? null,
-        };
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", session.user.id)
+    .single();
 
-        const { error } = await supabase
-          .from("profiles")
-          .upsert(upsertPayload);
-
-        if (error) {
-          throw error;
-        }
-
-        if (profile.cvFile) {
-          const backendFormData = new FormData();
-          backendFormData.append("user_id", userId);
-          backendFormData.append("file", profile.cvFile);
-
-          try {
-            const result = await authenticatedFetch("/upload-and-analyze", {
-              method: "POST",
-              body: backendFormData,
-            });
-            
-            if (result.text_length === 0) {
-              setStatus({ 
-                type: 'warning', 
-                message: "Profile saved, but the PDF content appears empty. Please ensure it's a text-based PDF." 
-              });
-            } else {
-              setStatus({ 
-                type: 'success', 
-                message: `Success! Analyzed ${result.internships_count} internships and found ${result.matches_count} potential matches.` 
-              });
-            }
-            
-            setProfile((prev: any) => ({
-              ...prev,
-              cv_url: result.cv_url,
-              cvFile: null,
-            }));
-            
-          } catch (cvErr: any) {
-            console.error("CV Upload/Analysis failed:", cvErr);
-            setStatus({ 
-              type: 'warning', 
-              message: `Profile saved, but CV analysis failed: ${cvErr.message}` 
-            });
-          }
-        } else {
-           setStatus({ type: 'success', message: "Profile details saved securely." });
-        }
-        setIsEditing(false);
-      } else {
-        setIsEditing(false);
-        setStatus({ type: 'success', message: "Profile updated locally." });
-      }
-    } catch (err: any) {
-      console.error("Error saving profile:", err);
-      setStatus({ type: 'error', message: err.message || "An unexpected error occurred." });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  if (!isProfileLoaded) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
-      </div>
-    );
-  }
+  const isEmployer = profile?.role === "employer";
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] py-6 md:py-12 px-4 md:px-12 lg:px-24">
-      <div className="max-w-4xl mx-auto space-y-4 md:space-y-8">
-        <Button
-          variant="outline"
-          leftIcon={<FiArrowLeft />}
-          onClick={() => router.push("/dashboard/student")}
-          className="border-none bg-white/50 hover:bg-white text-slate-500 font-bold"
-        >
-          Back to Dashboard
-        </Button>
+    <DashboardShell userProfile={profile}>
+      <div className="max-w-4xl mx-auto pb-12">
+        <header className="mb-10 px-4 sm:px-0">
+          <Typography variant="h3" weight="bold" className="text-slate-900 leading-tight">
+            {isEmployer ? "Company Profile" : "Profile Settings"}
+          </Typography>
+          <Typography variant="caption" className="text-slate-400 font-medium tracking-wide">
+            {isEmployer 
+              ? "Manage your company information, brand identity, and recruitment settings" 
+              : "Manage your personal information, interests, and school details"}
+          </Typography>
+        </header>
 
-        <Card className="overflow-hidden border-slate-100 shadow-2xl shadow-indigo-50/50 rounded-2xl md:rounded-[40px]">
-          <div className="bg-gradient-to-r from-brand to-brand-secondary px-6 py-8 md:px-10 md:py-12 text-white relative overflow-hidden">
-            {/* Decorative circles */}
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl animate-pulse" />
-            <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-indigo-200/20 rounded-full blur-2xl" />
-            
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
-              <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-4 md:gap-6">
-                <div className="w-16 h-16 md:w-24 md:h-24 bg-white/20 backdrop-blur-md rounded-2xl md:rounded-[32px] flex items-center justify-center border border-white/30 shadow-2xl shrink-0">
-                  <FiUser className="w-8 h-8 md:w-12 md:h-12 text-white" />
-                </div>
-                <div className="flex flex-col justify-center">
-                  <Typography variant="h2" weight="bold">{profile.full_name || "Guest User"}</Typography>
-                  <Typography variant="body1" className="opacity-80 font-medium break-all">{userEmail || "Log in to save your profile"}</Typography>
-                </div>
-              </div>
-              {!isEditing ? (
-                <Button
-                  onClick={() => setIsEditing(true)}
-                  leftIcon={<FiEdit2 />}
-                  className="bg-white/20 backdrop-blur-md border border-white/30 hover:bg-white/30 text-white font-bold rounded-2xl"
-                >
-                  Edit Profile
-                </Button>
-              ) : (
-                <Button
-                  isLoading={isSaving}
-                  onClick={handleSave}
-                  leftIcon={<FiSave />}
-                  className="bg-white text-brand hover:bg-white/90 shadow-xl font-bold rounded-2xl"
-                >
-                  {isSaving ? "Saving..." : "Save Changes"}
-                </Button>
-              )}
-            </div>
-          </div>
-
-          <CardContent className="p-6 md:p-10 space-y-8 md:space-y-10">
-            {status && (
-              <div className={`p-4 rounded-2xl flex items-center gap-3 animate-in fade-in zoom-in duration-300 ${
-                status.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 
-                status.type === 'warning' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
-                'bg-rose-50 text-rose-700 border border-rose-100'
-              }`}>
-                {status.type === 'success' ? <FiCheckCircle className="w-5 h-5" /> : <FiAlertCircle className="w-5 h-5" />}
-                <Typography variant="body2" weight="bold">{status.message}</Typography>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-              <Input
-                label="Full Name"
-                value={profile.full_name || ""}
-                onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
-                disabled={!isEditing}
-                placeholder="Enter your full name"
-                className={!isEditing ? "opacity-70" : ""}
-              />
-              <Input
-                label="Email Address"
-                value={userEmail || profile.email || ""}
-                disabled={true}
-                className="opacity-50"
-              />
-            </div>
-
-            <Input
-              label="Course / Major"
-              value={profile.course || ""}
-              onChange={(e) => setProfile({ ...profile, course: e.target.value })}
-              disabled={!isEditing}
-              placeholder="e.g. Computer Science"
-              className={!isEditing ? "opacity-70" : ""}
-            />
-
-            <div className="space-y-4">
-              <Typography variant="body2" weight="bold" color="muted" className="ml-1 uppercase tracking-widest text-[10px]">
-                Career Interests
-              </Typography>
-              <div className="flex flex-wrap gap-2">
-                {profile.interests?.length > 0 ? (
-                  profile.interests.map((interest: string) => (
-                    <Badge key={interest} variant="primary" size="md" className="rounded-xl px-4 py-1.5 font-bold">
-                      {interest}
-                    </Badge>
-                  ))
-                ) : (
-                  <Typography variant="body2" color="muted" className="italic ml-1">No interests added yet</Typography>
-                )}
-              </div>
-            </div>
-
-            <Divider />
-
-            <div className="space-y-6">
-              <Typography variant="h4" weight="bold">Curriculum Vitae (CV)</Typography>
-              <div className="bg-slate-50/50 border border-dashed border-slate-200 rounded-2xl md:rounded-[32px] p-6 md:p-8 flex flex-col items-center justify-center space-y-4 md:space-y-6">
-                <div className="w-12 h-12 md:w-16 md:h-16 bg-white rounded-xl md:rounded-2xl shadow-md flex items-center justify-center">
-                  <FiUploadCloud className="w-6 h-6 md:w-8 md:h-8 text-brand" />
-                </div>
-                <div className="text-center space-y-1 px-4">
-                  <Typography variant="body2" weight="bold" className="break-words">
-                    {profile.cvFile ? profile.cvFile.name : "Professional CV Document"}
-                  </Typography>
-                  <Typography variant="caption" color="muted">PDF, DOCX up to 5MB</Typography>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-3 sm:gap-4 justify-center">
-                  <Button 
-                    as="label"
-                    variant="outline" 
-                    disabled={!isEditing}
-                    className={`rounded-xl font-bold px-6 ${!isEditing ? 'opacity-50 cursor-not-allowed' : 'bg-white hover:border-brand hover:text-brand'}`}
-                  >
-                    {profile.cvFile ? "Change File" : "Upload New CV"}
-                    <input
-                      type="file"
-                      hidden
-                      accept=".pdf,.doc,.docx"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) setProfile({ ...profile, cvFile: file });
-                      }}
-                    />
-                  </Button>
-                  
-                  {profile.cv_url && (
-                    <Button
-                      variant="solid"
-                      leftIcon={<FiDownload />}
-                      onClick={async () => {
-                        try {
-                          const { data: sessionData } = await supabase.auth.getSession();
-                          const userId = sessionData?.session?.user?.id;
-                          if (!userId) throw new Error("Not logged in");
-
-                          const data = await authenticatedFetch("/refresh-cv-url", {
-                             method: "POST",
-                             body: JSON.stringify({ user_id: userId })
-                          });
-                          
-                          if (data.cv_url) {
-                             setProfile((prev: any) => ({ ...prev, cv_url: data.cv_url }));
-                             window.open(data.cv_url, "_blank");
-                             return;
-                          }
-                          window.open(profile.cv_url, "_blank");
-                        } catch (err) {
-                          console.error("Download Error:", err);
-                          window.open(profile.cv_url, "_blank");
-                        }
-                      }}
-                      className="rounded-xl font-bold px-8 shadow-lg shadow-indigo-100"
-                    >
-                      View Current CV
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="px-4 sm:px-0">
+          <ProfileClient initialProfile={profile} userEmail={session.user.email ?? null} />
+        </div>
       </div>
-    </div>
+    </DashboardShell>
   );
-};
-
-export default Profile;
+}

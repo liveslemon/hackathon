@@ -123,7 +123,7 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
   };
 
   return (
-    <Card className="h-full group hover:shadow-xl transition-all duration-300 border-slate-100 flex flex-col overflow-hidden rounded-2xl md:rounded-3xl hover:-translate-y-0.5 md:hover:-translate-y-1">
+    <Card className="h-full group shadow-sm hover:shadow-md transition-all duration-300 border-slate-100 flex flex-col overflow-hidden rounded-xl md:rounded-2xl">
       <div className="relative h-36 md:h-48 overflow-hidden">
         <img
           src={
@@ -131,19 +131,15 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
             "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=318"
           }
           alt={`${internship.company} office`}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute inset-0 bg-slate-900/10 group-hover:bg-slate-900/20 transition-colors duration-300" />
         
-        <Stack className="absolute top-4 left-4 right-4" direction="row" justify="between">
+        <Stack className="absolute top-3 left-3 right-3" direction="row" justify="between">
           {internship.applicationStatus && (
             <Badge 
               variant={getStatusColor(internship.applicationStatus)}
-              className={cx(
-                "text-[10px] px-3 py-1.5 backdrop-blur-md shadow-xl border-white/40 bg-white/80",
-                internship.applicationStatus.toLowerCase() === 'accepted' ? "text-emerald-700" :
-                internship.applicationStatus.toLowerCase() === 'rejected' ? "text-rose-700" : "text-indigo-700"
-              )}
+              className="px-2 py-1 shadow-sm border-white/20 bg-white/90"
             >
               {internship.applicationStatus.toUpperCase()}
             </Badge>
@@ -151,11 +147,7 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
           {internship.matchPercentage !== undefined && (
             <Badge 
               variant={getMatchColor(internship.matchPercentage)}
-              className={cx(
-                "text-[10px] px-3 py-1.5 backdrop-blur-md shadow-xl border-white/40 ml-auto bg-white/80",
-                internship.matchPercentage >= 70 ? "text-emerald-700" :
-                internship.matchPercentage >= 40 ? "text-amber-700" : "text-rose-700"
-              )}
+              className="px-2 py-1 shadow-sm border-white/20 ml-auto bg-white/90"
             >
               {internship.matchPercentage}% MATCH
             </Badge>

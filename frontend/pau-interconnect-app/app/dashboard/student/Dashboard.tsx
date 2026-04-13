@@ -15,7 +15,7 @@ import {
   Select,
 } from "@/components/ui";
 import InternshipCard from "@/components/InternshipCard";
-import DashboardHeader from "@/components/DashboardHeader";
+import DashboardShell from "@/components/DashboardShell";
 import LogbookWidget from "@/components/LogbookWidget";
 
 interface Internship {
@@ -69,7 +69,6 @@ const Dashboard = ({
   const [notificationSeverity, setNotificationSeverity] = useState<
     "success" | "error" | "info" | "warning"
   >("info");
-  const [analysisOpen, setAnalysisOpen] = useState(false);
 
   const router = useRouter();
 
@@ -190,14 +189,6 @@ const Dashboard = ({
     setCurrentPage(1);
   }, [selectedInterest, statusFilter, matchFilter, sortBy, searchQuery, internships]);
 
-  const handleOpenAnalysis = () => {
-    setAnalysisOpen(true);
-  };
-
-  const handleCloseAnalysis = () => {
-    setAnalysisOpen(false);
-  };
-
   const refreshData = async () => {
     try {
       const {
@@ -246,94 +237,104 @@ const Dashboard = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc]">
-      <DashboardHeader 
-        userProfile={userProfile} 
-        onOpenAnalysis={handleOpenAnalysis} 
-      />
+    <DashboardShell
+      userProfile={userProfile}
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-0">
+        {userProfile?.id && <div className="mb-8"><LogbookWidget userId={userProfile.id} /></div>}
+        
+        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-[0_1px_3px_rgba(0,0,0,0.02)] border border-slate-100/80 mb-10 overflow-hidden">
+          <Stack spacing={8}>
+            {/* Top row: Section Headers and Quick Filters */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div className="flex items-center gap-6">
+                 <div className="bg-brand/5 p-3 rounded-2xl border border-brand/10">
+                   <FiBriefcase className="w-5 h-5 text-brand" />
+                 </div>
+                 <div>
+                   <Typography variant="h4" weight="bold" className="text-slate-900 leading-tight">Internship Portal</Typography>
+                   <Typography variant="caption" className="text-slate-400 font-medium">Find your next technical career step at PAU</Typography>
+                 </div>
+              </div>
 
-      <main className="max-w-7xl mx-auto px-0 sm:px-6 py-8 sm:py-12 pb-24 md:pb-12">
-        {userProfile?.id && <div className="px-4 sm:px-0"><LogbookWidget userId={userProfile.id} /></div>}
-        <Stack spacing={6} className="mb-12">
-          <div className="w-full">
-            <Input
-              placeholder="Search internships by company, role, or field..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              leftIcon={<FiSearch className="w-5 h-5" />}
-              className="bg-white shadow-sm border-slate-100 h-14"
-            />
-            <div className="mt-4 flex overflow-x-auto pb-4 sm:pb-0 sm:flex-wrap gap-2 items-center hide-scrollbar px-5 sm:px-0">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-2 shrink-0">Quick Filters:</span>
-              {["Remote", "Hybrid", "Software Engineering", "Data Science", "Design", "Business"].map(tag => (
-                <button
-                  key={tag}
-                  onClick={() => setSearchQuery(tag)}
-                  className="text-xs shrink-0 whitespace-nowrap bg-brand/10 text-brand hover:bg-brand hover:text-white transition-colors px-3 py-1.5 rounded-full font-semibold"
-                >
-                  #{tag}
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex flex-wrap gap-2.5">
-              {availableFilters.map((filter) => (
-                <Button
-                  key={filter}
-                  variant={selectedInterest === filter ? "solid" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedInterest(filter)}
-                  className="px-6 rounded-xl text-xs font-bold transition-all duration-300"
-                >
-                  {filter}
-                </Button>
-              ))}
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em] mr-2">Quick Filters</span>
+                {["Remote", "Hybrid", "Software Engineering", "Business"].map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => setSearchQuery(tag)}
+                    className="text-[11px] px-4 py-2 bg-[#f4f7fa] text-slate-500 hover:bg-brand hover:text-white transition-all rounded-xl font-bold border border-slate-100/50"
+                  >
+                    #{tag}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="flex flex-wrap gap-3 items-center flex-grow sm:flex-grow-0">
-               <div className="w-full sm:w-[150px]">
-                 <Select 
-                   value={statusFilter}
-                   onChange={(e) => setStatusFilter(e.target.value)}
-                   options={[
-                     { value: "All", label: "Any Status" },
-                     { value: "Applied", label: "Pending App" },
-                     { value: "Accepted", label: "Approved" },
-                     { value: "Rejected", label: "Denied" },
-                     { value: "None", label: "Not Applied" },
-                   ]}
-                   className="h-11 text-xs shadow-sm border-slate-100 rounded-xl"
-                 />
-               </div>
-               <div className="w-full sm:w-[150px]">
-                 <Select 
-                   value={matchFilter}
-                   onChange={(e) => setMatchFilter(e.target.value)}
-                   options={[
-                     { value: "All", label: "Any Match" },
-                     { value: "70", label: "70%+ Match" },
-                     { value: "40", label: "40%+ Match" },
-                   ]}
-                   className="h-11 text-xs shadow-sm border-slate-100 rounded-xl"
-                 />
-               </div>
-               <div className="w-full sm:w-[150px]">
-                 <Select 
-                   value={sortBy}
-                   onChange={(e) => setSortBy(e.target.value)}
-                   options={[
-                     { value: "match", label: "Best Match" },
-                     { value: "deadline", label: "Soonest Deadline" },
-                     { value: "company", label: "Company (A-Z)" },
-                   ]}
-                   className="h-11 text-xs shadow-sm border-slate-100 rounded-xl"
-                 />
-               </div>
+            {/* Bottom row: Active Filters */}
+            <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8 pt-6 border-t border-slate-50">
+              <Stack direction="row" spacing={2} className="flex-wrap">
+                {availableFilters.map((filter) => (
+                  <Button
+                    key={filter}
+                    variant={selectedInterest === filter ? "solid" : "ghost"}
+                    size="sm"
+                    onClick={() => setSelectedInterest(filter)}
+                    className={cx(
+                      "px-6 rounded-xl font-bold text-xs transition-all",
+                      selectedInterest === filter 
+                        ? "bg-brand text-white shadow-lg shadow-brand/20" 
+                        : "text-slate-400 hover:text-slate-900"
+                    )}
+                  >
+                    {filter}
+                  </Button>
+                ))}
+              </Stack>
+              
+              <div className="flex flex-wrap items-center gap-3 lg:ml-auto">
+                 <div className="w-full sm:w-[160px]">
+                   <Select 
+                     value={statusFilter}
+                     onChange={(e) => setStatusFilter(e.target.value)}
+                     options={[
+                       { value: "All", label: "Any Status" },
+                       { value: "Applied", label: "Applied" },
+                       { value: "Accepted", label: "Approved" },
+                       { value: "Rejected", label: "Denied" },
+                     ]}
+                     className="bg-[#f4f7fa] border-none rounded-xl text-xs font-bold text-slate-600 h-10"
+                   />
+                 </div>
+                 <div className="w-full sm:w-[160px]">
+                   <Select 
+                     value={matchFilter}
+                     onChange={(e) => setMatchFilter(e.target.value)}
+                     options={[
+                       { value: "All", label: "Any Match" },
+                       { value: "70", label: "70%+ Match" },
+                       { value: "40", label: "40%+ Match" },
+                     ]}
+                     className="bg-[#f4f7fa] border-none rounded-xl text-xs font-bold text-slate-600 h-10"
+                   />
+                 </div>
+                 <div className="w-full sm:w-[160px]">
+                   <Select 
+                     value={sortBy}
+                     onChange={(e) => setSortBy(e.target.value)}
+                     options={[
+                       { value: "match", label: "Best Match" },
+                       { value: "deadline", label: "Deadline" },
+                     ]}
+                     className="bg-[#f4f7fa] border-none rounded-xl text-xs font-bold text-slate-600 h-10"
+                   />
+                 </div>
+              </div>
             </div>
-          </div>
-        </Stack>
+          </Stack>
+        </div>
 
         {(() => {
           const totalItems = (filteredInternships || []).length;
@@ -355,7 +356,7 @@ const Dashboard = ({
                     </div>
                   ))
                 ) : (
-                  <div className="col-span-full py-20 text-center bg-white rounded-3xl border border-dashed border-slate-200">
+                  <Card className="p-12 text-center bg-white rounded-3xl border border-slate-100 shadow-sm">
                     <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
                       <FiSearch className="w-10 h-10 text-slate-300" />
                     </div>
@@ -412,73 +413,9 @@ const Dashboard = ({
             </>
           );
         })()}
-      </main>
-
-      <Modal
-        isOpen={analysisOpen}
-        onClose={handleCloseAnalysis}
-        title="CV Analysis & Match Results"
-        size="lg"
-        footer={<Button onClick={handleCloseAnalysis}>Close</Button>}
-      >
-        {(internships || []).length === 0 ? (
-          <Typography color="muted" className="text-center py-10">
-            No internships available for analysis.
-          </Typography>
-        ) : (
-          <Stack spacing={8}>
-            {(internships || []).map((internship) => (
-              <div key={internship.id} className="group">
-                <Stack direction="row" justify="between" align="center" className="mb-4">
-                  <div>
-                    <Typography variant="h5" weight="bold" className="group-hover:text-brand transition-colors">
-                      {internship.role}
-                    </Typography>
-                    <Typography variant="body2" color="muted">
-                      {internship.company}
-                    </Typography>
-                  </div>
-
-                  {internship.matchPercentage !== undefined ? (
-                    <Badge 
-                      variant={getMatchColor(internship.matchPercentage)}
-                      className="px-4 py-1.5 rounded-xl font-bold"
-                    >
-                      {internship.matchPercentage}% Match
-                    </Badge>
-                  ) : (
-                    <Badge variant="slate" className="px-4 py-1.5 rounded-xl">Not analyzed</Badge>
-                  )}
-                </Stack>
-
-                {internship.matchPercentage !== undefined && (
-                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full transition-all duration-1000 ease-out ${
-                        internship.matchPercentage >= 70 ? 'bg-emerald-500' : 
-                        internship.matchPercentage >= 40 ? 'bg-amber-500' : 'bg-red-500'
-                      }`}
-                      style={{ width: `${internship.matchPercentage}%` }}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-          </Stack>
-        )}
-      </Modal>
-
-      {notificationOpen && (
-        <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 px-8 py-4 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-6 duration-300 z-[100] border ${
-          notificationSeverity === "success" 
-            ? "bg-emerald-50 text-emerald-700 border-emerald-100" 
-            : "bg-red-50 text-red-700 border-red-100"
-        }`}>
-          <Typography variant="body2" weight="bold">{notificationMessage}</Typography>
-        </div>
-      )}
-    </div>
+      </div>
+    </DashboardShell>
   );
-};
+}
 
 export default Dashboard;

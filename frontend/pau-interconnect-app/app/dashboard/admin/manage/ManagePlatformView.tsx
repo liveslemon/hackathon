@@ -1,14 +1,7 @@
-"use client";
-
-import React, { useEffect, useState } from "react";
-import {
-  Typography,
-  Stack,
-  Badge,
-} from "@/components/ui";
-import { FiUsers, FiBriefcase, FiShield, FiUser, FiActivity } from "react-icons/fi";
-import { authenticatedFetch } from "@/lib/api";
-import { useAuth } from "@/context/AuthContext";
+import React from "react";
+import { Typography, Stack, Badge } from "@/components/ui";
+import { FiUsers, FiBriefcase } from "react-icons/fi";
+import { authenticatedFetchServer } from "@/lib/api-server";
 
 const Avatar = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
   <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${className}`}>
@@ -16,43 +9,21 @@ const Avatar = ({ children, className = "" }: { children: React.ReactNode; class
   </div>
 );
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+export default async function ManagePlatformView() {
+  let profiles: any[] = [];
+  let error: string | null = null;
 
-export default function ManagePlatformView() {
-  const { user, loading: authLoading } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [profiles, setProfiles] = useState<any[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  try {
+    profiles = await authenticatedFetchServer("/admin/directory");
+  } catch (err: any) {
+    console.error("Failed to fetch profiles:", err);
+    error = err.message || "Failed to load directory";
+  }
 
-  useEffect(() => {
-    if (!authLoading) {
-      if (user) {
-        fetchProfiles();
-      } else {
-        setLoading(false);
-        setError("Unauthorized: Session missing.");
-      }
-    }
-  }, [authLoading, user]);
-
-  const fetchProfiles = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await authenticatedFetch("/admin/directory");
-      setProfiles(data || []);
-    } catch (err: any) {
-      console.error("Failed to fetch profiles:", err);
-      setError(err.message || "Failed to load directory");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
+  if (error) {
     return (
-      <div className="flex items-center justify-center h-[50vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
+      <div className="bg-red-50 text-red-700 p-6 rounded-3xl border border-red-100 mb-8">
+        <Typography variant="body1" weight="bold">{error}</Typography>
       </div>
     );
   }
@@ -61,7 +32,7 @@ export default function ManagePlatformView() {
   const students = (profiles || []).filter(p => !!p && (!p.role || p.role === "student" || p.role === "admin"));
 
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-500">
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <Typography variant="h3" weight="bold">Platform Directory</Typography>
@@ -112,7 +83,7 @@ export default function ManagePlatformView() {
                       <Typography color="muted">No companies registered yet.</Typography>
                     </td>
                   </tr>
-                ) : employers.map((emp) => (
+                ) : employers.map((emp: any) => (
                   <tr key={emp.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group">
                     <td className="px-8 py-6">
                       <Stack direction="row" spacing={4} align="center">
@@ -170,7 +141,7 @@ export default function ManagePlatformView() {
                       <Typography color="muted">No students registered yet.</Typography>
                     </td>
                   </tr>
-                ) : students.map((stu) => (
+                ) : students.map((stu: any) => (
                   <tr key={stu.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group">
                     <td className="px-8 py-6">
                        <Stack direction="row" spacing={4} align="center">
@@ -184,7 +155,7 @@ export default function ManagePlatformView() {
                     </td>
                     <td className="px-8 py-6">
                       <Typography variant="body2" weight="medium">
-                        {stu.course_of_study ? `${stu.course_of_study} (${stu.level || "N/A"})` : "Not provided"}
+                        {stu.course ? `${stu.course} (${stu.level || "N/A"})` : "Not provided"}
                       </Typography>
                     </td>
                     <td className="px-8 py-6">

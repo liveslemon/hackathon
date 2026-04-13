@@ -1,13 +1,30 @@
-import { supabase } from "./supabaseClient";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import crossFetch from "cross-fetch";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 /**
- * Retrieves the current Supabase session token and returns it in Bearer format.
- * Browser-safe version using the singleton supabase client.
+ * Server-only version of auth header retrieval.
+ * Uses next/headers to get cookies for supabase session.
  */
-async function getAuthHeaders(): Promise<Record<string, string>> {
+async function getAuthHeadersServer(): Promise<Record<string, string>> {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: { fetch: crossFetch },
+      cookies: {
+        getAll() { return cookieStore.getAll(); },
+        setAll() {} // Read-only for access tokens
+      },
+    }
+  );
+
+  const { data: { user } } = await supabase.auth.getUser();
   const { data: { session } } = await supabase.auth.getSession();
+  
   if (!session) return {};
   return {
     Authorization: `Bearer ${session.access_token}`,
@@ -15,11 +32,11 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 }
 
 /**
- * Reusable fetch wrapper that automatically attaches the Supabase JWT.
- * Client-safe version.
+ * Reusable fetch wrapper for Server Components.
+ * Automatically attaches the Supabase JWT.
  */
-export async function authenticatedFetch(endpoint: string, options: RequestInit = {}, timeoutMs: number = 15000) {
-  const authHeaders = await getAuthHeaders();
+export async function authenticatedFetchServer(endpoint: string, options: RequestInit = {}, timeoutMs: number = 15000) {
+  const authHeaders = await getAuthHeadersServer();
   
   const headers: Record<string, string> = {
     ...authHeaders,
@@ -52,11 +69,10 @@ export async function authenticatedFetch(endpoint: string, options: RequestInit 
     return data;
   } catch (error: any) {
     if (error.name === 'AbortError') {
-      throw new Error("Request timed out. The server may be busy — please try again.");
+      throw new Error("Request timed out (Server Fetch). The backend may be busy.");
     }
     throw error;
   } finally {
     clearTimeout(id);
   }
 }
-

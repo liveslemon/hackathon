@@ -13,8 +13,8 @@ export const Card: React.FC<CardProps> = ({ children, className, onClick, hovera
     <div
       onClick={onClick}
       className={cx(
-        "bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden",
-        hoverable && "transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer",
+        "bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden",
+        hoverable && "transition-all duration-300 hover:shadow-md cursor-pointer",
         className
       )}
     >

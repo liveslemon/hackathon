@@ -29,7 +29,7 @@ export const Badge: React.FC<BadgeProps> = ({ children, variant = "primary", siz
   return (
     <span
       className={cx(
-        "inline-flex items-center justify-center font-bold rounded-full border uppercase tracking-wider",
+        "inline-flex items-center justify-center font-semibold rounded-lg border text-[10px] tracking-tight",
         variants[variant],
         sizes[size],
         className

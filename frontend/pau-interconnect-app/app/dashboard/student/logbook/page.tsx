@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button, Typography, Stack, Card, Textarea, Badge } from "@/components/ui";
-import DashboardHeader from "@/components/DashboardHeader";
+import DashboardShell from "@/components/DashboardShell";
 import { FiBook, FiClock, FiCheckCircle, FiAlertCircle, FiStar, FiFileText } from "react-icons/fi";
 
 interface LogbookEntry {
@@ -192,63 +192,70 @@ const StudentLogbookPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc]">
-      <DashboardHeader userProfile={userProfile} />
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        <Typography variant="h3" weight="bold" className="mb-2">SIWES/IT Logbook</Typography>
-        <Typography variant="body1" color="muted" className="mb-8">
-          Record your daily internship activities. <span className="font-bold text-red-500">Missed days cannot be recovered.</span>
-        </Typography>
+    <DashboardShell userProfile={userProfile}>
+      <div className="max-w-5xl mx-auto pb-12">
+        <header className="mb-8 px-4 sm:px-0">
+          <div className="flex items-center gap-4 mb-2">
+            <div className="bg-brand/5 p-3 rounded-2xl border border-brand/10">
+              <FiBook className="w-5 h-5 text-brand" />
+            </div>
+            <Typography variant="h3" weight="bold" className="text-slate-900 leading-tight">SIWES/IT Logbook</Typography>
+          </div>
+          <Typography variant="body2" className="text-slate-400 font-medium">Record daily activities. <span className="font-bold text-rose-500">Missed days cannot be recovered.</span></Typography>
+        </header>
 
         {!hasStarted ? (
-          <Card className="p-8 text-center bg-white rounded-3xl border border-slate-200">
-            <FiAlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-            <Typography variant="h5" color="muted">You don't have an active internship yet.</Typography>
-            <Typography variant="body2" color="muted" className="mt-2">Once you are accepted into a role, your logbook will unlock here.</Typography>
-          </Card>
+          <div className="px-4 sm:px-0">
+            <Card className="p-12 text-center bg-white rounded-3xl border border-slate-100 shadow-sm">
+              <FiAlertCircle className="w-16 h-16 text-slate-200 mx-auto mb-6" />
+              <Typography variant="h5" weight="bold" className="text-slate-800">No active internship</Typography>
+              <Typography variant="body2" color="muted" className="mt-2 max-w-sm mx-auto">Once you are accepted into a role, your daily logbook will automatically unlock here.</Typography>
+            </Card>
+          </div>
         ) : (
-          <Stack spacing={8}>
+          <Stack spacing={10} className="px-4 sm:px-0">
             {/* Today's Entry Section */}
-            <Card className="p-6 md:p-8 bg-white border-brand border-2 shadow-sm rounded-3xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full -mr-10 -mt-10 blur-2xl pointer-events-none" />
+            <div className="bg-white rounded-3xl p-8 md:p-10 border-2 border-brand/10 shadow-[0_20px_50px_rgba(79,70,229,0.05)] relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 rounded-full -mr-32 -mt-32 blur-3xl pointer-events-none" />
               
-              <Stack direction="row" justify="between" align="center" className="mb-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 relative z-10">
                 <div>
-                  <Typography variant="h5" weight="bold" className="flex items-center gap-2">
-                     Today's Log <span className="text-sm font-normal text-slate-500">({new Date().toLocaleDateString()})</span>
+                  <Typography variant="h4" weight="bold" className="text-slate-900 mb-1">
+                     Today's Log <span className="text-sm font-medium text-slate-400 ml-2">({new Date().toLocaleDateString()})</span>
                   </Typography>
-                  <Typography variant="caption" color="muted">
+                  <Typography variant="caption" className="text-brand font-bold uppercase tracking-widest text-[10px]">
                     {internshipDetails?.role} at {internshipDetails?.company}
                   </Typography>
                 </div>
                 {todayEntry?.status === 'approved' && (
-                  <Badge variant="success" className="px-4 py-1.5"><FiCheckCircle className="mr-1 inline"/> Approved</Badge>
+                  <Badge variant="success" className="px-6 py-2 rounded-full text-[11px] font-bold shadow-sm shadow-emerald-100"><FiCheckCircle className="mr-2 inline"/> Entry Approved</Badge>
                 )}
-              </Stack>
+              </div>
 
               {todayEntry?.status === 'approved' ? (
-                <div className="bg-emerald-50 text-emerald-800 p-4 rounded-xl text-sm border border-emerald-100">
-                  Your supervisor has already approved today's entry. Content is locked.
+                <div className="bg-emerald-50 text-emerald-700 p-6 rounded-3xl text-sm border border-emerald-100/50 flex items-center gap-4">
+                  <FiCheckCircle className="w-6 h-6 shrink-0" />
+                  <p className="font-medium">Your supervisor has approved today's activities. The log is now locked for records.</p>
                 </div>
               ) : (
-                <Stack spacing={6}>
+                <Stack spacing={8} className="relative z-10">
                   <div>
-                    <Typography variant="caption" weight="bold" className="mb-2 block text-slate-700">Rough Notes</Typography>
+                    <Typography variant="caption" className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mb-3 block">Rough Activities</Typography>
                     <Textarea 
-                      placeholder="What did you work on today? Give a quick summary, don't worry about sounding perfect."
+                      placeholder="List your tasks for today..."
                       value={rawText}
                       onChange={(e) => setRawText(e.target.value)}
-                      rows={4}
-                      className="bg-slate-50"
+                      rows={5}
+                      className="bg-[#fcfdfe] border-slate-100 rounded-2xl focus:ring-brand/5 focus:border-brand/20 transition-all p-5"
                     />
-                    <div className="mt-3 flex justify-end">
+                    <div className="mt-4 flex justify-end">
                       <Button 
-                        variant="outline" 
+                        variant="ghost" 
                         size="sm" 
                         onClick={handleEnhance} 
                         isLoading={isEnhancing}
                         disabled={!rawText.trim()}
-                        className="bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100"
+                        className="bg-brand/5 text-brand rounded-xl px-6 h-10 font-bold flex items-center gap-2 hover:bg-brand/10 border border-brand/10"
                       >
                          <FiStar className="mr-2" /> Enhance with AI
                       </Button>
@@ -256,68 +263,80 @@ const StudentLogbookPage = () => {
                   </div>
 
                   {enhancedText && (
-                    <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
-                       <Typography variant="caption" weight="bold" className="mb-2 block text-indigo-800">AI Polished Version</Typography>
+                    <div className="bg-[#fcfdfe] p-6 rounded-3xl border border-brand/10 shadow-inner">
+                       <Typography variant="caption" className="text-brand font-bold uppercase tracking-widest text-[10px] mb-3 block">AI Narrative Summary</Typography>
                        <Textarea 
                         value={enhancedText}
                         onChange={(e) => setEnhancedText(e.target.value)}
-                        rows={5}
-                        className="bg-white border-indigo-200"
+                        rows={6}
+                        className="bg-white border-brand/10 rounded-2xl p-5 text-slate-700 leading-relaxed"
                       />
                     </div>
                   )}
 
-                  <div className="flex justify-end pt-4 border-t border-slate-100">
+                  <div className="flex justify-end pt-8 border-t border-slate-50">
                      <Button 
                        variant="solid" 
                        onClick={handleSubmit} 
                        isLoading={isSubmitting}
                        disabled={!rawText.trim()}
-                       className="px-8"
+                       className="px-10 h-14 rounded-2xl shadow-xl shadow-brand/20 text-sm font-bold bg-brand text-white hover:bg-brand-dark transition-all"
                      >
-                       {todayEntry ? "Update Entry" : "Submit Today's Log"}
+                       {todayEntry ? "Update Entry" : "Finalize Today's Log"}
                      </Button>
                   </div>
                 </Stack>
               )}
-            </Card>
+            </div>
 
             {/* History Section */}
-            <div>
-              <Stack direction="row" justify="between" align="center" className="mb-6">
-                <Typography variant="h5" weight="bold">Logbook History</Typography>
-                <Button variant="ghost" size="sm" onClick={() => window.open("/dashboard/student/logbook/print", "_blank")} className="text-brand flex items-center gap-2">
-                  <FiFileText /> Export PDF
+            <div className="bg-white rounded-3xl p-8 md:p-10 border border-slate-100 shadow-sm">
+              <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 pb-6 border-b border-slate-50">
+                <div>
+                   <Typography variant="h4" weight="bold" className="text-slate-900 mb-1">Log History</Typography>
+                   <Typography variant="caption" className="text-slate-400 font-medium">Review your past submissions and approval status</Typography>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => window.open("/dashboard/student/logbook/print", "_blank")} 
+                  className="rounded-xl px-6 h-11 font-bold flex items-center gap-2 border-slate-200 text-slate-600 hover:border-brand hover:text-brand transition-all"
+                >
+                  <FiFileText size={18} /> Export PDF
                 </Button>
-              </Stack>
+              </header>
               
-              <Stack spacing={4}>
-                {entries.length === 0 && (
-                  <div className="text-center py-10 bg-white rounded-2xl border border-slate-100">
-                    <Typography color="muted">No history yet. Start logging today!</Typography>
+              <div className="space-y-6">
+                {entries.length === 0 ? (
+                  <div className="text-center py-16 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
+                    <FiBook className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                    <Typography className="text-slate-400 font-medium font-bold">Your journey starts here. Submit your first log today!</Typography>
                   </div>
-                )}
-                {entries.filter(e => e.date !== new Date().toISOString().split("T")[0]).map((entry) => (
-                  <Card key={entry.id} className="p-5 bg-white border border-slate-100 hover:shadow-md transition-shadow">
-                    <Stack direction="row" justify="between" align="start">
-                      <div className="flex-1">
-                        <Stack direction="row" align="center" spacing={3} className="mb-2">
-                          <Typography variant="body1" weight="bold">{new Date(entry.date).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</Typography>
-                          {getStatusBadge(entry.status)}
-                        </Stack>
-                        <div className="text-sm text-slate-700 whitespace-pre-wrap mt-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                          {entry.activities_enhanced || entry.activities_raw}
+                ) : (
+                  entries.filter(e => e.date !== new Date().toISOString().split("T")[0]).map((entry) => (
+                    <div key={entry.id} className="group p-6 bg-[#fcfdfe] border border-slate-100/50 rounded-[28px] hover:border-brand/20 hover:shadow-lg hover:shadow-brand/5 transition-all">
+                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-4 mb-4">
+                             <div className="px-5 py-2 bg-white rounded-xl border border-slate-100 shadow-sm text-sm font-bold text-slate-700">
+                               {new Date(entry.date).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                             </div>
+                             {getStatusBadge(entry.status)}
+                          </div>
+                          <div className="text-[14px] text-slate-600 leading-relaxed whitespace-pre-wrap bg-white p-6 rounded-2xl border border-slate-50 italic">
+                            "{entry.activities_enhanced || entry.activities_raw}"
+                          </div>
                         </div>
                       </div>
-                    </Stack>
-                  </Card>
-                ))}
-              </Stack>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </Stack>
         )}
-      </main>
-    </div>
+      </div>
+    </DashboardShell>
   );
 };
 

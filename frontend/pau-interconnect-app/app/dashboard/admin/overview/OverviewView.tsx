@@ -1,14 +1,6 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import {
-  Typography,
-  Card,
-  CardContent,
-} from "@/components/ui";
+import { Typography, Card, CardContent } from "@/components/ui";
 import { FiUsers, FiBriefcase, FiFileText, FiCalendar, FiUserPlus, FiActivity } from "react-icons/fi";
-import { authenticatedFetch } from "@/lib/api";
-import { useAuth } from "@/context/AuthContext";
+import { authenticatedFetchServer } from "@/lib/api-server";
 
 interface Stats {
   total_students: number;
@@ -18,9 +10,6 @@ interface Stats {
   applications_today: number;
   new_users_today: number;
 }
-
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 const metricCards = [
   {
@@ -79,39 +68,14 @@ const metricCards = [
   },
 ];
 
-export default function OverviewView() {
-  const { user, loading: authLoading } = useAuth();
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default async function OverviewView() {
+  let stats: Stats | null = null;
+  let error: string | null = null;
 
-  useEffect(() => {
-    if (!authLoading) {
-      if (user) {
-        const fetchStats = async () => {
-          try {
-            const data: Stats = await authenticatedFetch("/admin/stats");
-            setStats(data);
-          } catch (err: any) {
-            setError(err.message || "Something went wrong");
-          } finally {
-            setLoading(false);
-          }
-        };
-        fetchStats();
-      } else {
-        setLoading(false);
-        setError("Unauthorized: Admin access required.");
-      }
-    }
-  }, [authLoading, user]);
-
-  if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
-      </div>
-    );
+  try {
+    stats = await authenticatedFetchServer("/admin/stats");
+  } catch (err: any) {
+    error = err.message || "Something went wrong fetching stats";
   }
 
   if (error) {
@@ -123,7 +87,7 @@ export default function OverviewView() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex items-center justify-between">
         <Typography variant="h3" weight="bold">Platform Overview</Typography>
         <div className="px-4 py-2 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-2">
@@ -137,7 +101,7 @@ export default function OverviewView() {
           <div 
             key={card.key}
             className="animate-in fade-in slide-in-from-bottom-8 fill-mode-both h-full"
-            style={{ animationDelay: `${index * 100}ms` }}
+            style={{ animationDelay: `${index * 50}ms` }}
           >
             <Card className="group h-full transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-100 border-slate-100 overflow-hidden">
             <CardContent className={`p-8 ${card.bg} h-full relative`}>

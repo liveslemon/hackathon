@@ -1,107 +1,51 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import crossFetch from "cross-fetch";
-import Dashboard from "./Dashboard";
+import { Suspense } from "react";
+import Loading from "./loading";
+import DashboardShellWrapper from "./DashboardShellWrapper";
+import { ProfileHeaderSection, InternshipGridSection, StudentLogbookSection } from "./DashboardParts";
 
-interface Internship {
-  id: string;
-  company: string;
-  role: string;
-  location: string;
-  field: string;
-  category: string;
-  description: string;
-  deadline: string;
-  interests: string[];
-  matchPercentage?: number;
-}
+// Optimization: Revalidate the dashboard data every 60 seconds
+export const revalidate = 60;
 
 export default async function StudentDashboardPage() {
-  if (
-    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  ) {
-    throw new Error(
-      "Supabase URL or Key is missing! Check your .env.local file.",
-    );
-  }
-
   const cookieStore = await cookies();
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       global: { fetch: crossFetch },
       cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
+        getAll() { return cookieStore.getAll(); },
+        setAll() {} // Read-only shell doesn't need to set cookies
       },
-    },
+    }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    console.warn("[Dashboard] No user found in getUser(), redirecting to login.");
     redirect("/login/student");
   }
 
-  // --- Parallelized Data Fetching ---
-  // We fetch the profile first because it defines the user consistency, 
-  // but we can fetch internships, matches, and applications in parallel.
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-
-  if (profileError || !profile) {
-    console.warn("User has a session but no profile row found. Redirecting to onboarding.");
-    redirect("/onboarding");
-  }
-
-  // Parallelize the three heavy data fetches
-  const [internshipsResult, matchesResult, appliedResult] = await Promise.all([
-    supabase.from("internships").select("*"),
-    supabase.from("match_results").select("internship_id, match_score").eq("user_id", profile.id),
-    supabase.from("applied_internships").select("internship_id, status").eq("user_id", profile.id)
-  ]);
-
-  if (internshipsResult.error) console.error("Failed to fetch internships", internshipsResult.error);
-  if (matchesResult.error) console.error("Failed to fetch matches", matchesResult.error);
-  if (appliedResult.error) console.error("Failed to fetch applications", appliedResult.error);
-
-  const internshipsData = internshipsResult.data || [];
-  const matches = matchesResult.data || [];
-  const applications = appliedResult.data || [];
-  
-  const statusMap = new Map(applications.map(a => [a.internship_id, a.status]));
-
-  const internshipsWithMatches: Internship[] = internshipsData.map((internship) => ({
-    ...internship,
-    matchPercentage: matches.find((m) => m.internship_id === internship.id)?.match_score ?? 0,
-    applicationStatus: statusMap.get(internship.id)
-  }));
-
+  // THE INSTANT SHELL
+  // This part of the code finishes instantly because we aren't 'awaiting' 
+  // the heavy database queries yet. Suspense handles the background work.
   return (
-    <Dashboard
-      userProfile={profile}
-      initialInternships={internshipsWithMatches}
-    />
+    <DashboardShellWrapper userProfile={user}>
+      <div className="pb-24 md:pb-12">
+        {/* 1. Logbook Section (Independent loading) */}
+        <Suspense fallback={<div className="h-40 bg-white rounded-3xl animate-pulse mb-8" />}>
+           <StudentLogbookSection />
+        </Suspense>
+
+        {/* 2. Main Content Section (Internships & Matches) */}
+        <Suspense fallback={<Loading />}>
+          <InternshipGridSection />
+        </Suspense>
+      </div>
+    </DashboardShellWrapper>
   );
 }
