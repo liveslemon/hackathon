@@ -175,7 +175,7 @@ const LogbookClient = ({ initialProfile, initialApplications, initialEntries, se
             
             {(() => {
               const todayStr = new Date().toISOString().split("T")[0];
-              const isPastEntry = selectedEntry && selectedEntry.date !== todayStr;
+              const isPastEntry = Boolean(selectedEntry && selectedEntry.date !== todayStr);
               const isApproved = selectedEntry?.status === 'approved' || (todayEntry?.status === 'approved' && !selectedEntry);
 
               if (isApproved) {
