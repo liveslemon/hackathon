@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button, Stack, Typography, Divider } from "@/components/ui";
-import { FiLogOut, FiSearch, FiCommand } from "react-icons/fi";
+import { LogOut, Search, Command } from "lucide-react";
 import { cx } from "@/utils/cx";
 import SearchOverlay from "@/components/SearchOverlay";
 
@@ -26,8 +26,21 @@ export default function AdminClient({ children }: { children: React.ReactNode })
     router.push(`/dashboard/admin?tab=${key}`);
   };
 
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    
+    try {
+      localStorage.clear();
+      await Promise.all([
+        supabase.auth.signOut(),
+        fetch("/api/auth/logout", { method: "POST" })
+      ]);
+    } catch (err) {
+      console.warn("Logout network issue:", err);
+    }
     router.refresh();
     router.push("/");
   };
@@ -44,7 +57,7 @@ export default function AdminClient({ children }: { children: React.ReactNode })
 
           <div className="flex-1 max-w-md w-full relative group">
             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <FiSearch className="h-4 w-4 text-slate-400 group-hover:text-indigo-500 transition-colors" />
+              <Search className="h-4 w-4 text-slate-400 group-hover:text-indigo-500 transition-colors" />
             </div>
             <input
               type="text"
@@ -59,10 +72,11 @@ export default function AdminClient({ children }: { children: React.ReactNode })
             variant="outline"
             size="sm"
             onClick={handleLogout}
-            leftIcon={<FiLogOut className="w-4 h-4" />}
-            className="rounded-xl border-slate-200 hover:border-red-200 hover:text-red-500 hover:bg-red-50"
+            disabled={isLoggingOut}
+            leftIcon={isLoggingOut ? <div className="w-4 h-4 rounded-full border-2 border-red-500 border-t-transparent animate-spin" /> : <LogOut className="w-4 h-4" />}
+            className={`rounded-xl transition-all ${isLoggingOut ? "opacity-50 cursor-not-allowed border-red-200 text-red-500 bg-red-50" : "border-slate-200 hover:border-red-200 hover:text-red-500 hover:bg-red-50"}`}
           >
-            Logout
+            {isLoggingOut ? "Logging out..." : "Logout"}
           </Button>
         </header>
 

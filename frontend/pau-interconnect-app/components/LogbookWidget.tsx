@@ -1,9 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { Card, Typography, Button, Stack } from "@/components/ui";
-import { FiBook, FiCheckCircle, FiAlertCircle } from "react-icons/fi";
+import { BookOpen, CheckCircle2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
-import crossFetch from "cross-fetch";
+import { supabaseFetch } from "@/lib/supabase-fetch";
 
 async function getSupabase() {
   const cookieStore = await cookies();
@@ -11,7 +11,7 @@ async function getSupabase() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      global: { fetch: crossFetch },
+      global: { fetch: supabaseFetch },
       cookies: {
         getAll() { return cookieStore.getAll(); },
         setAll() {}
@@ -58,31 +58,41 @@ export default async function LogbookWidget({ userId }: { userId: string }) {
 
   if (!hasStarted) return null;
 
+  const isMissing = todayStatus === "missing";
+
   return (
-    <Card className="mb-8 p-6 bg-gradient-to-r from-brand/10 to-brand-secondary/10 border border-brand/20 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm hover:shadow-md transition-shadow">
-      <Stack direction="row" align="center" spacing={4} className="flex-1">
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${todayStatus === 'missing' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
-          {todayStatus === 'missing' ? <FiAlertCircle className="w-6 h-6" /> : <FiCheckCircle className="w-6 h-6" />}
+    <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl border ${
+      isMissing 
+        ? "bg-amber-50/60 border-amber-100" 
+        : "bg-emerald-50/60 border-emerald-100"
+    }`}>
+      <div className="flex items-center gap-3">
+        <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+          isMissing ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600"
+        }`}>
+          {isMissing ? <AlertTriangle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
         </div>
         <div>
-          <Typography variant="h6" weight="bold" className="text-slate-800">
-            {todayStatus === 'missing' ? "Don't forget today's log!" : "Today's log submitted"}
-          </Typography>
-          <Typography variant="body2" color="muted">
-            {todayStatus === 'missing' 
-              ? "You haven't filled your SIWES logbook for today yet. Missed days cannot be recovered." 
-              : `Your log is currently ${todayStatus}. Great job keeping up!`}
-          </Typography>
+          <p className="text-sm font-semibold text-slate-700">
+            {isMissing ? "Today's log is missing" : "Today's log submitted"}
+          </p>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {isMissing 
+              ? "Fill in your SIWES logbook before end of day" 
+              : `Status: ${todayStatus}`}
+          </p>
         </div>
-      </Stack>
-      <Link href="/dashboard/student/logbook" className="no-underline">
-        <Button 
-          variant={todayStatus === 'missing' ? "solid" : "outline"} 
-          className="whitespace-nowrap rounded-xl shadow-sm"
-        >
-          <FiBook className="mr-2 inline" /> Go to Logbook
-        </Button>
+      </div>
+      <Link href="/dashboard/student/logbook" className="no-underline shrink-0">
+        <button className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+          isMissing 
+            ? "bg-amber-600 text-white hover:bg-amber-700 shadow-sm" 
+            : "bg-white text-slate-600 border border-slate-200 hover:border-slate-300"
+        }`}>
+          <BookOpen className="w-3.5 h-3.5" />
+          Open Logbook
+        </button>
       </Link>
-    </Card>
+    </div>
   );
 }

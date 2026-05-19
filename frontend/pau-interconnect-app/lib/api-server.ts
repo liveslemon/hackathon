@@ -1,20 +1,25 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import crossFetch from "cross-fetch";
+import { supabaseFetch } from "./supabase-fetch";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+const isDev = process.env.NODE_ENV === "development";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || (isDev ? "http://localhost:8000" : "https://pau-interconnect-backend.onrender.com");
 
 /**
  * Server-only version of auth header retrieval.
  * Uses next/headers to get cookies for supabase session.
  */
-async function getAuthHeadersServer(): Promise<Record<string, string>> {
+async function getAuthHeadersServer(existingSession?: any): Promise<Record<string, string>> {
+  if (existingSession) {
+    return { Authorization: `Bearer ${existingSession.access_token}` };
+  }
+
   const cookieStore = await cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      global: { fetch: crossFetch },
+      global: { fetch: supabaseFetch },
       cookies: {
         getAll() { return cookieStore.getAll(); },
         setAll() {} // Read-only for access tokens
@@ -22,7 +27,6 @@ async function getAuthHeadersServer(): Promise<Record<string, string>> {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
   const { data: { session } } = await supabase.auth.getSession();
   
   if (!session) return {};
@@ -35,8 +39,8 @@ async function getAuthHeadersServer(): Promise<Record<string, string>> {
  * Reusable fetch wrapper for Server Components.
  * Automatically attaches the Supabase JWT.
  */
-export async function authenticatedFetchServer(endpoint: string, options: RequestInit = {}, timeoutMs: number = 15000) {
-  const authHeaders = await getAuthHeadersServer();
+export async function authenticatedFetchServer(endpoint: string, options: RequestInit = {}, timeoutMs: number = 15000, session?: any) {
+  const authHeaders = await getAuthHeadersServer(session);
   
   const headers: Record<string, string> = {
     ...authHeaders,

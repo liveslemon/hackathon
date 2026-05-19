@@ -1,10 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import crossFetch from "cross-fetch";
 import InternshipCard from "@/components/InternshipCard";
-import { Typography, Card, CardContent, Stack, Badge } from "@/components/ui";
-import { FiCalendar, FiBriefcase, FiHeart } from "react-icons/fi";
+import { Calendar, Briefcase, Heart, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
+import { supabaseFetch } from "@/lib/supabase-fetch";
 
 async function getSupabase() {
   const cookieStore = await cookies();
@@ -12,7 +11,7 @@ async function getSupabase() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      global: { fetch: crossFetch },
+      global: { fetch: supabaseFetch },
       cookies: {
         getAll() { return cookieStore.getAll(); },
         setAll() {}
@@ -63,6 +62,7 @@ export async function MyInternshipsSections() {
   }));
 
   const expiringInternships = appliedInternships.filter((internship) => {
+    if (!internship.deadline) return false;
     const daysLeft = Math.ceil((new Date(internship.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
     return daysLeft > 0 && daysLeft <= 7;
   });
@@ -71,66 +71,76 @@ export async function MyInternshipsSections() {
     <div className="space-y-12">
       {/* 1. Deadlines Section */}
       {expiringInternships.length > 0 && (
-        <Card className="border-rose-100 bg-rose-50/50 shadow-xl shadow-rose-50 rounded-[32px] overflow-hidden">
-          <CardContent className="p-8">
-            <Stack direction="row" align="center" spacing={4} className="mb-6">
-              <div className="w-12 h-12 bg-rose-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-rose-200">
-                <FiCalendar className="w-6 h-6" />
-              </div>
-              <div>
-                <Typography variant="h4" weight="bold" className="text-slate-900">Upcoming Deadlines</Typography>
-                <Typography variant="body2" color="muted">Don't miss out on these opportunities</Typography>
-              </div>
-            </Stack>
-            <div className="space-y-3">
-              {expiringInternships.map((internship) => {
-                const daysLeft = Math.ceil((new Date(internship.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                return (
-                  <Link href={`/internships/${internship.id}`} key={internship.id}>
-                    <div className="flex justify-between items-center p-5 bg-white rounded-[20px] border border-rose-100 shadow-sm hover:translate-x-1 transition-transform mb-3">
-                      <Typography weight="bold" className="text-slate-700">
-                        {internship.role} <span className="text-slate-400 font-medium ml-2">at {internship.company}</span>
-                      </Typography>
-                      <Badge variant="error" size="md" className="rounded-xl px-4 py-1.5 font-bold">{daysLeft} days left</Badge>
-                    </div>
-                  </Link>
-                );
-              })}
+        <div className="bg-rose-50/50 border border-rose-100 rounded-2xl overflow-hidden p-6 md:p-8">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 bg-white text-rose-500 rounded-xl flex items-center justify-center shadow-sm border border-rose-50">
+              <Calendar className="w-6 h-6" />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <h3 className="text-lg font-bold text-slate-800">Upcoming Deadlines</h3>
+              <p className="text-sm text-slate-400">Don't miss out on these opportunities</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {expiringInternships.map((internship) => {
+              const daysLeft = Math.ceil((new Date(internship.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+              return (
+                <Link href={`/internships/${internship.id}`} key={internship.id} className="block group">
+                  <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-rose-100 shadow-sm group-hover:border-rose-200 group-hover:shadow-md transition-all">
+                    <div>
+                      <p className="text-sm font-bold text-slate-700">
+                        {internship.role}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-0.5">at {internship.company}</p>
+                    </div>
+                    <span className="px-3 py-1 bg-rose-50 text-rose-600 rounded-lg text-xs font-bold border border-rose-100">
+                      {daysLeft} days left
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* 2. Applied Section */}
       <section className="space-y-6">
-        <header className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center"><FiBriefcase className="w-5 h-5" /></div>
-          <Typography variant="h4" weight="bold">Applied Internships ({appliedInternships.length})</Typography>
+        <header className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center">
+            <Briefcase className="w-4 h-4" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-800">Applied Internships <span className="text-slate-400 ml-1 font-medium">({appliedInternships.length})</span></h3>
         </header>
         {appliedInternships.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {appliedInternships.map((internship) => <InternshipCard key={internship.id} internship={internship} />)}
           </div>
         ) : (
-          <div className="bg-white/50 border border-slate-100 rounded-[32px] p-12 text-center text-slate-500">
-            <Typography variant="body1">You haven't applied to any internships yet.</Typography>
+          <div className="bg-slate-50 border border-slate-100 rounded-2xl py-12 px-6 text-center">
+            <p className="text-sm text-slate-400">You haven't applied to any internships yet.</p>
+            <Link href="/dashboard/student" className="inline-flex items-center gap-1.5 text-indigo-600 text-xs font-semibold mt-3 hover:gap-2 transition-all">
+              Explore opportunities <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
         )}
       </section>
 
       {/* 3. Saved Section */}
-      <section className="space-y-6 pb-12">
-        <header className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center"><FiHeart className="w-5 h-5" /></div>
-          <Typography variant="h4" weight="bold">Saved Internships ({savedInternships.length})</Typography>
+      <section className="space-y-6 pb-6">
+        <header className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-rose-50 text-rose-600 rounded-lg flex items-center justify-center">
+            <Heart className="w-4 h-4" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-800">Saved Internships <span className="text-slate-400 ml-1 font-medium">({savedInternships.length})</span></h3>
         </header>
         {savedInternships.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {savedInternships.map((internship) => <InternshipCard key={internship.id} internship={internship} />)}
           </div>
         ) : (
-          <div className="bg-white/50 border border-slate-100 rounded-[32px] p-12 text-center text-slate-500">
-            <Typography variant="body1">Your wishlist is currently empty.</Typography>
+          <div className="bg-slate-50 border border-slate-100 rounded-2xl py-12 px-6 text-center">
+            <p className="text-sm text-slate-400">Your wishlist is currently empty.</p>
           </div>
         )}
       </section>

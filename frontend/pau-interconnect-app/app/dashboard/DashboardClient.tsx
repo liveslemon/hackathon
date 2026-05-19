@@ -52,20 +52,23 @@ export default function DashboardClient({ session }: { session: any }) {
     fetchData();
   }, [session, router]);
 
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const handleLogout = async () => {
-    // Add a safety timeout for logout so the user isn't stuck if Supabase hangs
-    const logoutTimeout = setTimeout(() => {
-      router.push("/");
-    }, 2000);
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
 
     try {
-      await supabase.auth.signOut();
+      localStorage.clear();
+      await Promise.all([
+        supabase.auth.signOut(),
+        fetch("/api/auth/logout", { method: "POST" })
+      ]);
     } catch (err) {
-      console.error("Sign out error:", err);
-    } finally {
-      clearTimeout(logoutTimeout);
-      router.push("/");
+      console.warn("Logout network issue:", err);
     }
+    
+    router.push("/");
   };
 
   if (!session?.user || loading) {
@@ -94,10 +97,11 @@ export default function DashboardClient({ session }: { session: any }) {
             variant="outline"
             size="sm"
             onClick={handleLogout}
-            leftIcon={<FiLogOut className="w-4 h-4" />}
-            className="rounded-xl border-slate-200 hover:border-red-200 hover:text-red-500 hover:bg-red-50 transition-all font-bold"
+            disabled={isLoggingOut}
+            leftIcon={isLoggingOut ? <div className="w-4 h-4 rounded-full border-2 border-red-500 border-t-transparent animate-spin" /> : <FiLogOut className="w-4 h-4" />}
+            className={`rounded-xl transition-all font-bold ${isLoggingOut ? 'opacity-50 cursor-not-allowed border-red-200 text-red-500 bg-red-50' : 'border-slate-200 hover:border-red-200 hover:text-red-500 hover:bg-red-50'}`}
           >
-            Logout
+            {isLoggingOut ? "Logging out..." : "Logout"}
           </Button>
         </header>
 

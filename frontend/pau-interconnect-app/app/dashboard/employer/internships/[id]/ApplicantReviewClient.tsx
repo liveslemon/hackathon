@@ -14,16 +14,16 @@ import {
   Input,
 } from "@/components/ui";
 import { 
-  FiArrowLeft, 
-  FiChevronDown, 
-  FiChevronUp, 
-  FiFileText, 
-  FiExternalLink, 
-  FiCheckCircle, 
-  FiXCircle,
-  FiUser
-} from "react-icons/fi";
-import { authenticatedFetch } from "@/lib/api";
+  ArrowLeft, 
+  ChevronDown, 
+  ChevronUp, 
+  FileText, 
+  ExternalLink, 
+  CheckCircle, 
+  XCircle,
+  User
+} from "lucide-react";
+import { authenticatedFetch, ensureFreshCvUrl } from "@/lib/api";
 
 interface ApplicantReviewClientProps {
   internship: any;
@@ -86,8 +86,8 @@ export default function ApplicantReviewClient({ internship, applicants: initialA
 
       {applicants.length === 0 ? (
         <div className="p-20 text-center bg-white rounded-[40px] border border-slate-100 shadow-sm">
-          <div className="w-16 h-16 bg-slate-50 rounded-[28px] flex items-center justify-center mx-auto mb-6 text-slate-300">
-             <FiUser size={32} />
+          <div className="w-16 h-16 bg-slate-50 rounded-[28px] flex items-center justify-center mx-auto mb-6 text-slate-300 border border-slate-100">
+             <User size={32} />
           </div>
           <Typography variant="h4" weight="bold" className="mb-2 text-slate-900">No applicants yet</Typography>
           <Typography color="muted" className="max-w-md mx-auto text-sm">When students apply, they'll appear here for your professional review.</Typography>
@@ -152,7 +152,7 @@ export default function ApplicantReviewClient({ internship, applicants: initialA
                     "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
                     isExpanded ? "bg-brand/10 text-brand rotate-180" : "bg-slate-50 text-slate-300"
                   )}>
-                    <FiChevronDown size={18} />
+                    <ChevronDown size={18} />
                   </div>
                 </div>
 
@@ -179,16 +179,31 @@ export default function ApplicantReviewClient({ internship, applicants: initialA
                           <Button 
                             variant="outline"
                             className="w-full h-11 border-slate-200 text-slate-600 hover:border-brand hover:text-brand hover:bg-brand/5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all p-0"
-                            onClick={() => {
+                            onClick={async () => {
                                if (!studentInfo?.cv_url) return;
-                               const rawFullName = studentInfo?.full_name || "Student";
-                               const safeName = rawFullName.trim().replace(/\s+/g, '_') + ' CV';
-                               const viewerUrl = `/cv/view?name=${encodeURIComponent(safeName)}&url=${encodeURIComponent(studentInfo.cv_url)}`;
-                               window.open(viewerUrl, "_blank");
+
+                               const popup = window.open("about:blank", "_blank");
+                               if (!popup) {
+                                 alert("Popup blocked. Please allow popups for this site.");
+                                 return;
+                               }
+                               
+                               try {
+                                 const studentId = studentInfo.id;
+                                 const freshUrl = await ensureFreshCvUrl(studentId, studentInfo.cv_url);
+                                 
+                                 const rawFullName = studentInfo?.full_name || "Student";
+                                 const safeName = rawFullName.trim().replace(/\s+/g, '_') + ' CV';
+                                 const viewerUrl = `/cv/view?name=${encodeURIComponent(safeName)}&url=${encodeURIComponent(freshUrl)}`;
+                                 popup.location.href = viewerUrl;
+                               } catch (err) {
+                                 console.error("CV view error:", err);
+                                 popup.close();
+                               }
                             }}
                             disabled={!studentInfo?.cv_url}
                           >
-                            <FiFileText size={18} />
+                            <FileText size={18} />
                             View CV / Resume
                           </Button>
 
@@ -212,7 +227,7 @@ export default function ApplicantReviewClient({ internship, applicants: initialA
                                      : "bg-emerald-50 text-emerald-700 border border-emerald-100 hover:bg-emerald-100"
                                  )}
                                >
-                                 <FiCheckCircle size={18} />
+                                 <CheckCircle size={18} />
                                  Accept
                                </button>
                                
@@ -225,7 +240,7 @@ export default function ApplicantReviewClient({ internship, applicants: initialA
                                      : "bg-white border border-rose-200 text-rose-600 hover:bg-rose-50"
                                  )}
                                >
-                                 <FiXCircle size={18} />
+                                 <XCircle size={18} />
                                  Reject
                                </button>
                              </div>

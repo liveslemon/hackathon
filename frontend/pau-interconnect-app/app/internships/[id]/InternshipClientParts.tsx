@@ -1,13 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { 
-  FiSend, 
-  FiClock, 
-  FiCheckCircle, 
-  FiX, 
-  FiZap 
-} from "react-icons/fi";
+import { Send, Clock, CheckCircle2, X, Sparkles, AlertTriangle, Loader2 } from "lucide-react";
 import { 
   Button, 
   Modal, 
@@ -92,84 +86,102 @@ export default function InternshipClientParts({
     }
   };
 
+  const statusConfig: Record<string, { label: string; icon: any; className: string }> = {
+    accepted: { label: "Application Approved", icon: CheckCircle2, className: "bg-emerald-600 hover:bg-emerald-600" },
+    rejected: { label: "Application Denied", icon: X, className: "bg-red-500 hover:bg-red-500" },
+    pending: { label: "Application Pending", icon: Clock, className: "bg-indigo-600 hover:bg-indigo-600" },
+    applied: { label: "Application Pending", icon: Clock, className: "bg-indigo-600 hover:bg-indigo-600" },
+  };
+
+  const appStatus = applicationStatus?.toLowerCase() || "";
+  const statusData = hasApplied ? statusConfig[appStatus] || statusConfig.pending : null;
+
   return (
     <>
-      <div className="space-y-4">
-        <Button
-          size="lg"
-          onClick={() => setApplyModalOpen(true)}
+      <div className="space-y-2.5">
+        {/* Apply / Status Button */}
+        <button
+          onClick={() => !hasApplied && setApplyModalOpen(true)}
           disabled={hasApplied}
-          leftIcon={hasApplied ? (
-            applicationStatus?.toLowerCase() === 'accepted' ? <FiCheckCircle /> :
-            applicationStatus?.toLowerCase() === 'rejected' ? <FiX /> : <FiClock />
-          ) : <FiSend />}
           className={cx(
-            "w-full", 
-            hasApplied && applicationStatus?.toLowerCase() === 'accepted' ? "bg-emerald-500 text-white" :
-            hasApplied && applicationStatus?.toLowerCase() === 'rejected' ? "bg-rose-500 text-white" :
-            hasApplied ? "bg-indigo-500 text-white" : ""
+            "w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white transition-colors",
+            hasApplied
+              ? cx("cursor-default opacity-90", statusData?.className || "bg-indigo-600")
+              : "bg-slate-800 hover:bg-slate-700"
           )}
         >
-          {hasApplied ? (
-            applicationStatus?.toLowerCase() === 'accepted' ? "Application Approved" :
-            applicationStatus?.toLowerCase() === 'rejected' ? "Application Denied" : "Application Pending"
-          ) : "Apply Now"}
-        </Button>
+          {hasApplied && statusData ? (
+            <>
+              <statusData.icon className="w-4 h-4" />
+              {statusData.label}
+            </>
+          ) : (
+            <>
+              <Send className="w-4 h-4" />
+              Apply Now
+            </>
+          )}
+        </button>
         
-        <Button
-          variant="outline"
-          size="lg"
-          leftIcon={<FiZap className="text-amber-500" />}
+        {/* AI Review Button */}
+        <button
           onClick={() => setCvReviewModalOpen(true)}
-          className="w-full border-amber-100 hover:border-amber-200 hover:bg-amber-50"
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium text-slate-600 bg-slate-50 border border-slate-150 hover:border-slate-300 hover:bg-slate-100 transition-all"
         >
+          <Sparkles className="w-4 h-4 text-amber-500" />
           AI CV Review
-        </Button>
+        </button>
       </div>
 
       {/* Apply Modal */}
       <Modal
         isOpen={isApplyModalOpen}
         onClose={() => !isSubmitting && setApplyModalOpen(false)}
-        title="Quick Application"
+        title="Apply"
         size="md"
         footer={
-          <Stack direction="row" spacing={3} className="w-full">
-            <Button 
-              variant="outline" 
-              leftIcon={<FiZap className="text-indigo-500" />}
-              onClick={handleDraftCoverLetter} 
+          <div className="flex gap-2 w-full">
+            <button
+              onClick={handleDraftCoverLetter}
               disabled={isDrafting || isSubmitting}
-              className="flex-1"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 hover:border-slate-300 disabled:opacity-50 transition-all"
             >
+              {isDrafting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4 text-amber-500" />
+              )}
               {isDrafting 
                 ? (coverLetter.trim() ? "Enhancing..." : "Drafting...") 
-                : (coverLetter.trim() ? "✨ Enhance with AI" : "⚡ Draft with AI")
+                : (coverLetter.trim() ? "Enhance with AI" : "Draft with AI")
               }
-            </Button>
-            <Button 
-              onClick={handleApply} 
-              disabled={isSubmitting || isDrafting} 
-              isLoading={isSubmitting}
-              rightIcon={<FiSend />}
-              className="flex-1"
+            </button>
+            <button
+              onClick={handleApply}
+              disabled={isSubmitting || isDrafting}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold text-white bg-slate-800 hover:bg-slate-700 disabled:opacity-50 transition-colors"
             >
-              Submit Application
-            </Button>
-          </Stack>
+              {isSubmitting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              Submit
+            </button>
+          </div>
         }
       >
-        <div className="space-y-6">
-          <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
-            <Typography variant="body2" weight="bold" color="primary" className="mb-2">WHY YOU'RE A FIT</Typography>
-            <Typography variant="body1" className="text-slate-700">
-              Share a brief cover letter or statement about why you're interested in {internship.company}.
-            </Typography>
+        <div className="space-y-4">
+          <div className="bg-indigo-50/70 p-4 rounded-lg border border-indigo-100">
+            <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wider mb-1">Why you?</p>
+            <p className="text-sm text-slate-600">
+              Share a brief statement about why you're interested in this role at {internship.company}.
+            </p>
           </div>
           
           <Textarea
             label="Cover Letter"
-            placeholder="Tell us about yourself and why you're perfect for this role..."
+            placeholder="Tell us about yourself and why you're a good fit..."
             value={coverLetter}
             onChange={(e) => setCoverLetter(e.target.value)}
             disabled={isSubmitting}
@@ -182,63 +194,60 @@ export default function InternshipClientParts({
       <Modal
         isOpen={isCvReviewModalOpen}
         onClose={() => !isReviewing && setCvReviewModalOpen(false)}
-        title="AI Keyword Analysis"
+        title="Keyword Analysis"
         size="md"
       >
-        <div className="space-y-8">
-          <Typography variant="body1" color="muted">
-            I've compared your profile keywords with the requirements for this {internship.role || "position"}.
-          </Typography>
+        <div className="space-y-5">
+          <p className="text-sm text-slate-400">
+            Your profile compared against the requirements for <span className="font-medium text-slate-600">{internship.role || "this position"}</span>.
+          </p>
 
-          <div className="space-y-6">
+          <div className="space-y-4">
             {matchingSkills.length > 0 && (
-              <div className="bg-emerald-50/50 border border-emerald-100 p-6 rounded-[32px] space-y-4">
+              <div className="bg-emerald-50/60 border border-emerald-100 p-4 rounded-xl space-y-3">
                 <div className="flex items-center gap-2 text-emerald-600">
-                  <FiCheckCircle size={20} />
-                  <Typography variant="h4" weight="bold">Matched Strengths</Typography>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span className="text-sm font-semibold">Matched skills</span>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {matchingSkills.map((skill, index) => (
-                    <div key={index} className="px-4 py-1.5 bg-emerald-500/10 text-emerald-700 rounded-xl font-bold text-sm">
+                    <span key={index} className="px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-medium">
                       {skill}
-                    </div>
+                    </span>
                   ))}
                 </div>
               </div>
             )}
 
             {missingSkills.length > 0 && (
-              <div className="bg-amber-50/50 border border-amber-100 p-6 rounded-[32px] space-y-4">
+              <div className="bg-amber-50/60 border border-amber-100 p-4 rounded-xl space-y-3">
                 <div className="flex items-center gap-2 text-amber-600">
-                  <FiAlertTriangle size={20} />
-                  <Typography variant="h4" weight="bold">Missing Keywords</Typography>
+                  <AlertTriangle className="w-4 h-4" />
+                  <span className="text-sm font-semibold">Missing keywords</span>
                 </div>
-                <Typography variant="body1" className="text-amber-900/70 leading-relaxed">
-                  Recruiters for this role are looking for <strong>{missingSkills.join(", ")}</strong>. 
-                  Consider highlighting these in your profile or CV if you have the experience.
-                </Typography>
+                <p className="text-sm text-amber-800/70 leading-relaxed">
+                  Recruiters look for <strong>{missingSkills.join(", ")}</strong>. Consider adding these to your profile if applicable.
+                </p>
               </div>
             )}
             
             {matchingSkills.length === 0 && missingSkills.length === 0 && (
-              <div className="bg-slate-50 border border-slate-100 p-8 rounded-[32px] text-center">
-                <Typography variant="body1" color="muted">
-                  Resume data is still processing or unavailable for this listing.
-                </Typography>
+              <div className="bg-slate-50 border border-slate-100 p-6 rounded-xl text-center">
+                <p className="text-sm text-slate-400">
+                  Resume analysis is still processing or unavailable for this listing.
+                </p>
               </div>
             )}
 
-            <Button onClick={() => setCvReviewModalOpen(false)} variant="solid" className="mt-4 w-full">
-              Got it, Thanks!
-            </Button>
+            <button 
+              onClick={() => setCvReviewModalOpen(false)} 
+              className="w-full py-2.5 bg-slate-800 text-white rounded-lg text-sm font-semibold hover:bg-slate-700 transition-colors mt-2"
+            >
+              Got it
+            </button>
           </div>
         </div>
       </Modal>
     </>
   );
-}
-
-// Minimal icon imports for internal components
-function FiAlertTriangle({ size }: { size?: number }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>;
 }

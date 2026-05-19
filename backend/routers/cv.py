@@ -132,25 +132,38 @@ async def analyze_existing(payload: AnalyzeRequest, current_user = Depends(get_c
 @router.post("/refresh-cv-url")
 @router.post("/api/refresh-cv-url")
 def refresh_url(payload: AnalyzeRequest, current_user = Depends(get_current_user)):
-    if payload.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Forbidden: User ID mismatch.")
+    # Authorization: Student can refresh their own, or an employer can refresh any student's
+    if payload.user_id != current_user.id and current_user.user_metadata.get("role") != "employer" and getattr(current_user, 'role', None) != 'employer':
+        # Double check role from profile if not in JWT
+        profile = get_user_profile(current_user.id)
+        if profile.get("role") != "employer" and profile.get("role") != "admin":
+            raise HTTPException(status_code=403, detail="Forbidden: You do not have permission to refresh this URL.")
+            
     try:
         p = get_user_profile(payload.user_id)
         url = p.get("cv_url", "")
         if not url: return JSONResponse({"error": "No URL"}, status_code=404)
         
         filename = ""
-        for marker in ["/object/sign/cvs/", "/object/public/cvs/", "cvs/"]:
-            if marker in url:
-                filename = url.split(marker)[1].split("?")[0]
-                break
-        if not filename: raise ValueError("Could not parse filename")
+        # Improved parsing: get the part between 'cvs/' and '?'
+        if "cvs/" in url:
+            parts = url.split("cvs/")
+            if len(parts) > 1:
+                filename = parts[1].split("?")[0]
+        
+        if not filename: raise ValueError(f"Could not parse filename from URL: {url}")
 
+        # Refresh for another 7 days
         signed = supabase.storage.from_("cvs").create_signed_url(filename, 604800)
         new_url = signed.get("signedURL") or signed.get("signedUrl")
+        
+        if not new_url:
+            raise ValueError("Supabase failed to generate a new signed URL")
+            
         save_cv_text_and_url(payload.user_id, new_url, p.get("cv_text", ""))
         return {"cv_url": new_url}
     except Exception as e:
+        logger.error(f"[/refresh-cv-url] Error: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @router.get("/my-matches")

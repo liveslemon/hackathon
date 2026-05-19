@@ -1,9 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
-import { FiSearch } from "react-icons/fi";
+import { Search, Briefcase, SlidersHorizontal, ChevronLeft, ChevronRight, Sparkles, Flame, Clock, Building2 } from "lucide-react";
 import {
   Button,
-  Input,
   Typography,
   Stack,
   Select,
@@ -42,6 +41,7 @@ const InternshipGrid = ({
   const [availableFilters, setAvailableFilters] = useState<string[]>(["All"]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(8);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     const updateItemsPerPage = () => {
@@ -147,170 +147,201 @@ const InternshipGrid = ({
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedItems = filteredInternships.slice(startIndex, startIndex + itemsPerPage);
 
+  const quickFilters = [
+    { label: "Remote", icon: Sparkles },
+    { label: "Hybrid", icon: Building2 },
+    { label: "Software Engineering", icon: Flame },
+    { label: "Business", icon: Briefcase },
+  ];
+
   return (
-    <Stack spacing={10}>
-      {/* Premium Control Panel: Filters & Sorting */}
-      <div className="bg-white rounded-3xl p-6 md:p-8 shadow-[0_1px_3px_rgba(0,0,0,0.02)] border border-slate-100/80 overflow-hidden">
-        <Stack spacing={8}>
-          {/* Top row: Section Headers and Quick Filters */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div className="flex items-center gap-6">
-               <div className="bg-brand/5 p-3 rounded-2xl border border-brand/10">
-                 <svg className="w-5 h-5 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                   <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-                   <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-                 </svg>
-               </div>
-               <div>
-                 <Typography variant="h4" weight="bold" className="text-slate-900 leading-tight">Internship Portal</Typography>
-                 <Typography variant="caption" className="text-slate-400 font-medium tracking-tight">Discover your next career step</Typography>
-               </div>
+    <Stack spacing={8}>
+      {/* Header Bar */}
+      <div className="bg-white rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
+        {/* Title Row */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+              <Briefcase className="w-[18px] h-[18px] text-indigo-600" />
             </div>
-
-            <div className="flex flex-wrap gap-2 items-center">
-              <span className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em] mr-2">Quick Filters</span>
-              {["Remote", "Hybrid", "Software Engineering", "Business"].map(tag => {
-                const isActive = searchQuery === tag;
-                return (
-                  <button
-                    key={tag}
-                    onClick={() => {
-                      const newQuery = isActive ? "" : tag;
-                      setSearchQuery(newQuery);
-                      // Sync back to top bar
-                      window.dispatchEvent(new CustomEvent("gridSearchChange", { detail: newQuery }));
-                    }}
-                    className={cx(
-                      "text-[11px] px-4 py-2 transition-all rounded-xl font-bold border",
-                      isActive 
-                        ? "bg-brand text-white border-brand shadow-lg shadow-brand/20" 
-                        : "bg-[#f4f7fa] text-slate-500 hover:bg-brand/5 hover:text-brand border-slate-100/50"
-                    )}
-                  >
-                    #{tag}
-                  </button>
-                );
-              })}
+            <div>
+              <h2 className="text-[17px] font-semibold text-slate-800 leading-tight">Internships</h2>
+              <p className="text-xs text-slate-400 mt-0.5">{totalItems} opportunities available</p>
             </div>
           </div>
 
-          {/* Bottom row: Active Filters */}
-          <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8 pt-6 border-t border-slate-50">
-            <Stack direction="row" spacing={2} className="flex-wrap">
-              {availableFilters.map((filter) => (
-                <Button
-                  key={filter}
-                  variant={selectedInterest === filter ? "solid" : "ghost"}
-                  size="sm"
-                  onClick={() => setSelectedInterest(filter)}
-                  className={cx(
-                    "px-6 rounded-xl font-bold text-xs transition-all",
-                    selectedInterest === filter 
-                      ? "bg-brand text-white shadow-lg shadow-brand/20" 
-                      : "text-slate-400 hover:text-slate-900"
-                  )}
-                >
-                  {filter}
-                </Button>
-              ))}
-            </Stack>
-            
-            <div className="flex flex-wrap items-center gap-3 lg:ml-auto">
-               <div className="w-full sm:w-[160px]">
-                 <Select 
-                   value={statusFilter}
-                   onChange={(e) => setStatusFilter(e.target.value)}
-                   options={[
-                     { value: "All", label: "Any Status" },
-                     { value: "Applied", label: "Applied" },
-                     { value: "Accepted", label: "Approved" },
-                     { value: "Rejected", label: "Denied" },
-                   ]}
-                   className="bg-[#f4f7fa] border-none rounded-xl text-xs font-bold text-slate-600 h-10"
-                 />
-               </div>
-               <div className="w-full sm:w-[160px]">
-                 <Select 
-                   value={matchFilter}
-                   onChange={(e) => setMatchFilter(e.target.value)}
-                   options={[
-                     { value: "All", label: "Any Match" },
-                     { value: "70", label: "70%+ Match" },
-                     { value: "40", label: "40%+ Match" },
-                   ]}
-                   className="bg-[#f4f7fa] border-none rounded-xl text-xs font-bold text-slate-600 h-10"
-                 />
-               </div>
-               <div className="w-full sm:w-[160px]">
-                 <Select 
-                   value={sortBy}
-                   onChange={(e) => setSortBy(e.target.value)}
-                   options={[
-                     { value: "match", label: "Best Match" },
-                     { value: "deadline", label: "Deadline" },
-                   ]}
-                   className="bg-[#f4f7fa] border-none rounded-xl text-xs font-bold text-slate-600 h-10"
-                 />
-               </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={cx(
+                "flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-all border",
+                showFilters
+                  ? "bg-indigo-50 text-indigo-600 border-indigo-100"
+                  : "bg-white text-slate-500 border-slate-150 hover:border-slate-300"
+              )}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              Filters
+            </button>
+
+            <div className="w-[140px]">
+              <Select 
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                options={[
+                  { value: "match", label: "Best Match" },
+                  { value: "deadline", label: "Deadline" },
+                  { value: "company", label: "A → Z" },
+                ]}
+                className="bg-slate-50 border-slate-150 rounded-lg text-xs font-medium text-slate-600 h-9"
+              />
             </div>
           </div>
-        </Stack>
+        </div>
+
+        {/* Quick Filter Chips */}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          {quickFilters.map(({ label, icon: Icon }) => {
+            const isActive = searchQuery === label;
+            return (
+              <button
+                key={label}
+                onClick={() => {
+                  const newQuery = isActive ? "" : label;
+                  setSearchQuery(newQuery);
+                  window.dispatchEvent(new CustomEvent("gridSearchChange", { detail: newQuery }));
+                }}
+                className={cx(
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all",
+                  isActive 
+                    ? "bg-indigo-600 text-white shadow-sm" 
+                    : "bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                )}
+              >
+                <Icon className="w-3 h-3" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Interest pills */}
+        {availableFilters.length > 1 && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-slate-50">
+            <span className="text-[10px] text-slate-300 font-semibold uppercase tracking-wider mr-1">Your interests</span>
+            {availableFilters.map((filter) => (
+              <button
+                key={filter}
+                onClick={() => setSelectedInterest(filter)}
+                className={cx(
+                  "px-3 py-1 rounded-md text-[11px] font-semibold transition-all",
+                  selectedInterest === filter 
+                    ? "bg-slate-800 text-white" 
+                    : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                )}
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Expandable Advanced Filters */}
+        {showFilters && (
+          <div className="flex flex-wrap items-center gap-3 pt-4 mt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="w-full sm:w-[150px]">
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 block">Status</label>
+              <Select 
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                options={[
+                  { value: "All", label: "Any Status" },
+                  { value: "Applied", label: "Applied" },
+                  { value: "Accepted", label: "Approved" },
+                  { value: "Rejected", label: "Denied" },
+                ]}
+                className="bg-slate-50 border-slate-150 rounded-lg text-xs font-medium text-slate-600 h-9"
+              />
+            </div>
+            <div className="w-full sm:w-[150px]">
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 block">Match %</label>
+              <Select 
+                value={matchFilter}
+                onChange={(e) => setMatchFilter(e.target.value)}
+                options={[
+                  { value: "All", label: "Any Match" },
+                  { value: "70", label: "70%+" },
+                  { value: "40", label: "40%+" },
+                ]}
+                className="bg-slate-50 border-slate-150 rounded-lg text-xs font-medium text-slate-600 h-9"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+      {/* Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         {paginatedItems.length > 0 ? (
           paginatedItems.map((internship, index) => (
             <div 
               key={internship.id}
-              className="animate-in fade-in slide-in-from-bottom-8 duration-500 ease-out"
-              style={{ animationDelay: `${index * 50}ms` }}
+              className="animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out"
+              style={{ animationDelay: `${index * 40}ms` }}
             >
               <InternshipCard internship={internship} />
             </div>
           ))
         ) : (
-          <div className="col-span-full py-20 text-center bg-white rounded-3xl border border-dashed border-slate-200">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-              <FiSearch className="w-10 h-10 text-slate-300" />
+          <div className="col-span-full py-16 text-center">
+            <div className="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Search className="w-6 h-6 text-slate-300" />
             </div>
-            <Typography variant="h5" color="muted">
-              No internships found. Try adjusting your filters.
-            </Typography>
+            <p className="text-sm font-medium text-slate-400">No internships match your filters</p>
+            <p className="text-xs text-slate-300 mt-1">Try broadening your search criteria</p>
           </div>
         )}
       </div>
 
+      {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3 mt-12 pb-4">
-          <button
-            onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-            disabled={currentPage === 1}
-            className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 border border-slate-200 bg-white text-slate-600 hover:border-brand hover:text-brand disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            ← Previous
-          </button>
-          <div className="flex items-center gap-1.5">
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-xs text-slate-400">
+            {startIndex + 1}–{Math.min(startIndex + itemsPerPage, totalItems)} of {totalItems}
+          </p>
+          
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              disabled={currentPage === 1}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
             {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
               <button
                 key={page}
                 onClick={() => { setCurrentPage(page); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                className={`w-10 h-10 rounded-xl text-sm font-bold transition-all duration-200 ${
+                className={cx(
+                  "w-8 h-8 rounded-lg text-xs font-semibold transition-all",
                   currentPage === page
-                    ? 'bg-gradient-to-br from-brand to-brand-secondary text-white shadow-lg'
-                    : 'bg-white text-slate-500 border border-slate-200 hover:border-brand hover:text-brand'
-                }`}
+                    ? 'bg-slate-800 text-white'
+                    : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+                )}
               >
                 {page}
               </button>
             ))}
+
+            <button
+              onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              disabled={currentPage === totalPages}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
-          <button
-            onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-            disabled={currentPage === totalPages}
-            className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 border border-slate-200 bg-white text-slate-600 hover:border-brand hover:text-brand disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            Next →
-          </button>
         </div>
       )}
     </Stack>

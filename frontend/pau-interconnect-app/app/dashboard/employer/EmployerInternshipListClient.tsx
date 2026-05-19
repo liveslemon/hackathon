@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Stack, Typography, Card, CardContent, Badge, Button } from "@/components/ui";
-import { FiBriefcase, FiUsers, FiClock } from "react-icons/fi";
+import { Briefcase, Users, Clock } from "lucide-react";
 import Link from "next/link";
 import { cx } from "@/utils/cx";
 
@@ -127,8 +127,8 @@ export default function EmployerInternshipListClient({
                       <Badge variant="primary" size="sm">{job.field}</Badge>
                       <Badge variant="slate" size="sm">{job.category}</Badge>
                       {job.deadline && (
-                        <Stack direction="row" spacing={1} align="center" className="text-slate-400">
-                          <FiClock className="w-3.5 h-3.5" />
+                        <Stack direction="row" spacing={1.5} align="center" className="text-slate-400">
+                          <Clock className="w-3.5 h-3.5" />
                           <Typography variant="caption">{new Date(job.deadline).toLocaleDateString()}</Typography>
                         </Stack>
                       )}
@@ -138,7 +138,7 @@ export default function EmployerInternshipListClient({
                     variant="outline" 
                     size="sm" 
                     className="w-full md:w-auto"
-                    rightIcon={<FiUsers className="w-4 h-4 ml-1" />}
+                    rightIcon={<Users className="w-4 h-4" />}
                   >
                     Review {job.applied_internships?.[0]?.count || 0} Applicants
                   </Button>

@@ -1,7 +1,18 @@
 import { getSupabaseServer } from "@/lib/supabase-server";
 import DashboardHeader from "@/components/DashboardHeader";
 import { Typography, Card, CardContent, Stack, Badge, Button } from "@/components/ui";
-import { FiBriefcase, FiUsers, FiClock, FiPlus, FiList, FiEdit3, FiCheck, FiFileText, FiChevronRight, FiUser } from "react-icons/fi";
+import { 
+  Briefcase, 
+  Users, 
+  Clock, 
+  Plus, 
+  List, 
+  Edit3, 
+  Check, 
+  FileText, 
+  ChevronRight, 
+  User 
+} from "lucide-react";
 import Link from "next/link";
 import { cx } from "@/utils/cx";
 import { EmployerActivityClient } from "./EmployerActivityClient";
@@ -24,9 +35,9 @@ export async function EmployerHeaderSection() {
 // --- Quick Actions Toolbar ---
 export function EmployerQuickActionsSection({ profile }: { profile: any }) {
   const actions = [
-    { label: "Add Posting", icon: FiPlus, href: "#", isModalTrigger: true, color: "text-brand", bg: "bg-brand/5" },
-    { label: "My Hub", icon: FiList, href: "/dashboard/employer/internships", color: "text-slate-600", bg: "bg-slate-50" },
-    { label: "Logbooks", icon: FiEdit3, href: "/dashboard/employer/logbook", color: "text-slate-600", bg: "bg-slate-50" },
+    { label: "Add Posting", icon: Plus, href: "#", isModalTrigger: true, color: "text-brand", bg: "bg-brand/5" },
+    { label: "My Hub", icon: List, href: "/dashboard/employer/internships", color: "text-slate-600", bg: "bg-slate-50" },
+    { label: "Logbooks", icon: Edit3, href: "/dashboard/employer/logbook", color: "text-slate-600", bg: "bg-slate-50" },
   ];
 
   return (
@@ -180,7 +191,7 @@ export async function EmployerInternshipListSection() {
     return (
       <div className="p-10 bg-white border border-dashed border-slate-200 rounded-3xl text-center">
         <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-          <FiBriefcase className="w-8 h-8 text-slate-300" />
+          <Briefcase className="w-8 h-8 text-slate-300" />
         </div>
         <Typography variant="h6" color="muted">You haven't posted any internships yet.</Typography>
       </div>

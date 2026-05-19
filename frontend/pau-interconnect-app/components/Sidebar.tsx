@@ -1,18 +1,8 @@
 "use client";
 import React from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { 
-  FiHome, 
-  FiBriefcase, 
-  FiBook, 
-  FiUser, 
-  FiLogOut,
-  FiSettings,
-  FiX,
-  FiChevronLeft,
-  FiChevronRight
-} from "react-icons/fi";
-import { Typography, Stack, Button } from "./ui";
+import { Home, Briefcase, BookOpen, User, Settings, X, ChevronLeft, ChevronRight, BarChart3 } from "lucide-react";
+import { Typography } from "./ui";
 import { cx } from "@/utils/cx";
 import { useState } from "react";
 
@@ -34,28 +24,28 @@ const Sidebar = ({ userProfile, onClose, isPinned, onTogglePin, className }: Sid
   const isAdmin = userProfile?.role === "admin";
 
   const studentItems = [
-    { label: "Home", icon: FiHome, href: "/dashboard/student" },
-    { label: "My Internships", icon: FiBriefcase, href: "/my-internships" },
-    { label: "SIWES Logbook", icon: FiBook, href: "/dashboard/student/logbook" },
+    { label: "Home", icon: Home, href: "/dashboard/student" },
+    { label: "My Internships", icon: Briefcase, href: "/my-internships" },
+    { label: "SIWES Logbook", icon: BookOpen, href: "/dashboard/student/logbook" },
   ];
 
   const employerItems = [
-    { label: "Company Home", icon: FiHome, href: "/dashboard/employer" },
-    { label: "My Postings", icon: FiBriefcase, href: "/dashboard/employer/internships" },
-    { label: "Review Logbooks", icon: FiBook, href: "/dashboard/employer/logbook" },
+    { label: "Company Home", icon: Home, href: "/dashboard/employer" },
+    { label: "My Postings", icon: Briefcase, href: "/dashboard/employer/internships" },
+    { label: "Review Logbooks", icon: BookOpen, href: "/dashboard/employer/logbook" },
   ];
 
   const adminItems = [
-    { label: "Admin Home", icon: FiHome, href: "/dashboard/admin" },
-    { label: "Manage Roles", icon: FiUser, href: "/dashboard/admin/manage" },
-    { label: "Analytics", icon: FiBriefcase, href: "/dashboard/admin/analytics" },
+    { label: "Admin Home", icon: Home, href: "/dashboard/admin" },
+    { label: "Manage Roles", icon: User, href: "/dashboard/admin/manage" },
+    { label: "Analytics", icon: BarChart3, href: "/dashboard/admin/analytics" },
   ];
 
   const dashboardItems = isEmployer ? employerItems : (isAdmin ? adminItems : studentItems);
 
   const accountItems = [
-    { label: isEmployer ? "Company Profile" : "Profile Settings", icon: FiUser, href: "/profile" },
-    { label: "Help Center", icon: FiSettings, href: "#", disabled: true },
+    { label: isEmployer ? "Company Profile" : "Profile", icon: User, href: "/profile" },
+    { label: "Settings", icon: Settings, href: "#", disabled: true },
   ];
 
 
@@ -75,16 +65,16 @@ const Sidebar = ({ userProfile, onClose, isPinned, onTogglePin, className }: Sid
           className="flex items-center gap-3 cursor-pointer group shrink-0"
           onClick={() => router.push(isEmployer ? "/dashboard/employer" : "/dashboard/student")}
         >
-          <div className="w-10 h-10 bg-brand rounded-2xl flex items-center justify-center p-2 shadow-sm group-hover:scale-105 transition-transform shrink-0">
+          <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center p-2 shadow-sm group-hover:scale-105 transition-transform shrink-0">
             <img src="/favicon.ico" alt="PAU Logo" className="w-full h-full brightness-0 invert" />
           </div>
           <div className={cx(
             "transition-all duration-[400ms] ease-in-out overflow-hidden flex items-center",
             isExpanded ? "opacity-100 max-w-[200px]" : "opacity-0 max-w-0"
           )}>
-            <Typography variant="h5" weight="bold" className="text-slate-800 tracking-tight leading-tight whitespace-nowrap ml-3">
-              Job in
-            </Typography>
+            <span className="text-[15px] font-bold text-slate-800 tracking-tight whitespace-nowrap ml-1">
+              InterConnect
+            </span>
           </div>
         </div>
         
@@ -95,16 +85,16 @@ const Sidebar = ({ userProfile, onClose, isPinned, onTogglePin, className }: Sid
           <button 
             onClick={onTogglePin}
             className={cx(
-              "p-2 rounded-xl transition-all duration-200 hidden lg:flex items-center justify-center",
-              isPinned ? "bg-brand/10 text-brand" : "text-slate-300 hover:text-slate-600 hover:bg-slate-50"
+              "p-2 rounded-lg transition-all duration-200 hidden lg:flex items-center justify-center",
+              isPinned ? "bg-slate-100 text-slate-600" : "text-slate-300 hover:text-slate-500 hover:bg-slate-50"
             )}
             title={isPinned ? "Unpin sidebar" : "Pin sidebar"}
           >
-            {isPinned ? <FiChevronLeft size={18} /> : <FiChevronRight size={18} />}
+            {isPinned ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
           {onClose && (
             <button onClick={onClose} className="lg:hidden p-2 text-slate-400 hover:text-slate-600 transition-colors">
-              <FiX size={20} />
+              <X className="w-4 h-4" />
             </button>
           )}
         </div>
@@ -113,19 +103,20 @@ const Sidebar = ({ userProfile, onClose, isPinned, onTogglePin, className }: Sid
       <div className="flex-1 flex flex-col px-3 py-4 space-y-8 overflow-y-auto no-scrollbar">
         {/* Dashboard Section */}
         <div>
-          <div className="px-5 mb-4 h-4 flex items-center">
+          <div className="px-5 mb-3 h-4 flex items-center">
             <div className={cx(
               "transition-all duration-[400ms] ease-in-out overflow-hidden flex items-center",
               isExpanded ? "opacity-100 max-w-[200px]" : "opacity-0 max-w-0"
             )}>
-              <Typography variant="caption" className="block font-bold text-slate-400 uppercase tracking-widest text-[10px] whitespace-nowrap">
+              <span className="text-[10px] font-semibold text-slate-300 uppercase tracking-widest whitespace-nowrap">
                 Dashboard
-              </Typography>
+              </span>
             </div>
           </div>
-          <nav className="space-y-1">
+          <nav className="space-y-0.5">
             {dashboardItems.map((item) => {
               const isActive = pathname === item.href;
+              const Icon = item.icon;
               return (
                 <button
                   key={item.href}
@@ -135,25 +126,25 @@ const Sidebar = ({ userProfile, onClose, isPinned, onTogglePin, className }: Sid
                   }}
                   title={!isExpanded ? item.label : undefined}
                   className={cx(
-                    "w-full flex items-center rounded-2xl text-[13px] font-semibold transition-all duration-[400ms] ease-in-out group relative overflow-hidden h-12 md:h-14 px-5",
+                    "w-full flex items-center rounded-xl text-[13px] font-medium transition-all duration-200 group relative overflow-hidden h-11 px-5",
                     !isExpanded && "pl-[18px]",
                     isActive 
-                      ? "bg-brand/5 text-brand shadow-sm shadow-brand/5" 
-                      : "text-slate-400 hover:bg-slate-50 hover:text-slate-900 focus:outline-none"
+                      ? "bg-slate-50 text-slate-800" 
+                      : "text-slate-400 hover:bg-slate-50/50 hover:text-slate-600"
                   )}
                 >
-                  <item.icon size={20} className={cx(
-                    "transition-transform group-hover:scale-110 shrink-0",
-                    isActive ? "text-brand" : "text-slate-400"
+                  <Icon className={cx(
+                    "w-[18px] h-[18px] transition-colors shrink-0",
+                    isActive ? "text-indigo-600" : "text-slate-350"
                   )} />
                   <div className={cx(
-                    "transition-all duration-[400ms] ease-in-out overflow-hidden flex items-center ml-4",
+                    "transition-all duration-[400ms] ease-in-out overflow-hidden flex items-center ml-3",
                     isExpanded ? "opacity-100 max-w-[200px]" : "opacity-0 max-w-0"
                   )}>
                     <span className="truncate whitespace-nowrap">{item.label}</span>
                   </div>
                   {!isExpanded && isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-brand rounded-r-full" />
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-indigo-600 rounded-r-full" />
                   )}
                 </button>
               );
@@ -164,19 +155,20 @@ const Sidebar = ({ userProfile, onClose, isPinned, onTogglePin, className }: Sid
         {/* Account Section - Pushed to Bottom */}
         <div className="mt-auto space-y-8">
           <div>
-            <div className="px-5 mb-4 h-4 flex items-center">
+            <div className="px-5 mb-3 h-4 flex items-center">
               <div className={cx(
                 "transition-all duration-[400ms] ease-in-out overflow-hidden flex items-center",
                 isExpanded ? "opacity-100 max-w-[200px]" : "opacity-0 max-w-0"
               )}>
-                <Typography variant="caption" className="block font-bold text-slate-400 uppercase tracking-widest text-[10px] whitespace-nowrap">
+                <span className="text-[10px] font-semibold text-slate-300 uppercase tracking-widest whitespace-nowrap">
                   Account
-                </Typography>
+                </span>
               </div>
             </div>
-            <nav className="space-y-1">
+            <nav className="space-y-0.5">
               {accountItems.map((item) => {
                 const isActive = pathname === item.href;
+                const Icon = item.icon;
                 return (
                   <button
                     key={item.href}
@@ -187,26 +179,26 @@ const Sidebar = ({ userProfile, onClose, isPinned, onTogglePin, className }: Sid
                     }}
                     title={!isExpanded ? item.label : undefined}
                     className={cx(
-                      "w-full flex items-center rounded-2xl text-[13px] font-semibold transition-all duration-[400ms] ease-in-out group relative overflow-hidden h-12 md:h-14 px-5",
+                      "w-full flex items-center rounded-xl text-[13px] font-medium transition-all duration-200 group relative overflow-hidden h-11 px-5",
                       !isExpanded && "pl-[18px]",
-                      item.disabled ? "opacity-50 cursor-not-allowed" : "",
+                      item.disabled ? "opacity-40 cursor-not-allowed" : "",
                       isActive 
-                        ? "bg-brand/5 text-brand shadow-sm shadow-brand/5" 
-                        : "text-slate-400 hover:bg-slate-50 hover:text-slate-900 focus:outline-none"
+                        ? "bg-slate-50 text-slate-800" 
+                        : "text-slate-400 hover:bg-slate-50/50 hover:text-slate-600"
                     )}
                   >
-                    <item.icon size={20} className={cx(
-                      "transition-transform group-hover:scale-110 shrink-0",
-                      isActive ? "text-brand" : "text-slate-400"
+                    <Icon className={cx(
+                      "w-[18px] h-[18px] transition-colors shrink-0",
+                      isActive ? "text-indigo-600" : "text-slate-350"
                     )} />
                     <div className={cx(
-                      "transition-all duration-[400ms] ease-in-out overflow-hidden flex items-center ml-4",
+                      "transition-all duration-[400ms] ease-in-out overflow-hidden flex items-center ml-3",
                       isExpanded ? "opacity-100 max-w-[200px]" : "opacity-0 max-w-0"
                     )}>
                       <span className="truncate whitespace-nowrap">{item.label}</span>
                     </div>
                     {!isExpanded && isActive && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-brand rounded-r-full" />
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-indigo-600 rounded-r-full" />
                     )}
                   </button>
                 );

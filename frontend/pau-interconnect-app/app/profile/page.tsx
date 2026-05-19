@@ -1,10 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import crossFetch from "cross-fetch";
 import ProfileClient from "./ProfileClient";
 import DashboardShell from "@/components/DashboardShell";
-import { Typography } from "@/components/ui";
+import { supabaseFetch } from "@/lib/supabase-fetch";
 
 export default async function ProfilePage() {
   const cookieStore = await cookies();
@@ -12,7 +11,7 @@ export default async function ProfilePage() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      global: { fetch: crossFetch },
+      global: { fetch: supabaseFetch },
       cookies: {
         getAll() { return cookieStore.getAll(); },
         setAll() {}
@@ -20,13 +19,13 @@ export default async function ProfilePage() {
     }
   );
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) redirect("/login/student");
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login/student");
 
   const { data: profile } = await supabase
     .from("profiles")
     .select("*")
-    .eq("id", session.user.id)
+    .eq("id", user.id)
     .single();
 
   const isEmployer = profile?.role === "employer";
@@ -34,19 +33,19 @@ export default async function ProfilePage() {
   return (
     <DashboardShell userProfile={profile}>
       <div className="max-w-4xl mx-auto pb-12">
-        <header className="mb-10 px-4 sm:px-0">
-          <Typography variant="h3" weight="bold" className="text-slate-900 leading-tight">
+        <header className="mb-8 px-4 sm:px-0">
+          <h2 className="text-2xl font-bold text-slate-800 leading-tight">
             {isEmployer ? "Company Profile" : "Profile Settings"}
-          </Typography>
-          <Typography variant="caption" className="text-slate-400 font-medium tracking-wide">
+          </h2>
+          <p className="text-sm text-slate-400 mt-1">
             {isEmployer 
-              ? "Manage your company information, brand identity, and recruitment settings" 
-              : "Manage your personal information, interests, and school details"}
-          </Typography>
+              ? "Manage your company information and brand identity" 
+              : "Manage your personal information, interests, and CV"}
+          </p>
         </header>
 
         <div className="px-4 sm:px-0">
-          <ProfileClient initialProfile={profile} userEmail={session.user.email ?? null} />
+          <ProfileClient initialProfile={profile} userEmail={user.email ?? null} />
         </div>
       </div>
     </DashboardShell>

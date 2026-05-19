@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Stack, Typography } from "@/components/ui";
-import { FiUser, FiClock, FiChevronRight } from "react-icons/fi";
+import { User, Clock, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { cx } from "@/utils/cx";
 
@@ -65,7 +65,7 @@ export function EmployerActivityClient({
                   ? "bg-slate-50 text-slate-400 group-hover:bg-brand/5 group-hover:text-brand" 
                   : "bg-indigo-50/50 text-indigo-400 group-hover:bg-indigo-100 group-hover:text-indigo-600"
               )}>
-                {type === "applicants" ? <FiUser className="w-6 h-6" /> : <FiClock className="w-6 h-6" />}
+                {type === "applicants" ? <User className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
               </div>
               <div>
                 <Typography variant="h6" weight="bold" className="text-slate-900 group-hover:text-brand transition-colors">
@@ -79,7 +79,7 @@ export function EmployerActivityClient({
               </div>
             </div>
             {type === "applicants" ? (
-              <FiChevronRight className="text-slate-300 group-hover:text-brand transition-colors" />
+              <ChevronRight className="text-slate-300 group-hover:text-brand transition-colors" />
             ) : (
               <div className="px-4 py-2 rounded-xl bg-slate-50 text-slate-500 text-[11px] font-bold uppercase tracking-wider group-hover:bg-brand group-hover:text-white transition-all">
                 Approve

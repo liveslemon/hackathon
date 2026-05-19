@@ -1,15 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { cx } from "@/utils/cx";
-import {
-  Card,
-  CardContent,
-  Typography,
-  Button,
-  Badge,
-  Stack,
-} from "@/components/ui";
-import { FiHeart } from "react-icons/fi";
+import { Heart, ArrowUpRight, MapPin, Clock, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
 interface InternshipCardProps {
@@ -107,114 +99,98 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
       )
     : 0;
 
-  const getMatchColor = (percentage?: number) => {
-    if (percentage === undefined || percentage === null) return "primary";
-    if (percentage >= 70) return "success";
-    if (percentage >= 40) return "warning";
-    return "error";
+  const matchPct = internship.matchPercentage ?? 0;
+  const matchColor = matchPct >= 70 ? "text-emerald-600 bg-emerald-50" : matchPct >= 40 ? "text-amber-600 bg-amber-50" : "text-slate-500 bg-slate-50";
+
+  const statusConfig: Record<string, { label: string; icon: any; color: string }> = {
+    accepted: { label: "Approved", icon: CheckCircle, color: "text-emerald-600 bg-emerald-50 border-emerald-100" },
+    rejected: { label: "Denied", icon: XCircle, color: "text-red-500 bg-red-50 border-red-100" },
+    pending: { label: "Pending", icon: Loader2, color: "text-amber-600 bg-amber-50 border-amber-100" },
+    applied: { label: "Applied", icon: Loader2, color: "text-blue-600 bg-blue-50 border-blue-100" },
   };
 
-  const getStatusColor = (status: string) => {
-    switch(status.toLowerCase()) {
-      case 'accepted': return 'success';
-      case 'rejected': return 'error';
-      default: return 'primary';
-    }
-  };
+  const appStatus = internship.applicationStatus?.toLowerCase() || "";
+  const statusData = statusConfig[appStatus];
 
   return (
-    <Card className="h-full group shadow-sm hover:shadow-md transition-all duration-300 border-slate-100 flex flex-col overflow-hidden rounded-xl md:rounded-2xl">
-      <div className="relative h-36 md:h-48 overflow-hidden">
+    <div className="group bg-white rounded-xl border border-slate-100 hover:border-slate-200 transition-all duration-200 hover:shadow-md overflow-hidden flex flex-col h-full">
+      {/* Image */}
+      <div className="relative h-[140px] overflow-hidden">
         <img
           src={
             internship.imageUrl ||
             "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=318"
           }
-          alt={`${internship.company} office`}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+          alt={`${internship.company}`}
+          className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
         />
-        <div className="absolute inset-0 bg-slate-900/10 group-hover:bg-slate-900/20 transition-colors duration-300" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
         
-        <Stack className="absolute top-3 left-3 right-3" direction="row" justify="between">
-          {internship.applicationStatus && (
-            <Badge 
-              variant={getStatusColor(internship.applicationStatus)}
-              className="px-2 py-1 shadow-sm border-white/20 bg-white/90"
-            >
-              {internship.applicationStatus.toUpperCase()}
-            </Badge>
+        {/* Save Button */}
+        <button 
+          onClick={handleSave}
+          className={cx(
+            "absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-all backdrop-blur-sm",
+            isSaved 
+              ? "bg-red-500 text-white shadow-sm" 
+              : "bg-white/80 text-slate-500 hover:bg-white hover:text-red-500"
           )}
-          {internship.matchPercentage !== undefined && (
-            <Badge 
-              variant={getMatchColor(internship.matchPercentage)}
-              className="px-2 py-1 shadow-sm border-white/20 ml-auto bg-white/90"
-            >
-              {internship.matchPercentage}% MATCH
-            </Badge>
-          )}
-        </Stack>
+        >
+          <Heart className={cx("w-3.5 h-3.5", isSaved && "fill-current")} />
+        </button>
+
+        {/* Match Badge */}
+        {matchPct > 0 && (
+          <div className={cx("absolute top-3 left-3 px-2 py-0.5 rounded-md text-[10px] font-bold", matchColor)}>
+            {matchPct}% match
+          </div>
+        )}
       </div>
 
-      <CardContent className="flex-grow p-4 md:p-6">
-        <Stack spacing={2}>
-          <Typography variant="h5" className="group-hover:text-brand transition-colors line-clamp-1">
-            <a href={`/internships/${internship.id}`} className="hover:underline">
+      {/* Content */}
+      <div className="flex-grow p-4">
+        <div className="mb-3">
+          <a href={`/internships/${internship.id}`} className="hover:underline decoration-slate-300 underline-offset-2">
+            <h3 className="text-sm font-semibold text-slate-800 leading-snug line-clamp-2 group-hover:text-indigo-600 transition-colors">
               {internship.role}
-            </a>
-          </Typography>
-          <Typography variant="body2" color="muted" className="mb-4">
-            {internship.company} • {internship.location}
-          </Typography>
-          
-          <div className="pt-4 border-t border-slate-50 flex items-center justify-between">
-            <Typography variant="caption" weight="bold" className="text-slate-400">
-              {internship.category.toUpperCase()}
-            </Typography>
-            <Typography variant="caption" color={daysUntilDeadline > 3 ? "muted" : "error"}>
-              {daysUntilDeadline > 0
-                ? `${daysUntilDeadline} days left`
-                : "Deadline passed"}
-            </Typography>
-          </div>
-        </Stack>
-      </CardContent>
+            </h3>
+          </a>
+          <p className="text-xs text-slate-400 mt-1 font-medium">{internship.company}</p>
+        </div>
 
-      <div className="px-4 py-3 md:px-6 md:py-4 bg-slate-50/50 flex justify-between items-center border-t border-slate-100">
-        <Button
-          variant="ghost"
-          size="sm"
-          colorType={isSaved ? "danger" : "primary"}
-          isLoading={isLoading}
-          onClick={handleSave}
-          className="rounded-xl w-10 h-10 p-0"
-        >
-          {isSaved ? <FiHeart className="fill-current w-5 h-5" /> : <FiHeart className="w-5 h-5" />}
-        </Button>
-        {internship.applicationStatus ? (
-          <Button
-            variant="solid"
-            size="sm"
-            disabled={true}
-            colorType={
-              internship.applicationStatus.toLowerCase() === 'accepted' ? 'secondary' : 
-              internship.applicationStatus.toLowerCase() === 'rejected' ? 'danger' : 'primary'
-            }
-            className={cx(
-              "px-5 text-xs opacity-80 cursor-not-allowed",
-              internship.applicationStatus.toLowerCase() === 'accepted' ? "bg-emerald-500 hover:bg-emerald-500 border-none" : ""
-            )}
-          >
-            {internship.applicationStatus.toLowerCase() === 'accepted' ? 'Approved' : 
-             internship.applicationStatus.toLowerCase() === 'rejected' ? 'Denied' : 'Pending'}
-          </Button>
+        <div className="flex items-center gap-3 text-[11px] text-slate-400">
+          <span className="inline-flex items-center gap-1">
+            <MapPin className="w-3 h-3" />
+            {internship.location}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            {daysUntilDeadline > 0 ? `${daysUntilDeadline}d left` : "Closed"}
+          </span>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="px-4 py-3 border-t border-slate-50 flex items-center justify-between">
+        <span className="text-[10px] font-semibold text-slate-300 uppercase tracking-wider">
+          {internship.category}
+        </span>
+
+        {statusData ? (
+          <span className={cx("inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border", statusData.color)}>
+            <statusData.icon className="w-3 h-3" />
+            {statusData.label}
+          </span>
         ) : (
-          <a href={`/internships/${internship.id}`}>
-            <Button variant="solid" size="sm" className="px-5 text-xs">
-              Apply Now
-            </Button>
+          <a 
+            href={`/internships/${internship.id}`}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 text-white text-[11px] font-semibold hover:bg-slate-700 transition-colors"
+          >
+            Apply
+            <ArrowUpRight className="w-3 h-3" />
           </a>
         )}
       </div>
-    </Card>
+    </div>
   );
 }

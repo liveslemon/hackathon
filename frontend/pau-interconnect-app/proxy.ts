@@ -1,6 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import fetch from 'cross-fetch'
+import { supabaseFetch } from './lib/supabase-fetch'
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({
@@ -13,7 +13,7 @@ export async function proxy(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      global: { fetch },
+      global: { fetch: supabaseFetch },
       cookies: {
         getAll() {
           return request.cookies.getAll()
@@ -37,7 +37,7 @@ export async function proxy(request: NextRequest) {
     // getUser validates with the server, which is essential for production-grade security.
     await supabase.auth.getUser()
   } catch (err) {
-    console.debug("[Proxy] Session check failed:", err)
+    // Silently handle
   }
   
   return response
