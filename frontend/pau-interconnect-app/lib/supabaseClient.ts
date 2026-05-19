@@ -20,9 +20,6 @@ export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    // Disable broadcast and provide a no-op lock function to prevent session interference between tabs
-    broadcast: false,
-    lock: (name, acquireTimeout, callback) => callback(),
   }
 });
 
