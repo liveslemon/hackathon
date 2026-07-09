@@ -3,10 +3,13 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
+import type { Profile } from "@/types/domain";
+
+type AuthProfile = (Partial<Profile> & Record<string, unknown>) | null;
 
 interface AuthState {
   user: User | null;
-  profile: any | null;
+  profile: AuthProfile;
   loading: boolean;
 }
 
@@ -18,7 +21,7 @@ const AuthContext = createContext<AuthState>({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<any | null>(null);
+  const [profile, setProfile] = useState<AuthProfile>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,10 +34,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Trigger initial session check immediately in case onAuthStateChange is delayed
     const checkInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (isMounted && session?.user) {
         // This will trigger the logic to fetch profile and set user
-        // We actually just need to wait for onAuthStateChange usually, 
+        // We actually just need to wait for onAuthStateChange usually,
         // but if it's already stale, we force it.
       } else if (isMounted && !session) {
         setLoading(false); // No session, stop loading
@@ -42,55 +47,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     checkInitialSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        try {
-          if (session?.user) {
-            if (user?.id !== session.user.id) {
-              setUser(session.user);
-              
-              // Simple retry logic for transient network/socket errors
-              let attempts = 0;
-              let profileData = null;
-              let profileError = null;
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      try {
+        if (session?.user) {
+          setUser((prev) =>
+            prev?.id === session.user.id ? prev : session.user,
+          );
 
-              while (attempts < 2) {
-                const { data, error } = await supabase
-                  .from("profiles")
-                  .select("*")
-                  .eq("id", session.user.id)
-                  .maybeSingle();
-                
-                if (!error) {
-                  profileData = data;
-                  break;
-                }
-                
-                profileError = error;
-                attempts++;
-                if (attempts < 2) await new Promise(r => setTimeout(r, 1000)); // wait 1s before retry
-              }
-              
-              if (profileError && Object.keys(profileError).length > 0) {
-                console.warn("Profile fetch issue (likely transient):", profileError.message || JSON.stringify(profileError));
-              }
-              
-              if (isMounted) setProfile(profileData);
+          // Simple retry logic for transient network/socket errors
+          let attempts = 0;
+          let profileData: AuthProfile = null;
+          let profileError: { message?: string } | null = null;
+
+          while (attempts < 2) {
+            const { data, error } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("id", session.user.id)
+              .maybeSingle();
+
+            if (!error) {
+              profileData = (data as AuthProfile) ?? null;
+              break;
             }
-          } else {
-            if (isMounted) {
-              setUser(null);
-              setProfile(null);
+
+            profileError = error as { message?: string };
+            attempts++;
+            if (attempts < 2) {
+              await new Promise((resolve) => setTimeout(resolve, 1000));
             }
           }
-        } catch (err) {
-          // Swallow common refresh errors
-        } finally {
-          clearTimeout(safetyTimeout);
-          if (isMounted) setLoading(false);
+
+          if (profileError) {
+            console.warn(
+              "Profile fetch issue (likely transient):",
+              profileError.message || "Unknown profile fetch error",
+            );
+          }
+
+          if (isMounted) {
+            setProfile(profileData);
+          }
+        } else {
+          if (isMounted) {
+            setUser(null);
+            setProfile(null);
+          }
         }
+      } catch {
+        // Swallow common refresh errors
+      } finally {
+        clearTimeout(safetyTimeout);
+        if (isMounted) setLoading(false);
       }
-    );
+    });
 
     return () => {
       isMounted = false;

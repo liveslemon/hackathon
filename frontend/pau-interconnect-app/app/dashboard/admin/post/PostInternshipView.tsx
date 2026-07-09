@@ -1,14 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Typography,
-  Stack,
-  Button,
-  Input,
-  Textarea,
-  Badge,
-} from "@/components/ui";
+import { Typography, Button, Input, Textarea } from "@/components/ui";
 import { supabase } from "@/lib/supabaseClient";
 import { FiPlus, FiCheckCircle, FiAlertCircle } from "react-icons/fi";
 
@@ -48,7 +41,10 @@ export default function PostInternshipView() {
   const [interests, setInterests] = useState<string[]>([]);
   const [deadline, setDeadline] = useState("");
   const [linkedin, setLinkedin] = useState("");
-  const [notification, setNotification] = useState<{ message: string; type: "success" | "error" | null }>({
+  const [notification, setNotification] = useState<{
+    message: string;
+    type: "success" | "error" | null;
+  }>({
     message: "",
     type: null,
   });
@@ -56,7 +52,7 @@ export default function PostInternshipView() {
 
   const toggleInterest = (item: string) => {
     setInterests((prev) =>
-      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
+      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item],
     );
   };
 
@@ -127,10 +123,13 @@ export default function PostInternshipView() {
       setInterests([]);
       setDeadline("");
       setLinkedin("");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Post internship error:", error);
       setNotification({
-        message: error?.message ?? "Failed to post internship. Try again.",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to post internship. Try again.",
         type: "error",
       });
       setTimeout(() => setNotification({ message: "", type: null }), 4000);
@@ -144,11 +143,15 @@ export default function PostInternshipView() {
       <div className="bg-white rounded-[32px] p-8 md:p-12 border border-slate-100 shadow-xl shadow-indigo-50/50 space-y-10 relative overflow-hidden">
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        
+
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <Typography variant="h2" weight="bold">Post New Internship</Typography>
-            <Typography variant="body1" color="muted">Fill in the details to reach more candidates</Typography>
+            <Typography variant="h2" weight="bold">
+              Post New Internship
+            </Typography>
+            <Typography variant="body1" color="muted">
+              Fill in the details to reach more candidates
+            </Typography>
           </div>
           <div className="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center shadow-inner">
             <FiPlus className="w-8 h-8" />
@@ -181,7 +184,9 @@ export default function PostInternshipView() {
             className="bg-slate-50 border-transparent focus:bg-white"
           />
           <div className="space-y-1.5 ml-1">
-            <label className="block text-sm font-semibold text-slate-700">Category *</label>
+            <label className="block text-sm font-semibold text-slate-700">
+              Category *
+            </label>
             <select
               className="w-full py-2.5 px-4 rounded-xl border border-transparent bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all text-slate-900"
               value={category}
@@ -189,7 +194,9 @@ export default function PostInternshipView() {
             >
               <option value="">Select Category</option>
               {CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
               ))}
             </select>
           </div>
@@ -218,7 +225,13 @@ export default function PostInternshipView() {
 
         <div className="space-y-6 relative z-10">
           <div className="space-y-2">
-            <Typography variant="body2" weight="bold" className="ml-1 text-brand">Related Interests * (Select at least one)</Typography>
+            <Typography
+              variant="body2"
+              weight="bold"
+              className="ml-1 text-brand"
+            >
+              Related Interests * (Select at least one)
+            </Typography>
             <div className="flex flex-wrap gap-2.5">
               {INTERESTS_OPTIONS.map((option) => {
                 const isSelected = interests.includes(option);
@@ -270,13 +283,21 @@ export default function PostInternshipView() {
       </div>
 
       {notification.type && (
-        <div className={`fixed bottom-10 left-1/2 -translate-x-1/2 px-8 py-4 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-5 duration-300 flex items-center gap-4 z-[100] border ${
-          notification.type === "success" 
-            ? "bg-emerald-50 text-emerald-700 border-emerald-100" 
-            : "bg-red-50 text-red-700 border-red-100"
-        }`}>
-          {notification.type === "success" ? <FiCheckCircle className="w-6 h-6" /> : <FiAlertCircle className="w-6 h-6" />}
-          <Typography variant="body1" weight="bold">{notification.message}</Typography>
+        <div
+          className={`fixed bottom-10 left-1/2 -translate-x-1/2 px-8 py-4 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-5 duration-300 flex items-center gap-4 z-[100] border ${
+            notification.type === "success"
+              ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+              : "bg-red-50 text-red-700 border-red-100"
+          }`}
+        >
+          {notification.type === "success" ? (
+            <FiCheckCircle className="w-6 h-6" />
+          ) : (
+            <FiAlertCircle className="w-6 h-6" />
+          )}
+          <Typography variant="body1" weight="bold">
+            {notification.message}
+          </Typography>
         </div>
       )}
     </div>

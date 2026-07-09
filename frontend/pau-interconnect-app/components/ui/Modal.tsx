@@ -2,7 +2,6 @@
 import React, { useEffect, useRef } from "react";
 import { cx } from "@/utils/cx";
 import { Typography } from "./Typography";
-import { Button } from "./Button";
 
 interface ModalProps {
   isOpen: boolean;
@@ -51,38 +50,50 @@ export const Modal: React.FC<ModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300"
         onClick={onClose}
       />
-      
+
       {/* Modal Content */}
-      <div 
+      <div
         className={cx(
           "relative bg-white w-full rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh] md:max-h-[85vh]",
-          sizes[size]
+          sizes[size],
         )}
         ref={modalRef}
       >
         {/* Header */}
         <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div>
-            {title && <Typography variant="h4" weight="bold">{title}</Typography>}
+            {title && (
+              <Typography variant="h4" weight="bold">
+                {title}
+              </Typography>
+            )}
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="p-2 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-8 overflow-y-auto">
-          {children}
-        </div>
+        <div className="p-8 overflow-y-auto">{children}</div>
 
         {/* Footer */}
         {footer && (

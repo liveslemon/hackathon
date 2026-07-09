@@ -1,21 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { supabase } from "@/lib/supabaseClient";
-import { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import {
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  Input,
-  Typography,
-  Stack,
-  Container,
-} from "@/components/ui";
+import { Button, Input, Typography, Stack } from "@/components/ui";
+import { getDashboardPathForRole, getUserRoleProfile } from "@/lib/role-guard";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address."),
@@ -26,10 +18,13 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 const Login = () => {
   const router = useRouter();
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   });
-  const [user, setUser] = useState<User | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
@@ -39,10 +34,7 @@ const Login = () => {
 
   useEffect(() => {
     const checkUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
+      await supabase.auth.getUser();
     };
 
     checkUser();
@@ -51,10 +43,18 @@ const Login = () => {
   const handleAuth = async (data: LoginForm) => {
     setIsLoading(true);
     setSnackbarOpen(false);
-    
+
     // Add a 60-second logic timeout for the authentication call
     const authTimeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error("Login is taking longer than expected. Please check your internet connection or try refreshing.")), 60000);
+      setTimeout(
+        () =>
+          reject(
+            new Error(
+              "Login is taking longer than expected. Please check your internet connection or try refreshing.",
+            ),
+          ),
+        60000,
+      );
     });
 
     try {
@@ -66,7 +66,11 @@ const Login = () => {
         password,
       });
 
-      const { data: authData, error } = await Promise.race([authPromise, authTimeoutPromise]) as any;
+      const authResult = await Promise.race([authPromise, authTimeoutPromise]);
+
+      const { data: authData, error } = authResult as Awaited<
+        typeof authPromise
+      >;
 
       if (error) {
         setSnackbarMessage(error.message);
@@ -87,7 +91,7 @@ const Login = () => {
         const pending = localStorage.getItem("pendingProfile");
         if (pending) {
           const parsed = JSON.parse(pending);
-          const { data: existing, error: selectError } = await supabase
+          const { data: existing } = await supabase
             .from("profiles")
             .select("id")
             .eq("id", user?.id)
@@ -118,12 +122,21 @@ const Login = () => {
       }
 
       // Finish successfully
+      const { role, isAdmin } = await getUserRoleProfile(
+        supabase,
+        user?.id ?? "",
+      );
+      const destination = getDashboardPathForRole(role, isAdmin);
       setTimeout(() => {
-        router.push("/dashboard/student");
+        router.push(destination);
       }, 800);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Login failure:", err);
-      setSnackbarMessage(err?.message || "An unexpected error occurred. Please try again.");
+      setSnackbarMessage(
+        err instanceof Error
+          ? err.message
+          : "An unexpected error occurred. Please try again.",
+      );
       setSnackbarSeverity("error");
       setSnackbarOpen(true);
     } finally {
@@ -137,9 +150,19 @@ const Login = () => {
         <div className="px-6 py-10 md:p-10 md:bg-white md:rounded-3xl md:shadow-2xl">
           {/* Logo - mobile only */}
           <div className="flex flex-col items-center mb-8">
-            <img src="/favicon.ico" alt="PAU Logo" className="w-14 h-14 mb-4 rounded-xl" />
-            <Typography variant="h3" weight="bold" className="mb-1">Welcome Back</Typography>
-            <Typography variant="body2" color="muted">Sign in to your student account</Typography>
+            <Image
+              src="/favicon.ico"
+              alt="PAU Logo"
+              width={56}
+              height={56}
+              className="w-14 h-14 mb-4 rounded-xl"
+            />
+            <Typography variant="h3" weight="bold" className="mb-1">
+              Welcome Back
+            </Typography>
+            <Typography variant="body2" color="muted">
+              Sign in to your student account
+            </Typography>
           </div>
 
           {snackbarOpen && snackbarSeverity === "error" && (
@@ -167,7 +190,12 @@ const Login = () => {
               {...register("password")}
             />
 
-            <Button type="submit" className="w-full !rounded-full" size="lg" isLoading={isLoading}>
+            <Button
+              type="submit"
+              className="w-full !rounded-full"
+              size="lg"
+              isLoading={isLoading}
+            >
               Log In
             </Button>
           </form>
@@ -179,9 +207,10 @@ const Login = () => {
               onClick={() => router.push("/onboarding")}
               className="text-sm"
             >
-              Don't have an account? <span className="underline font-bold ml-1">Sign Up</span>
+              Don&apos;t have an account?{" "}
+              <span className="underline font-bold ml-1">Sign Up</span>
             </Button>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <Button
                 variant="outline"
@@ -204,12 +233,16 @@ const Login = () => {
       </div>
 
       {snackbarOpen && (
-        <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300 z-[100] border ${
-          snackbarSeverity === "success" 
-            ? "bg-emerald-50 text-emerald-700 border-emerald-100" 
-            : "bg-red-50 text-red-700 border-red-100"
-        }`}>
-          <Typography variant="body2" weight="bold">{snackbarMessage}</Typography>
+        <div
+          className={`fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300 z-[100] border ${
+            snackbarSeverity === "success"
+              ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+              : "bg-red-50 text-red-700 border-red-100"
+          }`}
+        >
+          <Typography variant="body2" weight="bold">
+            {snackbarMessage}
+          </Typography>
         </div>
       )}
     </div>

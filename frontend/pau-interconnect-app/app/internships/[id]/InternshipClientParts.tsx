@@ -1,19 +1,22 @@
 "use client";
 
-import React, { useState } from "react";
-import { Send, Clock, CheckCircle2, X, Sparkles, AlertTriangle, Loader2 } from "lucide-react";
-import { 
-  Button, 
-  Modal, 
-  Typography, 
-  Stack, 
-  Textarea,
-} from "@/components/ui";
+import { useState } from "react";
+import {
+  Send,
+  Clock,
+  CheckCircle2,
+  X,
+  Sparkles,
+  AlertTriangle,
+  Loader2,
+  type LucideIcon,
+} from "lucide-react";
+import { Modal, Textarea } from "@/components/ui";
 import { cx } from "@/utils/cx";
-import { authenticatedFetch } from "@/lib/api";
+import { authenticatedFetch, authenticatedFetchStream } from "@/lib/api";
 
 interface InternshipClientPartsProps {
-  internship: any;
+  internship: { id: string; company?: string; role?: string };
   hasApplied: boolean;
   applicationStatus: string | null;
   matchingSkills: string[];
@@ -49,15 +52,21 @@ export default function InternshipClientParts({
           internship_id: internship.id,
           cover_letter: coverLetter,
           student_email: studentEmail,
-        })
+        }),
       });
 
       setHasApplied(true);
       setApplyModalOpen(false);
-      alert("Application submitted successfully! The employer has been notified.");
-    } catch (error: any) {
+      alert(
+        "Application submitted successfully! The employer has been notified.",
+      );
+    } catch (error: unknown) {
       console.error("Application error:", error);
-      alert(error?.message || "Failed to submit application.");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to submit application.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -65,36 +74,88 @@ export default function InternshipClientParts({
 
   const handleDraftCoverLetter = async () => {
     setIsDrafting(true);
+
+    // Clear letter only if drafting from scratch
+    if (!coverLetter) {
+      setCoverLetter("");
+    }
+
     try {
-      const data = await authenticatedFetch("/draft-cover-letter", {
-        method: "POST",
-        body: JSON.stringify({ 
-          user_id: userId, 
-          internship_id: internship.id,
-          existing_letter: coverLetter 
-        }),
-      });
-      
-      if (data.cover_letter) {
-        setCoverLetter(data.cover_letter);
+      const response = await authenticatedFetchStream(
+        "/draft-cover-letter-stream",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            user_id: userId,
+            internship_id: internship.id,
+            existing_letter: coverLetter,
+          }),
+        },
+      );
+
+      if (!response.body)
+        throw new Error("No response body returned from stream.");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let streamFinished = false;
+
+      // Clear letter before stream starts appending if we are replacing it
+      setCoverLetter("");
+
+      while (!streamFinished) {
+        const { done, value } = await reader.read();
+        if (done) {
+          streamFinished = true;
+          break;
+        }
+        if (value) {
+          const chunkText = decoder.decode(value, { stream: true });
+          setCoverLetter((prev) => prev + chunkText);
+        }
       }
-    } catch (error: any) {
-      console.error("Drafting error:", error);
-      alert(error.message || "An error occurred while drafting the cover letter.");
+    } catch (error: unknown) {
+      console.error("Drafting stream error:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "An error occurred while drafting the cover letter.",
+      );
     } finally {
       setIsDrafting(false);
     }
   };
 
-  const statusConfig: Record<string, { label: string; icon: any; className: string }> = {
-    accepted: { label: "Application Approved", icon: CheckCircle2, className: "bg-emerald-600 hover:bg-emerald-600" },
-    rejected: { label: "Application Denied", icon: X, className: "bg-red-500 hover:bg-red-500" },
-    pending: { label: "Application Pending", icon: Clock, className: "bg-indigo-600 hover:bg-indigo-600" },
-    applied: { label: "Application Pending", icon: Clock, className: "bg-indigo-600 hover:bg-indigo-600" },
+  const statusConfig: Record<
+    string,
+    { label: string; icon: LucideIcon; className: string }
+  > = {
+    accepted: {
+      label: "Application Approved",
+      icon: CheckCircle2,
+      className: "bg-emerald-600 hover:bg-emerald-600",
+    },
+    rejected: {
+      label: "Application Denied",
+      icon: X,
+      className: "bg-red-500 hover:bg-red-500",
+    },
+    pending: {
+      label: "Application Pending",
+      icon: Clock,
+      className: "bg-indigo-600 hover:bg-indigo-600",
+    },
+    applied: {
+      label: "Application Pending",
+      icon: Clock,
+      className: "bg-indigo-600 hover:bg-indigo-600",
+    },
   };
 
   const appStatus = applicationStatus?.toLowerCase() || "";
-  const statusData = hasApplied ? statusConfig[appStatus] || statusConfig.pending : null;
+  const statusData = hasApplied
+    ? statusConfig[appStatus] || statusConfig.pending
+    : null;
 
   return (
     <>
@@ -106,8 +167,11 @@ export default function InternshipClientParts({
           className={cx(
             "w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white transition-colors",
             hasApplied
-              ? cx("cursor-default opacity-90", statusData?.className || "bg-indigo-600")
-              : "bg-slate-800 hover:bg-slate-700"
+              ? cx(
+                  "cursor-default opacity-90",
+                  statusData?.className || "bg-indigo-600",
+                )
+              : "bg-slate-800 hover:bg-slate-700",
           )}
         >
           {hasApplied && statusData ? (
@@ -122,7 +186,7 @@ export default function InternshipClientParts({
             </>
           )}
         </button>
-        
+
         {/* AI Review Button */}
         <button
           onClick={() => setCvReviewModalOpen(true)}
@@ -151,10 +215,13 @@ export default function InternshipClientParts({
               ) : (
                 <Sparkles className="w-4 h-4 text-amber-500" />
               )}
-              {isDrafting 
-                ? (coverLetter.trim() ? "Enhancing..." : "Drafting...") 
-                : (coverLetter.trim() ? "Enhance with AI" : "Draft with AI")
-              }
+              {isDrafting
+                ? coverLetter.trim()
+                  ? "Enhancing..."
+                  : "Drafting..."
+                : coverLetter.trim()
+                  ? "Enhance with AI"
+                  : "Draft with AI"}
             </button>
             <button
               onClick={handleApply}
@@ -173,12 +240,15 @@ export default function InternshipClientParts({
       >
         <div className="space-y-4">
           <div className="bg-indigo-50/70 p-4 rounded-lg border border-indigo-100">
-            <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wider mb-1">Why you?</p>
+            <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wider mb-1">
+              Why you?
+            </p>
             <p className="text-sm text-slate-600">
-              Share a brief statement about why you're interested in this role at {internship.company}.
+              Share a brief statement about why you&apos;re interested in this
+              role at {internship.company}.
             </p>
           </div>
-          
+
           <Textarea
             label="Cover Letter"
             placeholder="Tell us about yourself and why you're a good fit..."
@@ -199,7 +269,11 @@ export default function InternshipClientParts({
       >
         <div className="space-y-5">
           <p className="text-sm text-slate-400">
-            Your profile compared against the requirements for <span className="font-medium text-slate-600">{internship.role || "this position"}</span>.
+            Your profile compared against the requirements for{" "}
+            <span className="font-medium text-slate-600">
+              {internship.role || "this position"}
+            </span>
+            .
           </p>
 
           <div className="space-y-4">
@@ -211,7 +285,10 @@ export default function InternshipClientParts({
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {matchingSkills.map((skill, index) => (
-                    <span key={index} className="px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-medium">
+                    <span
+                      key={index}
+                      className="px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-medium"
+                    >
                       {skill}
                     </span>
                   ))}
@@ -223,24 +300,29 @@ export default function InternshipClientParts({
               <div className="bg-amber-50/60 border border-amber-100 p-4 rounded-xl space-y-3">
                 <div className="flex items-center gap-2 text-amber-600">
                   <AlertTriangle className="w-4 h-4" />
-                  <span className="text-sm font-semibold">Missing keywords</span>
+                  <span className="text-sm font-semibold">
+                    Missing keywords
+                  </span>
                 </div>
                 <p className="text-sm text-amber-800/70 leading-relaxed">
-                  Recruiters look for <strong>{missingSkills.join(", ")}</strong>. Consider adding these to your profile if applicable.
-                </p>
-              </div>
-            )}
-            
-            {matchingSkills.length === 0 && missingSkills.length === 0 && (
-              <div className="bg-slate-50 border border-slate-100 p-6 rounded-xl text-center">
-                <p className="text-sm text-slate-400">
-                  Resume analysis is still processing or unavailable for this listing.
+                  Recruiters look for{" "}
+                  <strong>{missingSkills.join(", ")}</strong>. Consider adding
+                  these to your profile if applicable.
                 </p>
               </div>
             )}
 
-            <button 
-              onClick={() => setCvReviewModalOpen(false)} 
+            {matchingSkills.length === 0 && missingSkills.length === 0 && (
+              <div className="bg-slate-50 border border-slate-100 p-6 rounded-xl text-center">
+                <p className="text-sm text-slate-400">
+                  Resume analysis is still processing or unavailable for this
+                  listing.
+                </p>
+              </div>
+            )}
+
+            <button
+              onClick={() => setCvReviewModalOpen(false)}
               className="w-full py-2.5 bg-slate-800 text-white rounded-lg text-sm font-semibold hover:bg-slate-700 transition-colors mt-2"
             >
               Got it

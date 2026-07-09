@@ -1,23 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import {
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  Input,
-  Typography,
-  Stack,
-} from "@/components/ui";
-
-const adminAccounts = [
-  { email: "admin@pau.edu.ng", password: "admin123" },
-  { email: "supervisor@pau.edu.ng", password: "super456" },
-  { email: "head@pau.edu.ng", password: "admin789" },
-];
+import { Button, Input, Typography } from "@/components/ui";
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -37,7 +24,10 @@ export default function AdminLogin() {
     try {
       // 1. Authenticate with Supabase
       const { data: authData, error: authError } =
-        await supabase.auth.signInWithPassword({ email: cleanEmail, password: cleanPassword });
+        await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: cleanPassword,
+        });
 
       if (authError) throw authError;
 
@@ -68,8 +58,10 @@ export default function AdminLogin() {
 
       // 3. Redirect to admin dashboard
       router.push("/dashboard/admin");
-    } catch (err: any) {
-      setError(err.message || "Login failed. Please try again.");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "Login failed. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -80,9 +72,19 @@ export default function AdminLogin() {
       <div className="w-full max-w-md md:mx-6">
         <div className="px-6 py-10 md:p-10 md:bg-white md:rounded-3xl md:shadow-2xl">
           <div className="flex flex-col items-center mb-8">
-            <img src="/favicon.ico" alt="PAU Logo" className="w-14 h-14 mb-4 rounded-xl" />
-            <Typography variant="h3" weight="bold" className="mb-1">Admin Portal</Typography>
-            <Typography variant="body2" color="muted">Sign in with your administrator credentials</Typography>
+            <Image
+              src="/favicon.ico"
+              alt="PAU Logo"
+              width={56}
+              height={56}
+              className="w-14 h-14 mb-4 rounded-xl"
+            />
+            <Typography variant="h3" weight="bold" className="mb-1">
+              Admin Portal
+            </Typography>
+            <Typography variant="body2" color="muted">
+              Sign in with your administrator credentials
+            </Typography>
           </div>
 
           {error && (
@@ -112,9 +114,9 @@ export default function AdminLogin() {
               required
             />
 
-            <Button 
-              type="submit" 
-              className="w-full !rounded-full" 
+            <Button
+              type="submit"
+              className="w-full !rounded-full"
               size="lg"
               isLoading={loading}
             >
@@ -122,10 +124,13 @@ export default function AdminLogin() {
             </Button>
           </form>
 
-          <Typography variant="body2" className="text-center mt-8 text-slate-500">
+          <Typography
+            variant="body2"
+            className="text-center mt-8 text-slate-500"
+          >
             Not an admin?{" "}
-            <span 
-              className="text-brand cursor-pointer font-bold hover:underline" 
+            <span
+              className="text-brand cursor-pointer font-bold hover:underline"
               onClick={() => router.push("/")}
             >
               Go back home

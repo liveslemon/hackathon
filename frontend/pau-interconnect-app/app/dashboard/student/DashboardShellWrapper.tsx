@@ -1,13 +1,17 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import DashboardShell from "@/components/DashboardShell";
+import type { Profile } from "@/types/domain";
 
 interface DashboardShellWrapperProps {
   children: React.ReactNode;
-  userProfile?: any;
+  userProfile?: Partial<Profile> | null;
 }
 
-export default function DashboardShellWrapper({ children, userProfile }: DashboardShellWrapperProps) {
+export default function DashboardShellWrapper({
+  children,
+  userProfile,
+}: DashboardShellWrapperProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const onSearchChange = (query: string) => {
@@ -22,12 +26,13 @@ export default function DashboardShellWrapper({ children, userProfile }: Dashboa
       setSearchQuery(query || "");
     };
     window.addEventListener("gridSearchChange", handleGridSearch);
-    return () => window.removeEventListener("gridSearchChange", handleGridSearch);
+    return () =>
+      window.removeEventListener("gridSearchChange", handleGridSearch);
   }, []);
 
   return (
-    <DashboardShell 
-      userProfile={userProfile} 
+    <DashboardShell
+      userProfile={userProfile}
       searchQuery={searchQuery}
       onSearchChange={onSearchChange}
     >

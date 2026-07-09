@@ -1,15 +1,18 @@
 "use client";
 import React, { useState } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button, Stack, Typography, Divider } from "@/components/ui";
-import { LogOut, Search, Command } from "lucide-react";
+import { LogOut, Search } from "lucide-react";
 import { cx } from "@/utils/cx";
 import SearchOverlay from "@/components/SearchOverlay";
 
-import DashboardShell from "@/components/DashboardShell";
-
-export default function AdminClient({ children }: { children: React.ReactNode }) {
+export default function AdminClient({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTab = searchParams?.get("tab") || "overview";
@@ -31,16 +34,24 @@ export default function AdminClient({ children }: { children: React.ReactNode })
   const handleLogout = async () => {
     if (isLoggingOut) return;
     setIsLoggingOut(true);
-    
+
     try {
-      localStorage.clear();
-      await Promise.all([
-        supabase.auth.signOut(),
-        fetch("/api/auth/logout", { method: "POST" })
-      ]);
+      // 1. Sign out from Supabase client (requires active session token in storage)
+      await supabase.auth.signOut();
     } catch (err) {
-      console.warn("Logout network issue:", err);
+      console.warn("Supabase signOut error:", err);
     }
+
+    try {
+      // 2. Clear cookies on the server
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (err) {
+      console.warn("Server cookie logout error:", err);
+    }
+
+    // 3. Clear other local storage
+    localStorage.clear();
+
     router.refresh();
     router.push("/");
   };
@@ -51,8 +62,16 @@ export default function AdminClient({ children }: { children: React.ReactNode })
       <div className="max-w-7xl mx-auto">
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 bg-white/80 backdrop-blur-md p-6 rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <Stack direction="row" align="center" spacing={4}>
-            <img src="/favicon.ico" alt="PAU Logo" className="w-10 h-10 rounded-xl shadow-sm" />
-            <Typography variant="h4" weight="bold">Admin Control Center</Typography>
+            <Image
+              src="/favicon.ico"
+              alt="PAU Logo"
+              width={40}
+              height={40}
+              className="w-10 h-10 rounded-xl shadow-sm"
+            />
+            <Typography variant="h4" weight="bold">
+              Admin Control Center
+            </Typography>
           </Stack>
 
           <div className="flex-1 max-w-md w-full relative group">
@@ -73,7 +92,13 @@ export default function AdminClient({ children }: { children: React.ReactNode })
             size="sm"
             onClick={handleLogout}
             disabled={isLoggingOut}
-            leftIcon={isLoggingOut ? <div className="w-4 h-4 rounded-full border-2 border-red-500 border-t-transparent animate-spin" /> : <LogOut className="w-4 h-4" />}
+            leftIcon={
+              isLoggingOut ? (
+                <div className="w-4 h-4 rounded-full border-2 border-red-500 border-t-transparent animate-spin" />
+              ) : (
+                <LogOut className="w-4 h-4" />
+              )
+            }
             className={`rounded-xl transition-all ${isLoggingOut ? "opacity-50 cursor-not-allowed border-red-200 text-red-500 bg-red-50" : "border-slate-200 hover:border-red-200 hover:text-red-500 hover:bg-red-50"}`}
           >
             {isLoggingOut ? "Logging out..." : "Logout"}
@@ -90,9 +115,9 @@ export default function AdminClient({ children }: { children: React.ReactNode })
               onClick={() => handleTabChange(tab.key)}
               className={cx(
                 "px-8 rounded-xl font-bold transition-all duration-300",
-                activeTab === tab.key 
-                  ? "shadow-sm border-brand" 
-                  : "bg-white border-slate-100 text-slate-600 hover:border-brand hover:text-brand"
+                activeTab === tab.key
+                  ? "shadow-sm border-brand"
+                  : "bg-white border-slate-100 text-slate-600 hover:border-brand hover:text-brand",
               )}
             >
               {tab.label}

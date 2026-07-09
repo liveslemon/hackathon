@@ -1,15 +1,20 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { supabaseFetch } from "./supabase-fetch";
+import { getBackendUrl } from "./env";
+import { logger } from "./logger";
+import { ApiError, isApiErrorPayload, toApiErrorMessage } from "@/types/api";
+import type { AuthSessionLike } from "@/types/domain";
 
-const isDev = process.env.NODE_ENV === "development";
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || (isDev ? "http://localhost:8000" : "https://pau-interconnect-backend.onrender.com");
+const BACKEND_URL = getBackendUrl();
 
 /**
  * Server-only version of auth header retrieval.
  * Uses next/headers to get cookies for supabase session.
  */
-async function getAuthHeadersServer(existingSession?: any): Promise<Record<string, string>> {
+async function getAuthHeadersServer(
+  existingSession?: AuthSessionLike,
+): Promise<Record<string, string>> {
   if (existingSession) {
     return { Authorization: `Bearer ${existingSession.access_token}` };
   }
@@ -21,14 +26,18 @@ async function getAuthHeadersServer(existingSession?: any): Promise<Record<strin
     {
       global: { fetch: supabaseFetch },
       cookies: {
-        getAll() { return cookieStore.getAll(); },
-        setAll() {} // Read-only for access tokens
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll() {}, // Read-only for access tokens
       },
-    }
+    },
   );
 
-  const { data: { session } } = await supabase.auth.getSession();
-  
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
   if (!session) return {};
   return {
     Authorization: `Bearer ${session.access_token}`,
@@ -39,9 +48,14 @@ async function getAuthHeadersServer(existingSession?: any): Promise<Record<strin
  * Reusable fetch wrapper for Server Components.
  * Automatically attaches the Supabase JWT.
  */
-export async function authenticatedFetchServer(endpoint: string, options: RequestInit = {}, timeoutMs: number = 15000, session?: any) {
+export async function authenticatedFetchServer<TResponse = unknown>(
+  endpoint: string,
+  options: RequestInit = {},
+  timeoutMs: number = 15000,
+  session?: AuthSessionLike,
+) {
   const authHeaders = await getAuthHeadersServer(session);
-  
+
   const headers: Record<string, string> = {
     ...authHeaders,
     ...(options.headers as Record<string, string>),
@@ -51,11 +65,13 @@ export async function authenticatedFetchServer(endpoint: string, options: Reques
     headers["Content-Type"] = "application/json";
   }
 
-  const url = endpoint.startsWith("http") ? endpoint : `${BACKEND_URL}${endpoint}`;
-  
+  const url = endpoint.startsWith("http")
+    ? endpoint
+    : `${BACKEND_URL}${endpoint}`;
+
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
-  
+
   try {
     const response = await fetch(url, {
       ...options,
@@ -64,17 +80,23 @@ export async function authenticatedFetchServer(endpoint: string, options: Reques
     });
 
     clearTimeout(id);
-    const data = await response.json().catch(() => ({}));
+    const data: unknown = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(data.detail || data.error || `Request failed with status ${response.status}`);
+      throw new ApiError(toApiErrorMessage(data, response.status), {
+        status: response.status,
+        payload: isApiErrorPayload(data) ? data : undefined,
+      });
     }
 
-    return data;
-  } catch (error: any) {
-    if (error.name === 'AbortError') {
-      throw new Error("Request timed out (Server Fetch). The backend may be busy.");
+    return data as TResponse;
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new ApiError(
+        "Request timed out (Server Fetch). The backend may be busy.",
+      );
     }
+    logger.error("api-server", "Server fetch failed", error);
     throw error;
   } finally {
     clearTimeout(id);

@@ -1,21 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import PostInternshipView from "./post/PostInternshipView";
-import {
-  Button,
-  Stack,
-  Typography,
-  Divider,
-} from "@/components/ui";
+import { Button, Stack, Typography, Divider } from "@/components/ui";
 import { FiLogOut, FiPieChart, FiPlusSquare } from "react-icons/fi";
 import AnalyticsView from "./AnalyticsView";
+import type { Session } from "@supabase/supabase-js";
 
-export default function DashboardClient({ session }: { session: any }) {
+export default function DashboardClient({
+  session,
+}: {
+  session: Session | null;
+}) {
   const [activeTab, setActiveTab] = useState("analytics");
-  const [categories, setCategories] = useState<{ label: string; value: number }[]>([]);
+  const [categories, setCategories] = useState<
+    { label: string; value: number }[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -28,18 +31,22 @@ export default function DashboardClient({ session }: { session: any }) {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase.from("internships").select("category");
-        
+        const { data, error } = await supabase
+          .from("internships")
+          .select("category");
+
         if (!error && data) {
           const counts: Record<string, number> = {};
           data.forEach((item) => {
             const category = item.category || "Unknown";
             counts[category] = (counts[category] || 0) + 1;
           });
-          const categoryArray = Object.entries(counts).map(([label, value]) => ({
-            label,
-            value,
-          }));
+          const categoryArray = Object.entries(counts).map(
+            ([label, value]) => ({
+              label,
+              value,
+            }),
+          );
           setCategories(categoryArray);
         }
       } catch (err) {
@@ -59,15 +66,22 @@ export default function DashboardClient({ session }: { session: any }) {
     setIsLoggingOut(true);
 
     try {
-      localStorage.clear();
-      await Promise.all([
-        supabase.auth.signOut(),
-        fetch("/api/auth/logout", { method: "POST" })
-      ]);
+      // 1. Sign out from Supabase client (requires active session token in storage)
+      await supabase.auth.signOut();
     } catch (err) {
-      console.warn("Logout network issue:", err);
+      console.warn("Supabase signOut error:", err);
     }
-    
+
+    try {
+      // 2. Clear cookies on the server
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (err) {
+      console.warn("Server cookie logout error:", err);
+    }
+
+    // 3. Clear other local storage
+    localStorage.clear();
+
     router.push("/");
   };
 
@@ -85,11 +99,21 @@ export default function DashboardClient({ session }: { session: any }) {
         <header className="flex justify-between items-center bg-white/60 backdrop-blur-xl p-6 rounded-[32px] border border-white shadow-xl shadow-indigo-50/50">
           <Stack direction="row" align="center" spacing={4}>
             <div className="w-12 h-12 bg-gradient-to-br from-brand to-brand-secondary rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
-              <img src="/favicon.ico" alt="Logo" className="w-8 h-8 opacity-90" />
+              <Image
+                src="/favicon.ico"
+                alt="Logo"
+                width={32}
+                height={32}
+                className="w-8 h-8 opacity-90"
+              />
             </div>
             <div>
-              <Typography variant="h4" weight="bold">Admin Portal</Typography>
-              <Typography variant="caption" weight="semibold" color="muted">Manage your platform ecosystem</Typography>
+              <Typography variant="h4" weight="bold">
+                Admin Portal
+              </Typography>
+              <Typography variant="caption" weight="semibold" color="muted">
+                Manage your platform ecosystem
+              </Typography>
             </div>
           </Stack>
 
@@ -98,8 +122,14 @@ export default function DashboardClient({ session }: { session: any }) {
             size="sm"
             onClick={handleLogout}
             disabled={isLoggingOut}
-            leftIcon={isLoggingOut ? <div className="w-4 h-4 rounded-full border-2 border-red-500 border-t-transparent animate-spin" /> : <FiLogOut className="w-4 h-4" />}
-            className={`rounded-xl transition-all font-bold ${isLoggingOut ? 'opacity-50 cursor-not-allowed border-red-200 text-red-500 bg-red-50' : 'border-slate-200 hover:border-red-200 hover:text-red-500 hover:bg-red-50'}`}
+            leftIcon={
+              isLoggingOut ? (
+                <div className="w-4 h-4 rounded-full border-2 border-red-500 border-t-transparent animate-spin" />
+              ) : (
+                <FiLogOut className="w-4 h-4" />
+              )
+            }
+            className={`rounded-xl transition-all font-bold ${isLoggingOut ? "opacity-50 cursor-not-allowed border-red-200 text-red-500 bg-red-50" : "border-slate-200 hover:border-red-200 hover:text-red-500 hover:bg-red-50"}`}
           >
             {isLoggingOut ? "Logging out..." : "Logout"}
           </Button>
@@ -111,8 +141,8 @@ export default function DashboardClient({ session }: { session: any }) {
             onClick={() => setActiveTab("analytics")}
             leftIcon={<FiPieChart className="w-5 h-5" />}
             className={`px-8 h-14 rounded-2xl font-bold transition-all duration-300 ${
-              activeTab === "analytics" 
-                ? "shadow-xl shadow-indigo-100" 
+              activeTab === "analytics"
+                ? "shadow-xl shadow-indigo-100"
                 : "bg-white border-slate-100 text-slate-500 hover:border-brand hover:text-brand"
             }`}
           >
@@ -123,8 +153,8 @@ export default function DashboardClient({ session }: { session: any }) {
             onClick={() => setActiveTab("post")}
             leftIcon={<FiPlusSquare className="w-5 h-5" />}
             className={`px-8 h-14 rounded-2xl font-bold transition-all duration-300 ${
-              activeTab === "post" 
-                ? "shadow-xl shadow-indigo-100" 
+              activeTab === "post"
+                ? "shadow-xl shadow-indigo-100"
                 : "bg-white border-slate-100 text-slate-500 hover:border-brand hover:text-brand"
             }`}
           >
@@ -135,7 +165,9 @@ export default function DashboardClient({ session }: { session: any }) {
         <Divider className="opacity-40" />
 
         <main className="animate-in fade-in slide-in-from-bottom-6 duration-500 fill-mode-both">
-          {activeTab === "analytics" && <AnalyticsView categories={categories} />}
+          {activeTab === "analytics" && (
+            <AnalyticsView categories={categories} />
+          )}
           {activeTab === "post" && <PostInternshipView />}
         </main>
       </div>

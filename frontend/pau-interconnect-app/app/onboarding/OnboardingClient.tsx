@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import {
@@ -8,9 +8,9 @@ import {
   Stack,
   Input,
 } from "@/components/ui";
-import { AiOutlineArrowLeft, AiOutlineArrowRight } from "react-icons/ai";
 import { FileUpload } from "@/components/application/file-upload/file-upload-base";
 import { authenticatedFetch } from "@/lib/api";
+import type { User } from "@supabase/supabase-js";
 
 // --- Data ---
 const courses = ["Computer Science", "Engineering", "Business Administration", "Economics", "Biology", "Chemistry", "Physics", "Mathematics", "Design", "Marketing"];
@@ -37,7 +37,14 @@ function simulateUploadProgress(file: File, onProgress: (progress: number) => vo
   }, 25);
 }
 
-export default function OnboardingClient({ initialUser }: { initialUser: any }) {
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return "Something went wrong.";
+}
+
+export default function OnboardingClient({ initialUser }: { initialUser: User | null }) {
   const [step, setStep] = useState(initialUser ? 2 : 1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [optimisticMessage, setOptimisticMessage] = useState("");
@@ -116,8 +123,8 @@ export default function OnboardingClient({ initialUser }: { initialUser: any }) 
       }
 
       setStep(5);
-    } catch (err: any) {
-      setSnackbar({ open: true, message: err.message, severity: "error" });
+    } catch (err: unknown) {
+      setSnackbar({ open: true, message: getErrorMessage(err), severity: "error" });
     } finally {
       setIsSubmitting(false);
     }
@@ -180,7 +187,7 @@ export default function OnboardingClient({ initialUser }: { initialUser: any }) 
           )}
           {step === 5 && (
             <div className="text-center py-10">
-               <Typography variant="h3">You're all set!</Typography>
+               <Typography variant="h3">You&apos;re all set!</Typography>
                <Typography color="muted" className="mt-4">Check your email for verification. You can now proceed to the dashboard.</Typography>
                <Button className="mt-8" onClick={() => router.push("/dashboard/student")}>Go to Dashboard</Button>
             </div>

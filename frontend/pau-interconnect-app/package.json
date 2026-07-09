@@ -6,7 +6,14 @@
     "dev": "NODE_OPTIONS=--dns-result-order=ipv4first next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:ci": "vitest run --reporter=dot",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "verify": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "check:env": "node scripts/health/check-env.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -45,7 +52,9 @@
     "baseline-browser-mapping": "^2.10.8",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "jsdom": "^26.1.0",
     "tailwindcss": "^4.2.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   }
 }

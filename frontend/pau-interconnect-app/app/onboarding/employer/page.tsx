@@ -1,32 +1,37 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from "@/lib/supabaseClient";
-import {
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  Input,
-  Textarea,
-  Typography,
-  Stack,
-} from "@/components/ui";
+import { Button, Input, Textarea, Typography } from "@/components/ui";
 
 const employerSchema = z.object({
   companyName: z.string().min(2, "Company name must be at least 2 characters."),
   email: z.string().email("Please enter a valid work email."),
   password: z.string().min(8, "Password must be at least 8 characters."),
-  companyDescription: z.string().min(15, "Please provide a slightly longer description."),
+  companyDescription: z
+    .string()
+    .min(15, "Please provide a slightly longer description."),
 });
 type EmployerForm = z.infer<typeof employerSchema>;
 
 export default function EmployerOnboarding() {
-  const { register, handleSubmit, formState: { errors } } = useForm<EmployerForm>({
+  const getErrorMessage = (err: unknown): string => {
+    if (err instanceof Error) {
+      return err.message;
+    }
+    return "Registration failed.";
+  };
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<EmployerForm>({
     resolver: zodResolver(employerSchema),
   });
   const [loading, setLoading] = useState(false);
@@ -49,22 +54,24 @@ export default function EmployerOnboarding() {
 
       // 2. Insert Profile Data
       if (authData.user) {
-         const updates = {
-            id: authData.user.id,
-            full_name: companyName, // Treating Company Name as Full Name for Fallbacks
-            company_name: companyName,
-            company_description: companyDescription,
-            role: "employer",
-            updated_at: new Date().toISOString(),
-         };
+        const updates = {
+          id: authData.user.id,
+          full_name: companyName, // Treating Company Name as Full Name for Fallbacks
+          company_name: companyName,
+          company_description: companyDescription,
+          role: "employer",
+          updated_at: new Date().toISOString(),
+        };
 
-         const { error: profileError } = await supabase.from("profiles").upsert(updates);
-         if (profileError) throw profileError;
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .upsert(updates);
+        if (profileError) throw profileError;
       }
 
       router.push("/dashboard/employer");
-    } catch (err: any) {
-      setErrorMsg(err.message || "Registration failed.");
+    } catch (err: unknown) {
+      setErrorMsg(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -75,9 +82,20 @@ export default function EmployerOnboarding() {
       <div className="w-full max-w-xl md:mx-6">
         <div className="px-6 py-10 md:p-10 md:bg-white md:rounded-3xl md:shadow-2xl md:border md:border-slate-100">
           <div className="flex flex-col items-center mb-8">
-            <img src="/favicon.ico" alt="PAU Logo" className="w-14 h-14 mb-4 rounded-xl" />
-            <Typography variant="h3" weight="bold" className="mb-1">Register Your Company</Typography>
-            <Typography variant="body2" color="muted">Create an employer account to post internships and discover talent.</Typography>
+            <Image
+              src="/favicon.ico"
+              alt="PAU Logo"
+              width={56}
+              height={56}
+              className="w-14 h-14 mb-4 rounded-xl"
+            />
+            <Typography variant="h3" weight="bold" className="mb-1">
+              Register Your Company
+            </Typography>
+            <Typography variant="body2" color="muted">
+              Create an employer account to post internships and discover
+              talent.
+            </Typography>
           </div>
 
           {errorMsg && (
@@ -122,9 +140,9 @@ export default function EmployerOnboarding() {
               {...register("companyDescription")}
             />
 
-            <Button 
-              type="submit" 
-              className="w-full !rounded-full" 
+            <Button
+              type="submit"
+              className="w-full !rounded-full"
               size="lg"
               isLoading={loading}
             >
@@ -134,14 +152,14 @@ export default function EmployerOnboarding() {
 
           <Typography variant="body2" className="text-center mt-8">
             Already registered?{" "}
-            <span 
-              className="text-brand cursor-pointer font-bold hover:underline" 
+            <span
+              className="text-brand cursor-pointer font-bold hover:underline"
               onClick={() => router.push("/login/employer")}
             >
               Sign in
             </span>
           </Typography>
-          
+
           <Button
             variant="ghost"
             onClick={() => router.push("/")}

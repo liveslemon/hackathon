@@ -1,45 +1,50 @@
 import React from "react";
-import {
-  Typography,
-  Card,
-  CardContent,
-  Stack,
-  Badge,
-} from "@/components/ui";
-import {
-  FiBriefcase,
-  FiUsers,
-  FiTrendingUp,
-} from "react-icons/fi";
+import { Typography, Card, CardContent, Stack, Badge } from "@/components/ui";
+import { FiBriefcase, FiUsers, FiTrendingUp } from "react-icons/fi";
 import { authenticatedFetchServer } from "@/lib/api-server";
 import AnalyticsCharts from "./AnalyticsCharts";
+
+type InternshipStat = {
+  title: string;
+  company: string;
+  category?: string;
+  deadline?: string;
+  applications: number;
+};
+
+type AnalyticsResponse = {
+  total_internships?: number;
+  total_applications?: number;
+  avg_applications?: string;
+  internship_stats?: InternshipStat[];
+};
 
 export default async function AnalyticsView() {
   let totalInternships = 0;
   let totalApplications = 0;
   let avgApplications = "0.0";
-  let categories: {label: string, value: number}[] = [];
-  let internshipStats: any[] = [];
+  let internshipStats: InternshipStat[] = [];
   let error: string | null = null;
 
   try {
-    const data = await authenticatedFetchServer("/admin/analytics");
-    
+    const data =
+      await authenticatedFetchServer<AnalyticsResponse>("/admin/analytics");
+
     totalInternships = data.total_internships || 0;
     totalApplications = data.total_applications || 0;
     avgApplications = data.avg_applications || "0.0";
-    categories = data.categories || [];
     internshipStats = data.internship_stats || [];
-    
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("Error fetching analytics:", e);
-    error = e.message || "Failed to load analytics";
+    error = e instanceof Error ? e.message : "Failed to load analytics";
   }
 
   if (error) {
     return (
       <div className="bg-red-50 text-red-700 p-6 rounded-3xl border border-red-100 mb-8">
-        <Typography variant="body1" weight="bold">{error}</Typography>
+        <Typography variant="body1" weight="bold">
+          {error}
+        </Typography>
       </div>
     );
   }
@@ -51,8 +56,16 @@ export default async function AnalyticsView() {
           <CardContent className="p-8 text-white">
             <Stack direction="row" justify="between" align="center">
               <div>
-                <Typography variant="body2" weight="bold" className="uppercase tracking-widest opacity-80 mb-2">Total Internships</Typography>
-                <Typography variant="h1" className="text-white">{totalInternships}</Typography>
+                <Typography
+                  variant="body2"
+                  weight="bold"
+                  className="uppercase tracking-widest opacity-80 mb-2"
+                >
+                  Total Internships
+                </Typography>
+                <Typography variant="h1" className="text-white">
+                  {totalInternships}
+                </Typography>
               </div>
               <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
                 <FiBriefcase className="w-8 h-8" />
@@ -60,13 +73,21 @@ export default async function AnalyticsView() {
             </Stack>
           </CardContent>
         </Card>
-        
+
         <Card className="flex-1 min-w-[280px] bg-gradient-to-br from-blue-500 to-blue-600 border-none shadow-xl shadow-blue-100">
           <CardContent className="p-8 text-white">
             <Stack direction="row" justify="between" align="center">
               <div>
-                <Typography variant="body2" weight="bold" className="uppercase tracking-widest opacity-80 mb-2">Total Applications</Typography>
-                <Typography variant="h1" className="text-white">{totalApplications}</Typography>
+                <Typography
+                  variant="body2"
+                  weight="bold"
+                  className="uppercase tracking-widest opacity-80 mb-2"
+                >
+                  Total Applications
+                </Typography>
+                <Typography variant="h1" className="text-white">
+                  {totalApplications}
+                </Typography>
               </div>
               <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
                 <FiUsers className="w-8 h-8" />
@@ -79,8 +100,16 @@ export default async function AnalyticsView() {
           <CardContent className="p-8 text-white">
             <Stack direction="row" justify="between" align="center">
               <div>
-                <Typography variant="body2" weight="bold" className="uppercase tracking-widest opacity-80 mb-2">Avg Applications</Typography>
-                <Typography variant="h1" className="text-white">{avgApplications}</Typography>
+                <Typography
+                  variant="body2"
+                  weight="bold"
+                  className="uppercase tracking-widest opacity-80 mb-2"
+                >
+                  Avg Applications
+                </Typography>
+                <Typography variant="h1" className="text-white">
+                  {avgApplications}
+                </Typography>
               </div>
               <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
                 <FiTrendingUp className="w-8 h-8" />
@@ -93,24 +122,35 @@ export default async function AnalyticsView() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         <Card className="border-slate-100 shadow-sm">
           <CardContent className="p-8">
-            <Typography variant="h4" weight="bold" className="mb-8">Application Volume (Top 10 Roles)</Typography>
+            <Typography variant="h4" weight="bold" className="mb-8">
+              Application Volume (Top 10 Roles)
+            </Typography>
             <AnalyticsCharts internshipStats={internshipStats} />
           </CardContent>
         </Card>
 
         <Card className="border-slate-100 shadow-sm">
           <CardContent className="p-8">
-            <Typography variant="h4" weight="bold" className="mb-8">Most Applied Internships</Typography>
+            <Typography variant="h4" weight="bold" className="mb-8">
+              Most Applied Internships
+            </Typography>
             <div className="space-y-4">
               {(internshipStats || []).slice(0, 5).map((item, idx) => (
-                <div key={idx} className="group p-4 bg-slate-50/50 rounded-2xl border border-transparent hover:border-indigo-100 hover:bg-indigo-50/30 transition-all duration-300">
+                <div
+                  key={idx}
+                  className="group p-4 bg-slate-50/50 rounded-2xl border border-transparent hover:border-indigo-100 hover:bg-indigo-50/30 transition-all duration-300"
+                >
                   <Stack direction="row" align="center" justify="between">
                     <Stack direction="row" spacing={4} align="center">
                       <div className="w-10 h-10 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center font-bold text-indigo-500">
                         {idx + 1}
                       </div>
                       <div>
-                        <Typography variant="body1" weight="bold" className="group-hover:text-indigo-600 transition-colors uppercase tracking-tight">
+                        <Typography
+                          variant="body1"
+                          weight="bold"
+                          className="group-hover:text-indigo-600 transition-colors uppercase tracking-tight"
+                        >
                           {item.title}
                         </Typography>
                         <Typography variant="caption" color="muted">
@@ -118,7 +158,9 @@ export default async function AnalyticsView() {
                         </Typography>
                       </div>
                     </Stack>
-                    <Badge variant="primary" className="px-3 py-1.5 rounded-xl">{item.applications} Apps</Badge>
+                    <Badge variant="primary" className="px-3 py-1.5 rounded-xl">
+                      {item.applications} Apps
+                    </Badge>
                   </Stack>
                 </div>
               ))}
@@ -129,34 +171,95 @@ export default async function AnalyticsView() {
 
       <Card className="border-slate-100 shadow-sm overflow-hidden">
         <div className="bg-slate-50/50 px-8 py-6 border-b border-slate-100">
-          <Typography variant="h4" weight="bold">Detailed Application Overview</Typography>
+          <Typography variant="h4" weight="bold">
+            Detailed Application Overview
+          </Typography>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="px-8 py-4"><Typography variant="caption" weight="extrabold" color="muted">Company</Typography></th>
-                <th className="px-8 py-4"><Typography variant="caption" weight="extrabold" color="muted">Role</Typography></th>
-                <th className="px-8 py-4"><Typography variant="caption" weight="extrabold" color="muted">Category</Typography></th>
-                <th className="px-8 py-4"><Typography variant="caption" weight="extrabold" color="muted">Deadline</Typography></th>
-                <th className="px-8 py-4 text-center"><Typography variant="caption" weight="extrabold" color="muted">Applications</Typography></th>
+                <th className="px-8 py-4">
+                  <Typography
+                    variant="caption"
+                    weight="extrabold"
+                    color="muted"
+                  >
+                    Company
+                  </Typography>
+                </th>
+                <th className="px-8 py-4">
+                  <Typography
+                    variant="caption"
+                    weight="extrabold"
+                    color="muted"
+                  >
+                    Role
+                  </Typography>
+                </th>
+                <th className="px-8 py-4">
+                  <Typography
+                    variant="caption"
+                    weight="extrabold"
+                    color="muted"
+                  >
+                    Category
+                  </Typography>
+                </th>
+                <th className="px-8 py-4">
+                  <Typography
+                    variant="caption"
+                    weight="extrabold"
+                    color="muted"
+                  >
+                    Deadline
+                  </Typography>
+                </th>
+                <th className="px-8 py-4 text-center">
+                  <Typography
+                    variant="caption"
+                    weight="extrabold"
+                    color="muted"
+                  >
+                    Applications
+                  </Typography>
+                </th>
               </tr>
             </thead>
             <tbody>
               {(internshipStats || []).map((row, idx) => (
-                <tr key={idx} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
-                  <td className="px-8 py-5"><Typography variant="body2" weight="semibold">{row.company}</Typography></td>
-                  <td className="px-8 py-5"><Typography variant="body2">{row.title}</Typography></td>
+                <tr
+                  key={idx}
+                  className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors"
+                >
                   <td className="px-8 py-5">
-                    <Badge variant="slate" size="sm">{row.category}</Badge>
+                    <Typography variant="body2" weight="semibold">
+                      {row.company}
+                    </Typography>
+                  </td>
+                  <td className="px-8 py-5">
+                    <Typography variant="body2">{row.title}</Typography>
+                  </td>
+                  <td className="px-8 py-5">
+                    <Badge variant="slate" size="sm">
+                      {row.category}
+                    </Badge>
                   </td>
                   <td className="px-8 py-5">
                     <Typography variant="body2" color="muted">
-                      {row.deadline ? new Date(row.deadline).toLocaleDateString() : 'N/A'}
+                      {row.deadline
+                        ? new Date(row.deadline).toLocaleDateString()
+                        : "N/A"}
                     </Typography>
                   </td>
                   <td className="px-8 py-5 text-center">
-                    <Typography variant="body2" weight="bold" className="text-indigo-600">{row.applications}</Typography>
+                    <Typography
+                      variant="body2"
+                      weight="bold"
+                      className="text-indigo-600"
+                    >
+                      {row.applications}
+                    </Typography>
                   </td>
                 </tr>
               ))}

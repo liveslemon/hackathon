@@ -1,23 +1,102 @@
-import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import crossFetch from "cross-fetch";
 import { Suspense } from "react";
-import { Skeleton, Typography, Stack, Divider } from "@/components/ui";
-import { 
-  EmployerStatsSection, 
+import { Skeleton, Typography, Divider } from "@/components/ui";
+import {
+  EmployerStatsSection,
   EmployerQuickActionsSection,
   EmployerRecentApplicantsSection,
-  EmployerLogbookAlertsSection
+  EmployerLogbookAlertsSection,
 } from "./EmployerParts";
 import DashboardShellWrapper from "./DashboardShellWrapper";
 import { getSupabaseServer } from "@/lib/supabase-server";
+import {
+  getDevModeProfileForRole,
+  getDevModeRoleFromCookie,
+} from "@/lib/role-guard";
 
 export const revalidate = 0; // Fresh dashboard data
 
 export default async function EmployerDashboardPage() {
   const supabase = await getSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const cookieStore = await cookies();
+  const devRole = getDevModeRoleFromCookie(
+    cookieStore.get("dev_mode_role")?.value,
+  );
+  const devProfile = getDevModeProfileForRole(devRole);
+  const companyName =
+    typeof devProfile?.company_name === "string"
+      ? devProfile.company_name
+      : "Dev Mode Company";
+
+  if (devRole === "employer") {
+    return (
+      <DashboardShellWrapper userProfile={devProfile}>
+        <main className="max-w-6xl mx-auto py-12 px-6">
+          <div className="mb-12">
+            <Typography
+              variant="h2"
+              weight="bold"
+              className="text-slate-900 tracking-tight mb-1"
+            >
+              Recruitment Overview
+            </Typography>
+            <Typography variant="body1" className="text-slate-500 font-medium">
+              Managing{" "}
+              <span className="text-brand font-bold">{companyName}</span>
+              &apos;s activity.
+            </Typography>
+          </div>
+
+          <EmployerQuickActionsSection
+            profile={devProfile as Record<string, unknown>}
+          />
+
+          <Suspense
+            fallback={
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-12">
+                {[...Array(2)].map((_, i) => (
+                  <Skeleton key={i} className="h-[160px] rounded-[32px]" />
+                ))}
+              </div>
+            }
+          >
+            <EmployerStatsSection />
+          </Suspense>
+
+          <Divider className="my-12 opacity-50" />
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <Suspense
+              fallback={
+                <div className="space-y-6">
+                  <div className="h-8 w-48 bg-slate-100 rounded-xl animate-pulse mb-6 ml-2" />
+                  <div className="h-[400px] w-full bg-slate-50/50 rounded-[40px] animate-pulse" />
+                </div>
+              }
+            >
+              <EmployerRecentApplicantsSection />
+            </Suspense>
+
+            <Suspense
+              fallback={
+                <div className="space-y-6">
+                  <div className="h-8 w-48 bg-slate-100 rounded-xl animate-pulse mb-6 ml-2" />
+                  <div className="h-[400px] w-full bg-slate-50/50 rounded-[40px] animate-pulse" />
+                </div>
+              }
+            >
+              <EmployerLogbookAlertsSection />
+            </Suspense>
+          </div>
+        </main>
+      </DashboardShellWrapper>
+    );
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login/employer");
 
   const { data: profile } = await supabase
@@ -25,7 +104,7 @@ export default async function EmployerDashboardPage() {
     .select("*")
     .eq("id", user.id)
     .single();
-    
+
   if (!profile || profile.role !== "employer") redirect("/");
 
   return (
@@ -33,9 +112,17 @@ export default async function EmployerDashboardPage() {
       <main className="max-w-6xl mx-auto py-12 px-6">
         {/* 1. Integrated Header Context */}
         <div className="mb-12">
-          <Typography variant="h2" weight="bold" className="text-slate-900 tracking-tight mb-1">Recruitment Overview</Typography>
+          <Typography
+            variant="h2"
+            weight="bold"
+            className="text-slate-900 tracking-tight mb-1"
+          >
+            Recruitment Overview
+          </Typography>
           <Typography variant="body1" className="text-slate-500 font-medium">
-            Managing <span className="text-brand font-bold">{profile.company_name}</span>'s activity.
+            Managing{" "}
+            <span className="text-brand font-bold">{profile.company_name}</span>
+            &apos;s activity.
           </Typography>
         </div>
 
@@ -43,11 +130,15 @@ export default async function EmployerDashboardPage() {
         <EmployerQuickActionsSection profile={profile} />
 
         {/* 3. Core Metrics (Streaming) */}
-        <Suspense fallback={
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-12">
-            {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-[160px] rounded-[32px]" />)}
-          </div>
-        }>
+        <Suspense
+          fallback={
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-12">
+              {[...Array(2)].map((_, i) => (
+                <Skeleton key={i} className="h-[160px] rounded-[32px]" />
+              ))}
+            </div>
+          }
+        >
           <EmployerStatsSection />
         </Suspense>
 
@@ -55,21 +146,25 @@ export default async function EmployerDashboardPage() {
 
         {/* 4. Live Activity Feeds (Streaming) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          <Suspense fallback={
-            <div className="space-y-6">
-              <div className="h-8 w-48 bg-slate-100 rounded-xl animate-pulse mb-6 ml-2" />
-              <div className="h-[400px] w-full bg-slate-50/50 rounded-[40px] animate-pulse" />
-            </div>
-          }>
+          <Suspense
+            fallback={
+              <div className="space-y-6">
+                <div className="h-8 w-48 bg-slate-100 rounded-xl animate-pulse mb-6 ml-2" />
+                <div className="h-[400px] w-full bg-slate-50/50 rounded-[40px] animate-pulse" />
+              </div>
+            }
+          >
             <EmployerRecentApplicantsSection />
           </Suspense>
 
-          <Suspense fallback={
-            <div className="space-y-6">
-              <div className="h-8 w-48 bg-slate-100 rounded-xl animate-pulse mb-6 ml-2" />
-              <div className="h-[400px] w-full bg-slate-50/50 rounded-[40px] animate-pulse" />
-            </div>
-          }>
+          <Suspense
+            fallback={
+              <div className="space-y-6">
+                <div className="h-8 w-48 bg-slate-100 rounded-xl animate-pulse mb-6 ml-2" />
+                <div className="h-[400px] w-full bg-slate-50/50 rounded-[40px] animate-pulse" />
+              </div>
+            }
+          >
             <EmployerLogbookAlertsSection />
           </Suspense>
         </div>

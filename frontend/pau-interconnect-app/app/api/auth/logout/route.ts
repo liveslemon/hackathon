@@ -1,13 +1,11 @@
-import { createServerClient } from '@supabase/ssr';
-import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import crossFetch from 'cross-fetch';
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
+export async function POST() {
   const cookieStore = await cookies();
-  
+
   const allCookies = cookieStore.getAll();
   for (const cookie of allCookies) {
     if (cookie.name.startsWith("sb-")) {

@@ -75,8 +75,46 @@ class UnifiedLLMClient:
 
         raise ValueError(f"All LLM providers failed. Last error: {last_error}")
 
+    async def generate_text_stream(self, prompt: str, system_message: str = "You are a helpful assistant.", model: str = ""):
+        if not self.providers:
+            yield "Placeholder Generation (No API Key Configured)."
+            return
+
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": prompt}
+        ]
+
+        last_error = None
+        for provider in self.providers:
+            try:
+                logger.info(f"[LLM] Attempting stream with {provider['name']}...")
+                use_model = model if model else provider["model"]
+                response = await provider["client"].chat.completions.create(
+                    model=use_model,
+                    messages=messages,
+                    temperature=0.3,
+                    max_tokens=600,
+                    stream=True
+                )
+                async for chunk in response:
+                    content = chunk.choices[0].delta.content
+                    if content:
+                        yield content
+                logger.info(f"[LLM] Success with {provider['name']} stream.")
+                return
+            except Exception as e:
+                logger.warning(f"[LLM] {provider['name']} stream failed: {e}")
+                last_error = e
+
+        yield f"All LLM providers failed. Last error: {last_error}"
+
 llm_client = UnifiedLLMClient()
 
 @retry(stop=stop_after_attempt(1))
 async def generate_completion(prompt: str, system_message: str = "You are a helpful assistant.", model: str = "") -> str:
     return await llm_client.generate_text(prompt, system_message, model=model)
+
+async def generate_completion_stream(prompt: str, system_message: str = "You are a helpful assistant.", model: str = ""):
+    async for chunk in llm_client.generate_text_stream(prompt, system_message, model=model):
+        yield chunk

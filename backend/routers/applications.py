@@ -47,6 +47,47 @@ async def build_cover_letter(payload: DraftCoverLetterRequest, current_user = De
         logger.error(f"[/draft-cover-letter] Fatal: {e}")
         return JSONResponse({"error": "Drafting failed."}, status_code=500)
 
+from fastapi.responses import StreamingResponse
+
+@router.post("/draft-cover-letter-stream")
+@router.post("/api/draft-cover-letter-stream")
+async def build_cover_letter_stream(payload: DraftCoverLetterRequest, current_user = Depends(get_current_user)):
+    if payload.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden: User ID mismatch.")
+    
+    try:
+        profile = get_user_profile(payload.user_id)
+        cv_text = profile.get("cv_text")
+        if not cv_text: return JSONResponse({"error": "No CV text"}, status_code=400)
+            
+        job_res = supabase.table("internships").select("*").eq("id", payload.internship_id).single().execute()
+        job = job_res.data
+        if not job: return JSONResponse({"error": "Not found"}, status_code=404)
+
+        user_email = "[email]"
+        try:
+            auth_user = supabase.auth.admin.get_user_by_id(payload.user_id)
+            if auth_user and auth_user.user:
+                user_email = auth_user.user.email or "[email]"
+        except Exception as auth_e:
+            logger.warning(f"[Draft Stream] Could not fetch auth email for {payload.user_id}: {auth_e}")
+
+        from services.routing_service import generate_cover_letter_stream
+        
+        return StreamingResponse(
+            generate_cover_letter_stream(
+                student_name=profile.get('full_name', 'Student'),
+                user_email=user_email,
+                profile_text=cv_text,
+                job=job,
+                existing_letter=payload.existing_letter
+            ),
+            media_type="text/plain"
+        )
+    except Exception as e:
+        logger.error(f"[/draft-cover-letter-stream] Fatal: {e}")
+        return JSONResponse({"error": "Drafting stream failed."}, status_code=500)
+
 @router.post("/submit-application")
 @router.post("/api/submit-application")
 def submit_app(payload: SubmitApplicationRequest, current_user = Depends(get_current_user)):
@@ -85,24 +126,8 @@ def submit_app(payload: SubmitApplicationRequest, current_user = Depends(get_cur
                 job_role = job.get('role', 'Internship')
                 target_email = job.get('employer_email') or "noreply@pau.edu.ng"
                 
-                attachments = []
                 cv_url = student.get("cv_url", "")
-                if cv_url:
-                    try:
-                        filename = ""
-                        for marker in ["/object/sign/cvs/", "/object/public/cvs/", "cvs/"]:
-                            if marker in cv_url:
-                                filename = cv_url.split(marker)[1].split("?")[0]
-                                break
-                        if filename:
-                            cv_bytes = supabase.storage.from_("cvs").download(filename)
-                            if cv_bytes:
-                                attachments.append({
-                                    "filename": f"{student_name.replace(' ','_')}_CV.pdf",
-                                    "content": list(cv_bytes)
-                                })
-                    except Exception as storage_e:
-                        logger.error(f"[Resend] CV Attachment error: {storage_e}")
+                cv_link_text = f"\n\nView Student CV: {cv_url}" if cv_url else ""
 
                 reply_to = payload.student_email or student.get("email") or "noreply@pau.edu.ng"
                 
@@ -111,8 +136,7 @@ def submit_app(payload: SubmitApplicationRequest, current_user = Depends(get_cur
                     "to": [target_email],
                     "reply_to": reply_to,
                     "subject": f"Application: {job_role} - {student_name}",
-                    "text": f"A student has applied for {job_role}.\n\nName: {student_name}\nMatch Score: {match_score}%\n\nCover Letter:\n{payload.cover_letter}",
-                    "attachments": attachments
+                    "text": f"A student has applied for {job_role}.\n\nName: {student_name}\nMatch Score: {match_score}%\n\nCover Letter:\n{payload.cover_letter}{cv_link_text}"
                 }
                 
                 resend.Emails.send(params)
@@ -149,5 +173,14 @@ def get_applicants(internship_id: str, current_user = Depends(get_current_user))
         for a in apps:
             a["profiles"] = p_map.get(a["user_id"])
         return {"applicants": apps}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@router.get("/applications/student")
+@router.get("/api/applications/student")
+def get_student_applications(current_user = Depends(get_current_user)):
+    try:
+        res = supabase.table("applied_internships").select("*, internships(*)").eq("user_id", current_user.id).execute()
+        return {"applications": res.data or []}
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)

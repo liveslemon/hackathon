@@ -1,5 +1,12 @@
 import { Typography, Card, CardContent } from "@/components/ui";
-import { FiUsers, FiBriefcase, FiFileText, FiCalendar, FiUserPlus, FiActivity } from "react-icons/fi";
+import {
+  FiUsers,
+  FiBriefcase,
+  FiFileText,
+  FiCalendar,
+  FiUserPlus,
+  FiActivity,
+} from "react-icons/fi";
 import { authenticatedFetchServer } from "@/lib/api-server";
 
 interface Stats {
@@ -73,15 +80,20 @@ export default async function OverviewView() {
   let error: string | null = null;
 
   try {
-    stats = await authenticatedFetchServer("/admin/stats");
-  } catch (err: any) {
-    error = err.message || "Something went wrong fetching stats";
+    stats = await authenticatedFetchServer<Stats>("/admin/stats");
+  } catch (err: unknown) {
+    error =
+      err instanceof Error
+        ? err.message
+        : "Something went wrong fetching stats";
   }
 
   if (error) {
     return (
       <div className="bg-red-50 text-red-700 p-6 rounded-3xl border border-red-100 mb-8">
-        <Typography variant="body1" weight="bold">{error}</Typography>
+        <Typography variant="body1" weight="bold">
+          {error}
+        </Typography>
       </div>
     );
   }
@@ -89,40 +101,57 @@ export default async function OverviewView() {
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex items-center justify-between">
-        <Typography variant="h3" weight="bold">Platform Overview</Typography>
+        <Typography variant="h3" weight="bold">
+          Platform Overview
+        </Typography>
         <div className="px-4 py-2 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-2">
           <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-          <Typography variant="caption" weight="bold" color="muted">Live Dashboard</Typography>
+          <Typography variant="caption" weight="bold" color="muted">
+            Live Dashboard
+          </Typography>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {metricCards.map((card, index) => (
-          <div 
+          <div
             key={card.key}
             className="animate-in fade-in slide-in-from-bottom-8 fill-mode-both h-full"
             style={{ animationDelay: `${index * 50}ms` }}
           >
             <Card className="group h-full transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-100 border-slate-100 overflow-hidden">
-            <CardContent className={`p-8 ${card.bg} h-full relative`}>
-              {/* Decorative accent */}
-              <div className={`absolute top-0 right-0 w-32 h-32 ${card.accent} opacity-[0.03] rounded-bl-full transform translate-x-8 -translate-y-8 group-hover:scale-110 transition-transform duration-500`} />
-              
-              <div className="relative z-10 space-y-6">
-                <div className={`w-14 h-14 ${card.accent} text-white rounded-2xl flex items-center justify-center shadow-lg shadow-current/20 group-hover:scale-110 transition-transform duration-300`}>
-                  {card.icon}
-                </div>
+              <CardContent className={`p-8 ${card.bg} h-full relative`}>
+                {/* Decorative accent */}
+                <div
+                  className={`absolute top-0 right-0 w-32 h-32 ${card.accent} opacity-[0.03] rounded-bl-full transform translate-x-8 -translate-y-8 group-hover:scale-110 transition-transform duration-500`}
+                />
 
-                <div className="space-y-1">
-                  <Typography variant="h1" weight="extrabold" className="text-slate-900 tracking-tight">
-                    {stats?.[card.key]?.toLocaleString() ?? 0}
-                  </Typography>
-                  <Typography variant="body2" weight="bold" color="muted" className="uppercase tracking-widest text-[10px]">
-                    {card.label}
-                  </Typography>
+                <div className="relative z-10 space-y-6">
+                  <div
+                    className={`w-14 h-14 ${card.accent} text-white rounded-2xl flex items-center justify-center shadow-lg shadow-current/20 group-hover:scale-110 transition-transform duration-300`}
+                  >
+                    {card.icon}
+                  </div>
+
+                  <div className="space-y-1">
+                    <Typography
+                      variant="h1"
+                      weight="extrabold"
+                      className="text-slate-900 tracking-tight"
+                    >
+                      {stats?.[card.key]?.toLocaleString() ?? 0}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      weight="bold"
+                      color="muted"
+                      className="uppercase tracking-widest text-[10px]"
+                    >
+                      {card.label}
+                    </Typography>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
+              </CardContent>
             </Card>
           </div>
         ))}

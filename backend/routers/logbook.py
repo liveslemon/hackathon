@@ -24,6 +24,7 @@ class LogbookEntryRequest(BaseModel):
 
 class StatusUpdateRequest(BaseModel):
     status: str # 'approved' or 'flagged'
+    feedback_notes: Optional[str] = None
 
 @router.post("/api/logbook/enhance")
 async def enhance_entry(payload: EnhanceRequest, current_user = Depends(get_current_user)):
@@ -91,7 +92,7 @@ async def get_employer_entries(employer_id: str, current_user = Depends(get_curr
         # We also want student details (join on profiles.full_name maybe?)
         # Supabase Python client might not do nested select easily if profiles is not explicitly linked in a way we query here,
         # but we can just fetch all for this employer id.
-        res = supabase.table("logbook_entries").select("*, profiles!logbook_entries_student_id_fkey(full_name, email, avatar_url)").eq("employer_id", employer_id).order("date", desc=True).execute()
+        res = supabase.table("logbook_entries").select("*, profiles!logbook_entries_student_id_fkey(full_name, course, level)").eq("employer_id", employer_id).order("date", desc=True).execute()
         return {"entries": res.data}
     except Exception as e:
         logger.error(f"Error fetching employer logbook entries: {e}")
@@ -115,7 +116,11 @@ async def update_entry_status(entry_id: str, payload: StatusUpdateRequest, curre
         if existing.data[0]["employer_id"] != current_user.id:
             raise HTTPException(status_code=403, detail="Forbidden: Not authorized to update this entry.")
             
-        res = supabase.table("logbook_entries").update({"status": payload.status}).eq("id", entry_id).execute()
+        update_data = {"status": payload.status}
+        if payload.feedback_notes is not None:
+            update_data["feedback_notes"] = payload.feedback_notes
+            
+        res = supabase.table("logbook_entries").update(update_data).eq("id", entry_id).execute()
         return {"message": "Status updated successfully.", "entry": res.data[0] if res.data else None}
     except HTTPException:
         raise

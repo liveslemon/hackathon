@@ -1,17 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import {
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  Input,
-  Typography,
-  Stack,
-} from "@/components/ui";
+import { Button, Input, Typography } from "@/components/ui";
+import { getDashboardPathForRole, getUserRoleProfile } from "@/lib/role-guard";
 
 export default function EmployerLogin() {
   const [email, setEmail] = useState("");
@@ -35,23 +29,32 @@ export default function EmployerLogin() {
 
       // Verify Employer Role
       if (data.user) {
-         const { data: profile } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", data.user.id)
-            .single();
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", data.user.id)
+          .single();
 
-         if (profile?.role !== "employer") {
-            setErrorMsg("This account is not registered as an Employer.");
-            await supabase.auth.signOut();
-            setLoading(false);
-            return;
-         }
+        if (profile?.role !== "employer") {
+          setErrorMsg("This account is not registered as an Employer.");
+          await supabase.auth.signOut();
+          setLoading(false);
+          return;
+        }
       }
 
-      router.push("/dashboard/employer");
-    } catch (err: any) {
-      setErrorMsg(err.message || "Failed to log in.");
+      if (data.user) {
+        const { role, isAdmin } = await getUserRoleProfile(
+          supabase,
+          data.user.id,
+        );
+        const destination = getDashboardPathForRole(role, isAdmin);
+        router.push(destination);
+      } else {
+        router.push("/dashboard/employer");
+      }
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : "Failed to log in.");
     } finally {
       setLoading(false);
     }
@@ -62,9 +65,19 @@ export default function EmployerLogin() {
       <div className="w-full max-w-md md:mx-6">
         <div className="px-6 py-10 md:p-10 md:bg-white md:rounded-3xl md:shadow-2xl md:border md:border-slate-100">
           <div className="flex flex-col items-center mb-8">
-            <img src="/favicon.ico" alt="PAU Logo" className="w-14 h-14 mb-4 rounded-xl" />
-            <Typography variant="h3" weight="bold" className="mb-1">Employer Portal</Typography>
-            <Typography variant="body2" color="muted">Sign in to manage your company's internships</Typography>
+            <Image
+              src="/favicon.ico"
+              alt="PAU Logo"
+              width={56}
+              height={56}
+              className="w-14 h-14 mb-4 rounded-xl"
+            />
+            <Typography variant="h3" weight="bold" className="mb-1">
+              Employer Portal
+            </Typography>
+            <Typography variant="body2" color="muted">
+              Sign in to manage your company&apos;s internships
+            </Typography>
           </div>
 
           {errorMsg && (
@@ -94,9 +107,9 @@ export default function EmployerLogin() {
               required
             />
 
-            <Button 
-              type="submit" 
-              className="w-full !rounded-full" 
+            <Button
+              type="submit"
+              className="w-full !rounded-full"
               size="lg"
               isLoading={loading}
             >
@@ -105,15 +118,15 @@ export default function EmployerLogin() {
           </form>
 
           <Typography variant="body2" className="text-center mt-8">
-            Don't have a company account?{" "}
-            <span 
-              className="text-brand cursor-pointer font-bold hover:underline" 
+            Don&apos;t have a company account?{" "}
+            <span
+              className="text-brand cursor-pointer font-bold hover:underline"
               onClick={() => router.push("/onboarding/employer")}
             >
               Register here
             </span>
           </Typography>
-          
+
           <Button
             variant="ghost"
             onClick={() => router.push("/")}

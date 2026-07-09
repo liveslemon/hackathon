@@ -1,14 +1,19 @@
 "use client";
-import { useEffect, useState } from "react";
-import { Search, Briefcase, SlidersHorizontal, ChevronLeft, ChevronRight, Sparkles, Flame, Clock, Building2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Button,
-  Typography,
-  Stack,
-  Select,
-} from "@/components/ui";
+  Search,
+  Briefcase,
+  SlidersHorizontal,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+  Flame,
+  Building2,
+} from "lucide-react";
+import { Stack, Select } from "@/components/ui";
 import { cx } from "@/utils/cx";
 import InternshipCard from "@/components/InternshipCard";
+import { toStringArray } from "@/types/domain";
 
 interface Internship {
   id: string;
@@ -29,19 +34,22 @@ const InternshipGrid = ({
   userProfile,
 }: {
   initialInternships: Internship[];
-  userProfile: any;
+  userProfile: { id?: string; interests?: string[] | string | null } | null;
 }) => {
-  const [internships, setInternships] = useState<Internship[]>(initialInternships);
-  const [filteredInternships, setFilteredInternships] = useState<Internship[]>(initialInternships);
+  const internships = initialInternships;
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInterest, setSelectedInterest] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [matchFilter, setMatchFilter] = useState("All");
   const [sortBy, setSortBy] = useState("match");
-  const [availableFilters, setAvailableFilters] = useState<string[]>(["All"]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(8);
   const [showFilters, setShowFilters] = useState(false);
+
+  const applyAndResetPage = (updater: () => void) => {
+    updater();
+    setCurrentPage(1);
+  };
 
   useEffect(() => {
     const updateItemsPerPage = () => {
@@ -56,61 +64,47 @@ const InternshipGrid = ({
   }, []);
 
   const getInternshipInterests = (internship: Internship) => {
-    if (Array.isArray(internship.interests)) return internship.interests;
-    try {
-      const parsed = JSON.parse(internship.interests as any);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
+    return toStringArray(internship.interests);
   };
 
-  useEffect(() => {
-    if (userProfile?.interests) {
-      let interests: string[] = [];
-      if (Array.isArray(userProfile.interests)) {
-        interests = userProfile.interests.filter((i: any) => typeof i === "string");
-      } else if (typeof userProfile.interests === "string") {
-        try {
-          const parsed = JSON.parse(userProfile.interests);
-          if (Array.isArray(parsed)) {
-            interests = parsed.filter((i: any) => typeof i === "string");
-          }
-        } catch {
-          interests = [];
-        }
-      }
-      setAvailableFilters(["All", ...interests]);
-    }
-  }, [userProfile]);
+  const availableFilters = useMemo(() => {
+    const interests = toStringArray(userProfile?.interests);
+    return ["All", ...interests];
+  }, [userProfile?.interests]);
 
   useEffect(() => {
     const handleGlobalSearch = (e: Event) => {
       const query = (e as CustomEvent).detail;
-      setSearchQuery(query || "");
+      applyAndResetPage(() => {
+        setSearchQuery(query || "");
+      });
     };
 
     window.addEventListener("dashboardSearch", handleGlobalSearch);
-    return () => window.removeEventListener("dashboardSearch", handleGlobalSearch);
+    return () =>
+      window.removeEventListener("dashboardSearch", handleGlobalSearch);
   }, []);
 
-  useEffect(() => {
+  const filteredInternships = useMemo(() => {
     let filtered = [...internships];
 
     if (selectedInterest !== "All") {
       filtered = filtered.filter((internship) =>
         getInternshipInterests(internship).some(
-          (i: string) => i.toLowerCase() === selectedInterest.toLowerCase()
-        )
+          (i: string) => i.toLowerCase() === selectedInterest.toLowerCase(),
+        ),
       );
     }
 
     if (statusFilter !== "All") {
       filtered = filtered.filter((internship) => {
         const status = (internship.applicationStatus || "").toLowerCase();
-        if (statusFilter === "Applied") return ["pending", "applied", "submitted"].includes(status);
-        if (statusFilter === "Accepted") return status === "accepted" || status === "approved";
-        if (statusFilter === "Rejected") return status === "rejected" || status === "denied";
+        if (statusFilter === "Applied")
+          return ["pending", "applied", "submitted"].includes(status);
+        if (statusFilter === "Accepted")
+          return status === "accepted" || status === "approved";
+        if (statusFilter === "Rejected")
+          return status === "rejected" || status === "denied";
         if (statusFilter === "None") return !internship.applicationStatus;
         return true;
       });
@@ -118,7 +112,9 @@ const InternshipGrid = ({
 
     if (matchFilter !== "All") {
       const minMatch = parseInt(matchFilter);
-      filtered = filtered.filter((internship) => (internship.matchPercentage ?? 0) >= minMatch);
+      filtered = filtered.filter(
+        (internship) => (internship.matchPercentage ?? 0) >= minMatch,
+      );
     }
 
     if (searchQuery) {
@@ -127,25 +123,37 @@ const InternshipGrid = ({
         (internship) =>
           internship.company?.toLowerCase().includes(query) ||
           internship.role?.toLowerCase().includes(query) ||
-          internship.field?.toLowerCase().includes(query)
+          internship.field?.toLowerCase().includes(query),
       );
     }
 
     filtered.sort((a, b) => {
-      if (sortBy === "match") return (b.matchPercentage ?? 0) - (a.matchPercentage ?? 0);
-      if (sortBy === "deadline") return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
-      if (sortBy === "company") return (a.company || "").localeCompare(b.company || "");
+      if (sortBy === "match")
+        return (b.matchPercentage ?? 0) - (a.matchPercentage ?? 0);
+      if (sortBy === "deadline")
+        return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+      if (sortBy === "company")
+        return (a.company || "").localeCompare(b.company || "");
       return 0;
     });
 
-    setFilteredInternships(filtered);
-    setCurrentPage(1);
-  }, [selectedInterest, statusFilter, matchFilter, sortBy, searchQuery, internships]);
+    return filtered;
+  }, [
+    selectedInterest,
+    statusFilter,
+    matchFilter,
+    sortBy,
+    searchQuery,
+    internships,
+  ]);
 
   const totalItems = filteredInternships.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedItems = filteredInternships.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedItems = filteredInternships.slice(
+    startIndex,
+    startIndex + itemsPerPage,
+  );
 
   const quickFilters = [
     { label: "Remote", icon: Sparkles },
@@ -165,8 +173,12 @@ const InternshipGrid = ({
               <Briefcase className="w-[18px] h-[18px] text-indigo-600" />
             </div>
             <div>
-              <h2 className="text-[17px] font-semibold text-slate-800 leading-tight">Internships</h2>
-              <p className="text-xs text-slate-400 mt-0.5">{totalItems} opportunities available</p>
+              <h2 className="text-[17px] font-semibold text-slate-800 leading-tight">
+                Internships
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {totalItems} opportunities available
+              </p>
             </div>
           </div>
 
@@ -177,7 +189,7 @@ const InternshipGrid = ({
                 "flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-all border",
                 showFilters
                   ? "bg-indigo-50 text-indigo-600 border-indigo-100"
-                  : "bg-white text-slate-500 border-slate-150 hover:border-slate-300"
+                  : "bg-white text-slate-500 border-slate-150 hover:border-slate-300",
               )}
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -185,9 +197,13 @@ const InternshipGrid = ({
             </button>
 
             <div className="w-[140px]">
-              <Select 
+              <Select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={(e) =>
+                  applyAndResetPage(() => {
+                    setSortBy(e.target.value);
+                  })
+                }
                 options={[
                   { value: "match", label: "Best Match" },
                   { value: "deadline", label: "Deadline" },
@@ -208,14 +224,18 @@ const InternshipGrid = ({
                 key={label}
                 onClick={() => {
                   const newQuery = isActive ? "" : label;
-                  setSearchQuery(newQuery);
-                  window.dispatchEvent(new CustomEvent("gridSearchChange", { detail: newQuery }));
+                  applyAndResetPage(() => {
+                    setSearchQuery(newQuery);
+                  });
+                  window.dispatchEvent(
+                    new CustomEvent("gridSearchChange", { detail: newQuery }),
+                  );
                 }}
                 className={cx(
                   "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all",
-                  isActive 
-                    ? "bg-indigo-600 text-white shadow-sm" 
-                    : "bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                  isActive
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700",
                 )}
               >
                 <Icon className="w-3 h-3" />
@@ -228,16 +248,22 @@ const InternshipGrid = ({
         {/* Interest pills */}
         {availableFilters.length > 1 && (
           <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-slate-50">
-            <span className="text-[10px] text-slate-300 font-semibold uppercase tracking-wider mr-1">Your interests</span>
+            <span className="text-[10px] text-slate-300 font-semibold uppercase tracking-wider mr-1">
+              Your interests
+            </span>
             {availableFilters.map((filter) => (
               <button
                 key={filter}
-                onClick={() => setSelectedInterest(filter)}
+                onClick={() =>
+                  applyAndResetPage(() => {
+                    setSelectedInterest(filter);
+                  })
+                }
                 className={cx(
                   "px-3 py-1 rounded-md text-[11px] font-semibold transition-all",
-                  selectedInterest === filter 
-                    ? "bg-slate-800 text-white" 
-                    : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                  selectedInterest === filter
+                    ? "bg-slate-800 text-white"
+                    : "text-slate-400 hover:text-slate-600 hover:bg-slate-50",
                 )}
               >
                 {filter}
@@ -250,10 +276,16 @@ const InternshipGrid = ({
         {showFilters && (
           <div className="flex flex-wrap items-center gap-3 pt-4 mt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="w-full sm:w-[150px]">
-              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 block">Status</label>
-              <Select 
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 block">
+                Status
+              </label>
+              <Select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={(e) =>
+                  applyAndResetPage(() => {
+                    setStatusFilter(e.target.value);
+                  })
+                }
                 options={[
                   { value: "All", label: "Any Status" },
                   { value: "Applied", label: "Applied" },
@@ -264,10 +296,16 @@ const InternshipGrid = ({
               />
             </div>
             <div className="w-full sm:w-[150px]">
-              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 block">Match %</label>
-              <Select 
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 block">
+                Match %
+              </label>
+              <Select
                 value={matchFilter}
-                onChange={(e) => setMatchFilter(e.target.value)}
+                onChange={(e) =>
+                  applyAndResetPage(() => {
+                    setMatchFilter(e.target.value);
+                  })
+                }
                 options={[
                   { value: "All", label: "Any Match" },
                   { value: "70", label: "70%+" },
@@ -284,7 +322,7 @@ const InternshipGrid = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         {paginatedItems.length > 0 ? (
           paginatedItems.map((internship, index) => (
-            <div 
+            <div
               key={internship.id}
               className="animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out"
               style={{ animationDelay: `${index * 40}ms` }}
@@ -297,8 +335,12 @@ const InternshipGrid = ({
             <div className="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <Search className="w-6 h-6 text-slate-300" />
             </div>
-            <p className="text-sm font-medium text-slate-400">No internships match your filters</p>
-            <p className="text-xs text-slate-300 mt-1">Try broadening your search criteria</p>
+            <p className="text-sm font-medium text-slate-400">
+              No internships match your filters
+            </p>
+            <p className="text-xs text-slate-300 mt-1">
+              Try broadening your search criteria
+            </p>
           </div>
         )}
       </div>
@@ -307,27 +349,34 @@ const InternshipGrid = ({
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">
           <p className="text-xs text-slate-400">
-            {startIndex + 1}–{Math.min(startIndex + itemsPerPage, totalItems)} of {totalItems}
+            {startIndex + 1}–{Math.min(startIndex + itemsPerPage, totalItems)}{" "}
+            of {totalItems}
           </p>
-          
+
           <div className="flex items-center gap-1">
             <button
-              onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              onClick={() => {
+                setCurrentPage((p) => Math.max(1, p - 1));
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
               disabled={currentPage === 1}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
 
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
               <button
                 key={page}
-                onClick={() => { setCurrentPage(page); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                onClick={() => {
+                  setCurrentPage(page);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
                 className={cx(
                   "w-8 h-8 rounded-lg text-xs font-semibold transition-all",
                   currentPage === page
-                    ? 'bg-slate-800 text-white'
-                    : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+                    ? "bg-slate-800 text-white"
+                    : "text-slate-400 hover:bg-slate-100 hover:text-slate-600",
                 )}
               >
                 {page}
@@ -335,7 +384,10 @@ const InternshipGrid = ({
             ))}
 
             <button
-              onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              onClick={() => {
+                setCurrentPage((p) => Math.min(totalPages, p + 1));
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
               disabled={currentPage === totalPages}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >

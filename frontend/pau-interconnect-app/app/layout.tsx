@@ -15,6 +15,9 @@ export const metadata: Metadata = {
 };
 
 import GlobalErrorBoundary from "@/components/ErrorBoundary";
+import DevToolbar from "@/components/DevToolbar";
+
+// Remove the DevToolbar component from this layout to disable the dev helper entirely.
 
 export default function RootLayout({
   children,
@@ -26,6 +29,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <GlobalErrorBoundary>
           <Providers>{children}</Providers>
+          <DevToolbar />
         </GlobalErrorBoundary>
       </body>
     </html>

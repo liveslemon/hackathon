@@ -1,12 +1,17 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { LogOut, User, Briefcase, BookOpen } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
-import { Button, Typography, Stack } from "@/components/ui";
+import type { Profile } from "@/types/domain";
+
+interface DashboardUserProfile extends Partial<Profile> {
+  name?: string | null;
+}
 
 interface DashboardHeaderProps {
-  userProfile?: any;
+  userProfile?: DashboardUserProfile | null;
 }
 
 const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
@@ -14,7 +19,9 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
-  const [notificationSeverity, setNotificationSeverity] = useState<"success" | "error" | "info" | "warning">("info");
+  const [notificationSeverity, setNotificationSeverity] = useState<
+    "success" | "error" | "info" | "warning"
+  >("info");
 
   const isEmployer = userProfile?.role === "employer";
 
@@ -26,37 +33,62 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
     setNotificationOpen(true);
 
     try {
-      localStorage.clear();
-      await Promise.all([
-        supabase.auth.signOut(),
-        fetch("/api/auth/logout", { method: "POST" })
-      ]);
+      // 1. Sign out from Supabase client (requires active session token in storage)
+      await supabase.auth.signOut();
     } catch (err) {
-      console.warn("Logout network issue:", err);
+      console.warn("Supabase signOut error:", err);
     }
-    
+
+    try {
+      // 2. Clear cookies on the server
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (err) {
+      console.warn("Server cookie logout error:", err);
+    }
+
+    // 3. Wreak havoc on other local storage entries
+    localStorage.clear();
+
     window.location.href = isEmployer ? "/login/employer" : "/login/student";
   };
 
-  const displayName = isEmployer 
-    ? (userProfile?.company_name || "Employer") 
-    : (userProfile?.name?.split(" ")[0] || userProfile?.full_name?.split(" ")[0] || userProfile?.email || "Student");
+  const displayName = isEmployer
+    ? userProfile?.company_name || "Employer"
+    : userProfile?.name?.split(" ")[0] ||
+      userProfile?.full_name?.split(" ")[0] ||
+      userProfile?.email ||
+      "Student";
 
   return (
     <>
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-slate-100 h-14 flex items-center">
         <div className="max-w-7xl w-full mx-auto px-4 md:px-6 flex justify-between items-center">
-          <div 
-            className="flex items-center gap-3 cursor-pointer group" 
-            onClick={() => router.push(isEmployer ? "/dashboard/employer" : "/dashboard/student")}
+          <div
+            className="flex items-center gap-3 cursor-pointer group"
+            onClick={() =>
+              router.push(
+                isEmployer ? "/dashboard/employer" : "/dashboard/student",
+              )
+            }
           >
             <div className="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center p-1.5 group-hover:scale-105 transition-transform">
-              <img src="/favicon.ico" alt="PAU Logo" className="w-full h-full brightness-0 invert" />
+              <Image
+                src="/favicon.ico"
+                alt="PAU Logo"
+                width={20}
+                height={20}
+                className="w-full h-full brightness-0 invert"
+              />
             </div>
             <div className="hidden sm:block">
-              <p className="text-sm font-semibold text-slate-800 leading-none">InterConnect</p>
+              <p className="text-sm font-semibold text-slate-800 leading-none">
+                InterConnect
+              </p>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                Hi, <span className="font-semibold text-slate-600">{displayName}</span>
+                Hi,{" "}
+                <span className="font-semibold text-slate-600">
+                  {displayName}
+                </span>
               </p>
             </div>
           </div>
@@ -91,7 +123,7 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${isLoggingOut ? 'opacity-50 cursor-not-allowed text-red-400' : 'text-slate-400 hover:text-red-500 hover:bg-red-50'}`}
+                className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${isLoggingOut ? "opacity-50 cursor-not-allowed text-red-400" : "text-slate-400 hover:text-red-500 hover:bg-red-50"}`}
                 title="Logout"
               >
                 {isLoggingOut ? (
@@ -105,11 +137,13 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
         </div>
 
         {notificationOpen && (
-          <div className={`fixed top-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg shadow-lg animate-in slide-in-from-top-4 duration-300 z-[100] text-sm font-medium ${
-            notificationSeverity === "success" 
-              ? "bg-emerald-50 text-emerald-700 border border-emerald-100" 
-              : "bg-slate-50 text-slate-700 border border-slate-200"
-          }`}>
+          <div
+            className={`fixed top-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg shadow-lg animate-in slide-in-from-top-4 duration-300 z-[100] text-sm font-medium ${
+              notificationSeverity === "success"
+                ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                : "bg-slate-50 text-slate-700 border border-slate-200"
+            }`}
+          >
             {notificationMessage}
           </div>
         )}

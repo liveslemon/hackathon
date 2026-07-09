@@ -2,7 +2,7 @@ import os
 import uuid
 import tempfile
 import logging
-from fastapi import APIRouter, Depends, Form, File, UploadFile, HTTPException
+from fastapi import APIRouter, Depends, Form, File, UploadFile, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
 from core.security import get_current_user
 from core.db import supabase
@@ -14,9 +14,46 @@ import asyncio
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+async def process_matches_in_background(user_id: str, cv_text: str, internships: list):
+    try:
+        matches_found = 0
+        if internships:
+            semaphore = asyncio.Semaphore(5)
+            async def bounded_match(cv_t, j):
+                async with semaphore:
+                    return await compute_match_score(cv_t, j)
+
+            tasks = [bounded_match(cv_text, job) for job in internships]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for res in results:
+                if isinstance(res, dict):
+                    upsert_match_result(user_id, res.get("internship_id"), res)
+                    matches_found += 1
+                else:
+                    logger.error(f"Failed match computation for a job: {res}")
+        logger.info(f"Background match processing completed for user {user_id}. Found {matches_found} matches.")
+    except Exception as e:
+        logger.error(f"Background match processing failed for user {user_id}: {e}")
+
+async def process_new_internship_background(iid: str, job: dict, students: list):
+    try:
+        success = 0
+        for s in students:
+            try:
+                result = await compute_match_score(s["cv_text"], job)
+                if result:
+                    upsert_match_result(s["id"], iid, result)
+                    success += 1
+            except Exception as e:
+                logger.error(f"AI Skip for {s['id']}: {e}")
+        logger.info(f"Background processing for new internship {iid} completed. Analyzed {success} students.")
+    except Exception as e:
+        logger.error(f"Background processing failed for new internship {iid}: {e}")
+
 @router.post("/upload-and-analyze")
 @router.post("/api/upload-and-analyze")
 async def upload_and_analyze(
+    background_tasks: BackgroundTasks,
     user_id: str = Form(...), 
     file: UploadFile = File(...),
     current_user = Depends(get_current_user)
@@ -44,31 +81,14 @@ async def upload_and_analyze(
         save_cv_text_and_url(user_id, cv_url, cv_text)
         
         internships = fetch_internships()
-        matches_found = 0
         if internships:
-            # Use a semaphore to process matches in batches of 5
-            # This prevents 50+ threads from starting at once
-            semaphore = asyncio.Semaphore(5)
-            
-            async def bounded_match(cv_t, j):
-                async with semaphore:
-                    return await compute_match_score(cv_t, j)
-
-            tasks = [bounded_match(cv_text, job) for job in internships]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            for res in results:
-                if isinstance(res, dict):
-                    upsert_match_result(user_id, res.get("internship_id"), res)
-                    matches_found += 1
-                else:
-                    logger.error(f"Failed match computation for a job: {res}")
+            background_tasks.add_task(process_matches_in_background, user_id, cv_text, internships)
             
         return {
-            "message": "CV uploaded and matches computed successfully",
+            "message": "CV uploaded. AI matching is processing in the background.",
             "cv_url": cv_url,
             "text_length": len(cv_text),
-            "internships_count": len(internships),
-            "matches_count": matches_found
+            "internships_count": len(internships)
         }
     except Exception as e:
         logger.error(f"[/upload-and-analyze] Fatal: {e}")
@@ -79,7 +99,7 @@ async def upload_and_analyze(
 
 @router.post("/analyze-new-internship")
 @router.post("/api/analyze-new-internship")
-async def analyze_new_internship(payload: AnalyzeNewInternshipRequest, current_user = Depends(get_current_user)):
+async def analyze_new_internship(payload: AnalyzeNewInternshipRequest, background_tasks: BackgroundTasks, current_user = Depends(get_current_user)):
     try:
         iid = payload.internship_id
         res_job = supabase.table("internships").select("*").eq("id", iid).execute()
@@ -89,42 +109,26 @@ async def analyze_new_internship(payload: AnalyzeNewInternshipRequest, current_u
         res_students = supabase.table("profiles").select("id, cv_text").eq("role", "student").neq("cv_text", None).execute()
         students = res_students.data or []
         
-        success = 0
-        for s in students:
-            try:
-                result = await compute_match_score(s["cv_text"], job)
-                if result:
-                    upsert_match_result(s["id"], iid, result)
-                    success += 1
-            except Exception as e:
-                logger.error(f"AI Skip for {s['id']}: {e}")
-        return {"message": f"Analyzed {success} students."}
+        if students:
+            background_tasks.add_task(process_new_internship_background, iid, job, students)
+            
+        return {"message": f"AI matching for new internship started in the background for {len(students)} students."}
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @router.post("/analyze-existing-cv")
 @router.post("/api/analyze-existing-cv")
-async def analyze_existing(payload: AnalyzeRequest, current_user = Depends(get_current_user)):
+async def analyze_existing(payload: AnalyzeRequest, background_tasks: BackgroundTasks, current_user = Depends(get_current_user)):
     if payload.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Forbidden: User ID mismatch.")
     try:
         p = get_user_profile(payload.user_id)
         if not p.get("cv_text"): return JSONResponse({"error": "No CV"}, status_code=400)
         jobs = fetch_internships()
-        semaphore = asyncio.Semaphore(5)
+        if jobs:
+            background_tasks.add_task(process_matches_in_background, payload.user_id, p["cv_text"], jobs)
             
-        async def bounded_match(cv_t, j):
-            async with semaphore:
-                return await compute_match_score(cv_t, j)
-
-        tasks = [bounded_match(p["cv_text"], job) for job in jobs]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        count = 0
-        for r in results:
-            if isinstance(r, dict):
-                upsert_match_result(payload.user_id, r.get("internship_id"), r)
-                count += 1
-        return {"message": "Re-analysis complete.", "count": count}
+        return {"message": "Re-analysis started in the background."}
     except Exception as e:
         logger.error(f"[/analyze-existing-cv] Fatal: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)

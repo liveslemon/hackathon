@@ -2,12 +2,17 @@
 import React, { useState } from "react";
 import { Modal, Button, Stack, Typography, Badge } from "@/components/ui";
 
-export default function DashboardClientWrapper({ 
+export default function DashboardClientWrapper({
   children,
-  internships = []
-}: { 
+  internships = [],
+}: {
   children: (onOpen: () => void) => React.ReactNode;
-  internships?: any[];
+  internships?: Array<{
+    id: string;
+    role?: string;
+    company?: string;
+    matchPercentage?: number;
+  }>;
 }) {
   const [analysisOpen, setAnalysisOpen] = useState(false);
 
@@ -37,9 +42,18 @@ export default function DashboardClientWrapper({
           <Stack spacing={8}>
             {internships.map((internship) => (
               <div key={internship.id} className="group">
-                <Stack direction="row" justify="between" align="center" className="mb-4">
+                <Stack
+                  direction="row"
+                  justify="between"
+                  align="center"
+                  className="mb-4"
+                >
                   <div>
-                    <Typography variant="h5" weight="bold" className="group-hover:text-brand transition-colors">
+                    <Typography
+                      variant="h5"
+                      weight="bold"
+                      className="group-hover:text-brand transition-colors"
+                    >
                       {internship.role}
                     </Typography>
                     <Typography variant="body2" color="muted">
@@ -48,23 +62,28 @@ export default function DashboardClientWrapper({
                   </div>
 
                   {internship.matchPercentage !== undefined ? (
-                    <Badge 
+                    <Badge
                       variant={getMatchColor(internship.matchPercentage)}
                       className="px-4 py-1.5 rounded-xl font-bold"
                     >
                       {internship.matchPercentage}% Match
                     </Badge>
                   ) : (
-                    <Badge variant="slate" className="px-4 py-1.5 rounded-xl">Not analyzed</Badge>
+                    <Badge variant="slate" className="px-4 py-1.5 rounded-xl">
+                      Not analyzed
+                    </Badge>
                   )}
                 </Stack>
 
                 {internship.matchPercentage !== undefined && (
                   <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div 
+                    <div
                       className={`h-full transition-all duration-1000 ease-out ${
-                        internship.matchPercentage >= 70 ? 'bg-emerald-500' : 
-                        internship.matchPercentage >= 40 ? 'bg-amber-500' : 'bg-red-500'
+                        internship.matchPercentage >= 70
+                          ? "bg-emerald-500"
+                          : internship.matchPercentage >= 40
+                            ? "bg-amber-500"
+                            : "bg-red-500"
                       }`}
                       style={{ width: `${internship.matchPercentage}%` }}
                     />

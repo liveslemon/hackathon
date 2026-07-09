@@ -5,6 +5,7 @@ import crossFetch from "cross-fetch";
 import { Suspense } from "react";
 import AdminClient from "./AdminClient";
 import { Skeleton } from "@/components/ui";
+import { getDevModeRoleFromCookie } from "@/lib/role-guard";
 
 // Parallel import of subviews
 import OverviewView from "./overview/OverviewView";
@@ -25,13 +26,42 @@ export default async function AdminDashboardPage({
     {
       global: { fetch: crossFetch },
       cookies: {
-        getAll() { return cookieStore.getAll(); },
-        setAll() {}
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll() {},
       },
-    }
+    },
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const devRole = getDevModeRoleFromCookie(
+    cookieStore.get("dev_mode_role")?.value,
+  );
+
+  if (devRole === "admin") {
+    return (
+      <AdminClient>
+        <Suspense
+          fallback={
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <Skeleton className="h-48 rounded-3xl" />
+              <Skeleton className="h-48 rounded-3xl" />
+              <Skeleton className="h-48 rounded-3xl" />
+            </div>
+          }
+        >
+          {tab === "overview" && <OverviewView />}
+          {tab === "analytics" && <AnalyticsPage />}
+          {tab === "post" && <PostInternshipView />}
+          {tab === "manage" && <ManagePlatformView />}
+        </Suspense>
+      </AdminClient>
+    );
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login/admin");
 
   // Server-side Admin Check
@@ -42,7 +72,8 @@ export default async function AdminDashboardPage({
     .eq("id", user.id)
     .single();
 
-  const isAllowed = (user.email && ALLOWED_ADMINS.includes(user.email)) || profile?.is_admin;
+  const isAllowed =
+    (user.email && ALLOWED_ADMINS.includes(user.email)) || profile?.is_admin;
 
   if (!isAllowed) {
     redirect("/login/admin");
@@ -50,13 +81,15 @@ export default async function AdminDashboardPage({
 
   return (
     <AdminClient>
-      <Suspense fallback={
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Skeleton className="h-48 rounded-3xl" />
-          <Skeleton className="h-48 rounded-3xl" />
-          <Skeleton className="h-48 rounded-3xl" />
-        </div>
-      }>
+      <Suspense
+        fallback={
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Skeleton className="h-48 rounded-3xl" />
+            <Skeleton className="h-48 rounded-3xl" />
+            <Skeleton className="h-48 rounded-3xl" />
+          </div>
+        }
+      >
         {tab === "overview" && <OverviewView />}
         {tab === "analytics" && <AnalyticsPage />}
         {tab === "post" && <PostInternshipView />}

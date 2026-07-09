@@ -1,0 +1,19 @@
+{
+  "chat.tools.terminal.autoApprove": {
+    "npx tsc": true,
+    "npx eslint": true,
+    "/^cd '/Users/macbook/Documents/Uni stuff/PAU/Tech innovation club/Hackathon2/frontend/pau-interconnect-app' && node -e \"const fs=require\\('fs'\\);const r=JSON\\.parse\\(fs\\.readFileSync\\('\\.eslint-report\\.json','utf8'\\)\\);const byRule=\\{\\};const byFile=\\[\\];for\\(const f of r\\)\\{let e=0,w=0;for\\(const m of f\\.messages\\)\\{if\\(m\\.severity===2\\)e\\+\\+;else if\\(m\\.severity===1\\)w\\+\\+;const key=m\\.ruleId\\|\\|'unknown';byRule\\[key\\]=\\(byRule\\[key\\]\\|\\|0\\)\\+1;\\}if\\(e\\|\\|w\\)byFile\\.push\\(\\{file:f\\.filePath\\.replace\\(process\\.cwd\\(\\)\\+'/',''\\),e,w,t:e\\+w\\}\\);\\}console\\.log\\('Top rules:'\\);Object\\.entries\\(byRule\\)\\.sort\\(\\(a,b\\)=>b\\[1\\]-a\\[1\\]\\)\\.slice\\(0,20\\)\\.forEach\\(\\(\\[k,v\\]\\)=>console\\.log\\(v\\+'\\\\t'\\+k\\)\\);console\\.log\\('\\\\nTop files:'\\);byFile\\.sort\\(\\(a,b\\)=>b\\.t-a\\.t\\)\\.slice\\(0,30\\)\\.forEach\\(x=>console\\.log\\(`\\$\\{x\\.t\\}\\\\tE:\\$\\{x\\.e\\}\\\\tW:\\$\\{x\\.w\\}\\\\t\\$\\{x\\.file\\}`\\)\\);\"$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "set": true,
+    "/^cd '/Users/macbook/Documents/Uni stuff/PAU/Tech innovation club/Hackathon2/frontend/pau-interconnect-app' && set \\+H && node -e 'const fs=require\\(\"fs\"\\);const d=JSON\\.parse\\(fs\\.readFileSync\\(\"/tmp/pau-lint\\.json\",\"utf8\"\\)\\);const targets=\\[\"app/companies/\\[id\\]/CompanyClient\\.tsx\",\"app/dashboard/employer/EmployerActivityClient\\.tsx\",\"app/dashboard/employer/page\\.tsx\",\"app/my-internships/MyInternshipsParts\\.tsx\",\"app/dashboard/employer/logbook/LogbookReviewClient\\.tsx\",\"app/internships/\\[id\\]/page\\.tsx\"\\];for\\(const t of targets\\)\\{const f=d\\.find\\(x=>x\\.filePath\\.endsWith\\(\"/\"\\+t\\)\\);if\\(!f\\) continue;console\\.log\\(\"\\\\n## \"\\+t\\+\" \\(\"\\+f\\.warningCount\\+\"\\)\"\\);for\\(const m of f\\.messages\\)\\{if\\(m\\.severity===1\\) console\\.log\\(m\\.line\\+\":\"\\+m\\.column\\+\" \"\\+\\(m\\.ruleId\\|\\|\"unknown\"\\)\\+\" - \"\\+m\\.message\\);\\}\\}'$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^cd '/Users/macbook/Documents/Uni stuff/PAU/Tech innovation club/Hackathon2/frontend/pau-interconnect-app' && set \\+H && node -e 'const fs=require\\(\"fs\"\\);const d=JSON\\.parse\\(fs\\.readFileSync\\(\"/tmp/pau-lint\\.json\",\"utf8\"\\)\\);const targets=\\[\"app/page\\.tsx\",\"components/InternshipGrid\\.tsx\",\"context/AuthContext\\.tsx\",\"app/api/auth/logout/route\\.ts\",\"components/SearchOverlay\\.tsx\",\"components/Sidebar\\.tsx\"\\];for\\(const t of targets\\)\\{const f=d\\.find\\(x=>x\\.filePath\\.endsWith\\(\"/\"\\+t\\)\\);if\\(!f\\) continue;console\\.log\\(\"\\\\n## \"\\+t\\+\" \\(\"\\+f\\.warningCount\\+\"\\)\"\\);for\\(const m of f\\.messages\\)\\{if\\(m\\.severity===1\\) console\\.log\\(m\\.line\\+\":\"\\+m\\.column\\+\" \"\\+\\(m\\.ruleId\\|\\|\"unknown\"\\)\\+\" - \" \\+ m\\.message\\);\\}\\}'$/": {
+      "approve": true,
+      "matchCommandLine": true
+    }
+  }
+}
