@@ -41,7 +41,7 @@ export default async function CvPage() {
       <DashboardShellWrapper userProfile={devProfile}>
         <div className="pb-24 md:pb-12 space-y-10">
           <CvDashboardClient
-            userId={devProfile.id}
+            userId={(devProfile?.id as string) || "dev-student"}
             initialData={null}
             initialMetrics={{
               career_score: 0,
