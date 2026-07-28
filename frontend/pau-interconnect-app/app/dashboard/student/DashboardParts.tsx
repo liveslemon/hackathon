@@ -1,12 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import crossFetch from "cross-fetch";
+import { supabaseFetch } from "@/lib/supabase-fetch";
 import DashboardHeader from "@/components/DashboardHeader";
 import LogbookWidget from "@/components/LogbookWidget";
 import InternshipGrid from "@/components/InternshipGrid";
 import {
+  DEV_AUTH_MODE_COOKIE_NAME,
+  DEV_ROLE_COOKIE_NAME,
+  getActiveDevModeRole,
   getDevModeProfileForRole,
-  getDevModeRoleFromCookie,
 } from "@/lib/role-guard";
 
 async function getSupabase() {
@@ -15,7 +17,7 @@ async function getSupabase() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      global: { fetch: crossFetch },
+      global: { fetch: supabaseFetch },
       cookies: {
         getAll() {
           return cookieStore.getAll();
@@ -54,9 +56,10 @@ interface InternshipWithMatch {
 // --- Profile Header ---
 export async function ProfileHeaderSection() {
   const cookieStore = await cookies();
-  const devRole = getDevModeRoleFromCookie(
-    cookieStore.get("dev_mode_role")?.value,
-  );
+  const devRole = getActiveDevModeRole({
+    roleCookieValue: cookieStore.get(DEV_ROLE_COOKIE_NAME)?.value,
+    modeCookieValue: cookieStore.get(DEV_AUTH_MODE_COOKIE_NAME)?.value,
+  });
   const devProfile = getDevModeProfileForRole(devRole);
 
   if (devRole === "student") {
@@ -82,9 +85,10 @@ export async function ProfileHeaderSection() {
 // --- Logbook Section ---
 export async function StudentLogbookSection() {
   const cookieStore = await cookies();
-  const devRole = getDevModeRoleFromCookie(
-    cookieStore.get("dev_mode_role")?.value,
-  );
+  const devRole = getActiveDevModeRole({
+    roleCookieValue: cookieStore.get(DEV_ROLE_COOKIE_NAME)?.value,
+    modeCookieValue: cookieStore.get(DEV_AUTH_MODE_COOKIE_NAME)?.value,
+  });
 
   if (devRole === "student") {
     return (
@@ -121,9 +125,10 @@ export async function StudentLogbookSection() {
 // --- Internship Grid Section ---
 export async function InternshipGridSection() {
   const cookieStore = await cookies();
-  const devRole = getDevModeRoleFromCookie(
-    cookieStore.get("dev_mode_role")?.value,
-  );
+  const devRole = getActiveDevModeRole({
+    roleCookieValue: cookieStore.get(DEV_ROLE_COOKIE_NAME)?.value,
+    modeCookieValue: cookieStore.get(DEV_AUTH_MODE_COOKIE_NAME)?.value,
+  });
   const devProfile = getDevModeProfileForRole(devRole);
 
   if (devRole === "student") {

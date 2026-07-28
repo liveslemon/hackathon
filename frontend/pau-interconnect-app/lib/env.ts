@@ -7,6 +7,7 @@ const EnvSchema = z.object({
   NEXT_PUBLIC_BACKEND_URL: z.string().url().optional(),
   NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1).optional(),
+  NEXT_PUBLIC_AUTH_SIGNUP_REDIRECT_URL: z.string().url().optional(),
 });
 
 const parsed = EnvSchema.safeParse({
@@ -14,6 +15,8 @@ const parsed = EnvSchema.safeParse({
   NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL,
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  NEXT_PUBLIC_AUTH_SIGNUP_REDIRECT_URL:
+    process.env.NEXT_PUBLIC_AUTH_SIGNUP_REDIRECT_URL,
 });
 
 export type AppEnv = z.infer<typeof EnvSchema>;
@@ -25,7 +28,13 @@ export const env: AppEnv = parsed.success
       NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL,
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      NEXT_PUBLIC_AUTH_SIGNUP_REDIRECT_URL:
+        process.env.NEXT_PUBLIC_AUTH_SIGNUP_REDIRECT_URL,
     };
+
+export function getSignupRedirectUrl(): string | undefined {
+  return env.NEXT_PUBLIC_AUTH_SIGNUP_REDIRECT_URL;
+}
 
 export function getBackendUrl(): string {
   if (env.NEXT_PUBLIC_BACKEND_URL) return env.NEXT_PUBLIC_BACKEND_URL;

@@ -3,8 +3,8 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { LogOut, User, Briefcase, BookOpen } from "lucide-react";
-import { supabase } from "@/lib/supabaseClient";
 import type { Profile } from "@/types/domain";
+import { fastSignOut } from "@/lib/fast-signout";
 
 interface DashboardUserProfile extends Partial<Profile> {
   name?: string | null;
@@ -25,31 +25,14 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
 
   const isEmployer = userProfile?.role === "employer";
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     if (isLoggingOut) return;
     setIsLoggingOut(true);
     setNotificationMessage("Logging out...");
     setNotificationSeverity("info");
     setNotificationOpen(true);
 
-    try {
-      // 1. Sign out from Supabase client (requires active session token in storage)
-      await supabase.auth.signOut();
-    } catch (err) {
-      console.warn("Supabase signOut error:", err);
-    }
-
-    try {
-      // 2. Clear cookies on the server
-      await fetch("/api/auth/logout", { method: "POST" });
-    } catch (err) {
-      console.warn("Server cookie logout error:", err);
-    }
-
-    // 3. Wreak havoc on other local storage entries
-    localStorage.clear();
-
-    window.location.href = isEmployer ? "/login/employer" : "/login/student";
+    fastSignOut(isEmployer ? "/login/employer" : "/login/student");
   };
 
   const displayName = isEmployer

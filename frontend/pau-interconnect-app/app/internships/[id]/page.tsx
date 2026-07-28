@@ -42,8 +42,8 @@ export default async function InternshipDetailsPage({
   );
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
   // Fetch internship data
   const { data: internship, error: internshipError } = await supabase
@@ -81,21 +81,21 @@ export default async function InternshipDetailsPage({
   let missingSkills: string[] = [];
   let userProfile: Profile | null = null;
 
-  if (session) {
+  if (user) {
     const [appliedRes, matchRes, profileRes] = await Promise.all([
       supabase
         .from("applied_internships")
         .select("id, status")
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .eq("internship_id", internshipId)
         .maybeSingle(),
       supabase
         .from("match_results")
         .select("match_score, matching_skills, missing_skills")
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .eq("internship_id", internshipId)
         .maybeSingle(),
-      supabase.from("profiles").select("*").eq("id", session.user.id).single(),
+      supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
     ]);
 
     if (appliedRes.data) {
@@ -275,15 +275,15 @@ export default async function InternshipDetailsPage({
                 </div>
 
                 <div className="p-5 space-y-3">
-                  {session ? (
+                  {user ? (
                     <InternshipClientParts
                       internship={internship}
                       hasApplied={hasApplied}
                       applicationStatus={applicationStatus}
                       matchingSkills={matchingSkills}
                       missingSkills={missingSkills}
-                      userId={session.user.id}
-                      studentEmail={session.user.email}
+                      userId={user.id}
+                      studentEmail={user.email}
                     />
                   ) : (
                     <Link href="/login/student">

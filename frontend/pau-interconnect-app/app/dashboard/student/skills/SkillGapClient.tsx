@@ -39,7 +39,7 @@ export default function SkillGapClient() {
           applications?: Array<{
             internships?: { id: string; role: string; company: string } | null;
           }>;
-        }>("http://localhost:8000/api/applications/student");
+        }>("/api/applications/student");
         const apps = data.applications || [];
         // Extract unique internships from applications
         const uniqueJobs = apps
@@ -72,9 +72,7 @@ export default function SkillGapClient() {
           priority?: "High" | "Medium" | "Low" | string;
           estimated_learning_time?: string;
         }>;
-      }>(
-        `http://localhost:8000/api/analysis/skill-gap?internship_id=${selectedId}`,
-      );
+      }>(`/api/analysis/skill-gap?internship_id=${selectedId}`);
       setAnalysis(data);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Analysis failed");

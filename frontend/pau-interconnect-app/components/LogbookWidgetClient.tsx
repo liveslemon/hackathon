@@ -14,14 +14,14 @@ export default function LogbookWidgetClient({
   todayStatus,
 }: LogbookWidgetClientProps) {
   const [isVisible, setIsVisible] = useState(() => {
+    if (typeof window === "undefined") return true;
     try {
       const todayStr = new Date().toISOString().split("T")[0];
       const dismissed = localStorage.getItem(
         `logbook_reminder_dismissed_${todayStr}`,
       );
       return dismissed !== "true";
-    } catch (e) {
-      console.warn("localStorage is not available:", e);
+    } catch {
       return true;
     }
   });

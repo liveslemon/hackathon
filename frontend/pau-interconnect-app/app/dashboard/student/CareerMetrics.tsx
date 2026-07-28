@@ -20,7 +20,7 @@ export default function CareerMetrics() {
           ats_score?: number;
           weekly_progress?: number;
           streak_days?: number;
-        }>("http://localhost:8000/api/analysis/metrics");
+        }>("/api/analysis/metrics");
         setMetrics(data);
       } catch (e) {
         console.error("Failed to load career metrics", e);

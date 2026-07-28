@@ -77,7 +77,8 @@ const Dashboard = ({
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (!session?.user) return;
+      const user = session?.user;
+      if (!user) return;
 
       const { data: internshipsData } = await supabase
         .from("internships")
@@ -86,7 +87,7 @@ const Dashboard = ({
       const { data: appliedData } = await supabase
         .from("applied_internships")
         .select("internship_id, status")
-        .eq("user_id", session.user.id);
+        .eq("user_id", user.id);
 
       const statusMap = new Map(
         (appliedData ?? []).map(

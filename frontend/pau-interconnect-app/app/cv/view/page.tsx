@@ -12,15 +12,36 @@ function CVViewerContent() {
     : "Student CV";
 
   const [isLoading, setIsLoading] = useState(true);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Set the document title cleanly to the student's name
     document.title = name;
 
-    // Slight delay to allow iframe to initiate painting before removing loader
-    if (url) {
-      setTimeout(() => setIsLoading(false), 800);
-    }
+    if (!url) return;
+
+    // Fetch PDF as blob to bypass Content-Disposition: attachment headers
+    let objectUrl: string | null = null;
+    fetch(url)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch CV");
+        return res.blob();
+      })
+      .then((blob) => {
+        // Ensure it's treated as a PDF
+        const pdfBlob = new Blob([blob], { type: "application/pdf" });
+        objectUrl = URL.createObjectURL(pdfBlob);
+        setBlobUrl(objectUrl);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        setError("Failed to load CV. The link may have expired.");
+        setIsLoading(false);
+      });
+
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
   }, [name, url]);
 
   if (!url) {
@@ -33,43 +54,15 @@ function CVViewerContent() {
     );
   }
 
-  // We must strip any legacy '?download=' queries from the database URL, so Supabase doesn't force a download.
-  let cleanUrl: string | null = url;
-  try {
-    const parsed = new URL(url);
-
-    // SECURITY PATCH: Explicitly enforce that the URL is
-    // strictly targeting our Supabase database domain to prevent XSS iframe injections.
-    if (
-      !parsed.origin.includes("supabase.co") ||
-      parsed.protocol !== "https:"
-    ) {
-      console.warn(
-        "Security Alert: Blocked untrusted iframe URL injection.",
-        url,
-      );
-      cleanUrl = null;
-    } else {
-      parsed.searchParams.delete("download");
-      cleanUrl = parsed.toString();
-    }
-  } catch {
-    cleanUrl = null;
-  }
-
-  // Double check if the security validation wiped the URL
-  if (!cleanUrl) {
+  if (error) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50">
         <Typography variant="h6" className="text-red-600 font-bold">
-          Security Error: Untrusted URL Source Blocked
+          {error}
         </Typography>
       </div>
     );
   }
-
-  // We append #view=FitH to the Supabase URL to force the browser's native PDF viewer to fill the width
-  const viewerUrl = `${cleanUrl}#view=FitH`;
 
   return (
     <div className="w-screen h-screen overflow-hidden relative bg-[#333]">
@@ -83,12 +76,13 @@ function CVViewerContent() {
           </div>
         </div>
       )}
-      <iframe
-        src={viewerUrl}
-        className="w-full h-full border-none"
-        title={`${name} PDF Viewer`}
-        onLoad={() => setIsLoading(false)}
-      />
+      {blobUrl && (
+        <iframe
+          src={`${blobUrl}#view=FitH`}
+          className="w-full h-full border-none"
+          title={`${name} PDF Viewer`}
+        />
+      )}
     </div>
   );
 }

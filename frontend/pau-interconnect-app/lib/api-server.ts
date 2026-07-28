@@ -56,6 +56,12 @@ export async function authenticatedFetchServer<TResponse = unknown>(
 ) {
   const authHeaders = await getAuthHeadersServer(session);
 
+  if (!authHeaders.Authorization) {
+    throw new ApiError("Your session has expired. Please sign in again.", {
+      status: 401,
+    });
+  }
+
   const headers: Record<string, string> = {
     ...authHeaders,
     ...(options.headers as Record<string, string>),

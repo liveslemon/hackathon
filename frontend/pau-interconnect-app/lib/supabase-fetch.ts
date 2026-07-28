@@ -1,5 +1,35 @@
 import crossFetch from "cross-fetch";
 
+function isRecoverableSchemaError(
+  status: number,
+  body: string | null,
+): boolean {
+  if (status < 400 || !body) return false;
+
+  const normalized = body.toLowerCase();
+  return (
+    normalized.includes('"code":"42703"') ||
+    normalized.includes('"code":"pgrst204"') ||
+    normalized.includes("schema cache") ||
+    normalized.includes("could not find") ||
+    normalized.includes("does not exist") ||
+    normalized.includes("column")
+  );
+}
+
+function isNoRowObjectCoercionError(
+  status: number,
+  body: string | null,
+): boolean {
+  if (status !== 406 || !body) return false;
+
+  const normalized = body.toLowerCase();
+  return (
+    normalized.includes('"code":"pgrst116"') &&
+    normalized.includes("contains 0 rows")
+  );
+}
+
 // Shared custom fetch wrapper to reliably suppress "refresh_token_not_found" error logs
 // which otherwise spam the console randomly during server-side renders or token expirations.
 export const supabaseFetch = async (
@@ -26,8 +56,10 @@ export const supabaseFetch = async (
 
     const isRefreshTokenError =
       status === 400 && body?.includes("refresh_token_not_found");
+    const isSchemaError = isRecoverableSchemaError(status, body);
+    const isNoRowError = isNoRowObjectCoercionError(status, body);
 
-    if (!isRefreshTokenError) {
+    if (!isRefreshTokenError && !isSchemaError && !isNoRowError) {
       const meta = {
         url: String(input),
         status,

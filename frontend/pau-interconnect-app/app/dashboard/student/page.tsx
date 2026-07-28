@@ -1,15 +1,20 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import crossFetch from "cross-fetch";
+import { supabaseFetch } from "@/lib/supabase-fetch";
 import { Suspense } from "react";
 import Loading from "./loading";
 import DashboardShellWrapper from "./DashboardShellWrapper";
 import { InternshipGridSection, StudentLogbookSection } from "./DashboardParts";
 import CareerMetrics from "./CareerMetrics";
+import CvPromptCard from "./CvPromptCard";
 import {
+  DEV_AUTH_MODE_COOKIE_NAME,
+  DEV_ROLE_COOKIE_NAME,
+  getDashboardPathForRole,
+  getActiveDevModeRole,
   getDevModeProfileForRole,
-  getDevModeRoleFromCookie,
+  getUserRoleProfile,
 } from "@/lib/role-guard";
 
 // Optimization: Revalidate the dashboard data every 60 seconds
@@ -21,7 +26,7 @@ export default async function StudentDashboardPage() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      global: { fetch: crossFetch },
+      global: { fetch: supabaseFetch },
       cookies: {
         getAll() {
           return cookieStore.getAll();
@@ -31,9 +36,10 @@ export default async function StudentDashboardPage() {
     },
   );
 
-  const devRole = getDevModeRoleFromCookie(
-    cookieStore.get("dev_mode_role")?.value,
-  );
+  const devRole = getActiveDevModeRole({
+    roleCookieValue: cookieStore.get(DEV_ROLE_COOKIE_NAME)?.value,
+    modeCookieValue: cookieStore.get(DEV_AUTH_MODE_COOKIE_NAME)?.value,
+  });
   const devProfile = getDevModeProfileForRole(devRole);
 
   if (devRole === "student") {
@@ -41,6 +47,7 @@ export default async function StudentDashboardPage() {
       <DashboardShellWrapper userProfile={devProfile}>
         <div className="pb-24 md:pb-12">
           <CareerMetrics />
+          <CvPromptCard />
           <Suspense
             fallback={
               <div className="h-40 bg-white rounded-3xl animate-pulse mb-8" />
@@ -64,6 +71,16 @@ export default async function StudentDashboardPage() {
     redirect("/login/student");
   }
 
+  const { role, isAdmin } = await getUserRoleProfile(supabase, user.id);
+
+  if (!role) {
+    redirect("/onboarding");
+  }
+
+  if (role !== "student") {
+    redirect(getDashboardPathForRole(role, isAdmin));
+  }
+
   // THE INSTANT SHELL
   // This part of the code finishes instantly because we aren't 'awaiting'
   // the heavy database queries yet. Suspense handles the background work.
@@ -75,7 +92,10 @@ export default async function StudentDashboardPage() {
         {/* 1. Career Metrics */}
         <CareerMetrics />
 
-        {/* 2. Logbook Section (Independent loading) */}
+        {/* 2. CV Upload Prompt (only if no CV) */}
+        <CvPromptCard />
+
+        {/* 3. Logbook Section (Independent loading) */}
         <Suspense
           fallback={
             <div className="h-40 bg-white rounded-3xl animate-pulse mb-8" />
@@ -84,7 +104,7 @@ export default async function StudentDashboardPage() {
           <StudentLogbookSection />
         </Suspense>
 
-        {/* 2. Main Content Section (Internships & Matches) */}
+        {/* 4. Main Content Section (Internships & Matches) */}
         <Suspense fallback={<Loading />}>
           <InternshipGridSection />
         </Suspense>

@@ -109,7 +109,7 @@ export default function EmployerLogin() {
 
             <Button
               type="submit"
-              className="w-full !rounded-full"
+              className="w-full rounded-full!"
               size="lg"
               isLoading={loading}
             >
@@ -121,7 +121,7 @@ export default function EmployerLogin() {
             Don&apos;t have a company account?{" "}
             <span
               className="text-brand cursor-pointer font-bold hover:underline"
-              onClick={() => router.push("/onboarding/employer")}
+              onClick={() => router.push("/onboarding?role=employer")}
             >
               Register here
             </span>

@@ -9,6 +9,7 @@ import { Button, Stack, Typography, Divider } from "@/components/ui";
 import { FiLogOut, FiPieChart, FiPlusSquare } from "react-icons/fi";
 import AnalyticsView from "./AnalyticsView";
 import type { Session } from "@supabase/supabase-js";
+import { fastSignOut } from "@/lib/fast-signout";
 
 export default function DashboardClient({
   session,
@@ -37,7 +38,7 @@ export default function DashboardClient({
 
         if (!error && data) {
           const counts: Record<string, number> = {};
-          data.forEach((item) => {
+          data.forEach((item: { category: string | null }) => {
             const category = item.category || "Unknown";
             counts[category] = (counts[category] || 0) + 1;
           });
@@ -61,28 +62,11 @@ export default function DashboardClient({
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     if (isLoggingOut) return;
     setIsLoggingOut(true);
 
-    try {
-      // 1. Sign out from Supabase client (requires active session token in storage)
-      await supabase.auth.signOut();
-    } catch (err) {
-      console.warn("Supabase signOut error:", err);
-    }
-
-    try {
-      // 2. Clear cookies on the server
-      await fetch("/api/auth/logout", { method: "POST" });
-    } catch (err) {
-      console.warn("Server cookie logout error:", err);
-    }
-
-    // 3. Clear other local storage
-    localStorage.clear();
-
-    router.push("/");
+    fastSignOut("/");
   };
 
   if (!session?.user || loading) {

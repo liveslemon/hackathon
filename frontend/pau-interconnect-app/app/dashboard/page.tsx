@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import DashboardClient from "./DashboardClient";
-import crossFetch from "cross-fetch";
+import { supabaseFetch } from "@/lib/supabase-fetch";
 
 export default async function AdminDashboard() {
   const cookieStore = await cookies();
@@ -9,7 +9,7 @@ export default async function AdminDashboard() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      global: { fetch: crossFetch },
+      global: { fetch: supabaseFetch },
       cookies: {
         getAll() {
           return cookieStore.getAll();

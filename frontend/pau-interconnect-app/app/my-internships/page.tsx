@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui";
 import { Clock } from "lucide-react";
 import { MyInternshipsSections } from "./MyInternshipsParts";
 import { supabaseFetch } from "@/lib/supabase-fetch";
+import { getDashboardPathForRole, getUserRoleProfile } from "@/lib/role-guard";
 
 export const revalidate = 60;
 
@@ -30,6 +31,12 @@ export default async function MyInternshipsPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login/student");
+
+  const { role, isAdmin } = await getUserRoleProfile(supabase, user.id);
+  if (!role) redirect("/onboarding");
+  if (role !== "student") {
+    redirect(getDashboardPathForRole(role, isAdmin));
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -61,12 +68,11 @@ export default async function MyInternshipsPage() {
       <Suspense
         fallback={
           <div className="space-y-10 px-4 sm:px-0">
-            <Skeleton className="h-40 rounded-2xl w-full" />
+            <Skeleton className="h-40 rounded-3xl w-full" />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-              <Skeleton className="h-64 rounded-xl" />
-              <Skeleton className="h-64 rounded-xl" />
-              <Skeleton className="h-64 rounded-xl" />
-              <Skeleton className="h-64 rounded-xl" />
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-[280px] rounded-[24px]" />
+              ))}
             </div>
           </div>
         }

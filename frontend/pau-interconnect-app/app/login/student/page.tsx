@@ -86,41 +86,6 @@ const Login = () => {
       setSnackbarSeverity("success");
       setSnackbarOpen(true);
 
-      // --- Profile Check ---
-      try {
-        const pending = localStorage.getItem("pendingProfile");
-        if (pending) {
-          const parsed = JSON.parse(pending);
-          const { data: existing } = await supabase
-            .from("profiles")
-            .select("id")
-            .eq("id", user?.id)
-            .limit(1)
-            .maybeSingle();
-
-          if (!existing) {
-            const { error: insertError } = await supabase
-              .from("profiles")
-              .insert({
-                id: user?.id,
-                full_name: parsed.full_name,
-                course: parsed.course,
-                level: parsed.level,
-                interests: parsed.interests,
-                cv_url: parsed.cv_url,
-              });
-
-            if (!insertError) {
-              localStorage.removeItem("pendingProfile");
-            }
-          } else {
-            localStorage.removeItem("pendingProfile");
-          }
-        }
-      } catch (profileErr) {
-        console.warn("Non-critical profile sync error:", profileErr);
-      }
-
       // Finish successfully
       const { role, isAdmin } = await getUserRoleProfile(
         supabase,

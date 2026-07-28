@@ -1,8 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type AppRole = "student" | "employer" | "admin";
+export type DevAuthMode = "real" | "mock";
 
 export const DEV_ROLE_COOKIE_NAME = "dev_mode_role";
+export const DEV_AUTH_MODE_COOKIE_NAME = "dev_auth_mode";
 
 export interface UserRoleContext {
   profile: Record<string, unknown> | null;
@@ -42,13 +44,36 @@ export function getDashboardPathForRole(
   if (isAdmin || role === "admin") return "/dashboard/admin";
   if (role === "employer") return "/dashboard/employer";
   if (role === "student") return "/dashboard/student";
-  return "/dashboard/student";
+  return "/dashboard";
 }
 
-export function isDevToolbarEnabled(): boolean {
+export function isLocalDevHost(hostname: string | null | undefined): boolean {
+  if (!hostname) return false;
+  return (
+    hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1"
+  );
+}
+
+export function isDevToolbarEnabled(
+  hostname?: string | null,
+  options?: { allowNonLocal?: boolean },
+): boolean {
+  if (process.env.NODE_ENV !== "development") return false;
+  if (process.env.NEXT_PUBLIC_ENABLE_DEV_TOOLBAR === "false") return false;
+
+  const allowNonLocal =
+    options?.allowNonLocal ??
+    process.env.NEXT_PUBLIC_ENABLE_DEV_TOOLBAR_NON_LOCAL === "true";
+  if (allowNonLocal) return true;
+
+  return isLocalDevHost(hostname);
+}
+
+export function isDevRoleBypassEnabled(): boolean {
   return (
     process.env.NODE_ENV === "development" &&
-    process.env.NEXT_PUBLIC_ENABLE_DEV_TOOLBAR !== "false"
+    process.env.NEXT_PUBLIC_ENABLE_DEV_TOOLBAR !== "false" &&
+    process.env.NEXT_PUBLIC_ENABLE_DEV_MOCK_MODE !== "false"
   );
 }
 
@@ -65,6 +90,34 @@ export function getDevModeRoleFromCookie(
 
 export function clearDevModeRoleCookie(): string {
   return `${DEV_ROLE_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax`;
+}
+
+export function setDevModeRoleCookie(role: AppRole): string {
+  return `${DEV_ROLE_COOKIE_NAME}=${role}; Path=/; Max-Age=2592000; SameSite=Lax`;
+}
+
+export function getDevAuthModeFromCookie(
+  cookieValue: string | null | undefined,
+): DevAuthMode {
+  return cookieValue === "mock" ? "mock" : "real";
+}
+
+export function setDevAuthModeCookie(mode: DevAuthMode): string {
+  return `${DEV_AUTH_MODE_COOKIE_NAME}=${mode}; Path=/; Max-Age=2592000; SameSite=Lax`;
+}
+
+export function clearDevAuthModeCookie(): string {
+  return `${DEV_AUTH_MODE_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax`;
+}
+
+export function getActiveDevModeRole(options: {
+  roleCookieValue: string | null | undefined;
+  modeCookieValue: string | null | undefined;
+}): AppRole | null {
+  if (!isDevRoleBypassEnabled()) return null;
+  const mode = getDevAuthModeFromCookie(options.modeCookieValue);
+  if (mode !== "mock") return null;
+  return getDevModeRoleFromCookie(options.roleCookieValue);
 }
 
 export function getDevModeProfileForRole(

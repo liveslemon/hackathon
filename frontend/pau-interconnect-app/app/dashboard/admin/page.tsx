@@ -1,11 +1,17 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import crossFetch from "cross-fetch";
+import { supabaseFetch } from "@/lib/supabase-fetch";
 import { Suspense } from "react";
 import AdminClient from "./AdminClient";
 import { Skeleton } from "@/components/ui";
-import { getDevModeRoleFromCookie } from "@/lib/role-guard";
+import {
+  DEV_AUTH_MODE_COOKIE_NAME,
+  DEV_ROLE_COOKIE_NAME,
+  getDashboardPathForRole,
+  getActiveDevModeRole,
+  getUserRoleProfile,
+} from "@/lib/role-guard";
 
 // Parallel import of subviews
 import OverviewView from "./overview/OverviewView";
@@ -24,7 +30,7 @@ export default async function AdminDashboardPage({
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      global: { fetch: crossFetch },
+      global: { fetch: supabaseFetch },
       cookies: {
         getAll() {
           return cookieStore.getAll();
@@ -34,9 +40,10 @@ export default async function AdminDashboardPage({
     },
   );
 
-  const devRole = getDevModeRoleFromCookie(
-    cookieStore.get("dev_mode_role")?.value,
-  );
+  const devRole = getActiveDevModeRole({
+    roleCookieValue: cookieStore.get(DEV_ROLE_COOKIE_NAME)?.value,
+    modeCookieValue: cookieStore.get(DEV_AUTH_MODE_COOKIE_NAME)?.value,
+  });
 
   if (devRole === "admin") {
     return (
@@ -44,9 +51,9 @@ export default async function AdminDashboardPage({
         <Suspense
           fallback={
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <Skeleton className="h-48 rounded-3xl" />
-              <Skeleton className="h-48 rounded-3xl" />
-              <Skeleton className="h-48 rounded-3xl" />
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-48 rounded-3xl" />
+              ))}
             </div>
           }
         >
@@ -63,6 +70,16 @@ export default async function AdminDashboardPage({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login/admin");
+
+  const { role, isAdmin } = await getUserRoleProfile(supabase, user.id);
+
+  if (!role && !isAdmin) {
+    redirect("/onboarding");
+  }
+
+  if (!isAdmin && role !== "admin") {
+    redirect(getDashboardPathForRole(role, isAdmin));
+  }
 
   // Server-side Admin Check
   const ALLOWED_ADMINS = ["hillary.ilona@pau.edu.ng"];
@@ -84,9 +101,9 @@ export default async function AdminDashboardPage({
       <Suspense
         fallback={
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Skeleton className="h-48 rounded-3xl" />
-            <Skeleton className="h-48 rounded-3xl" />
-            <Skeleton className="h-48 rounded-3xl" />
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-48 rounded-3xl" />
+            ))}
           </div>
         }
       >

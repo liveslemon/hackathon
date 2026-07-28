@@ -329,7 +329,7 @@ export default function LandingPage() {
             <Button
               size="lg"
               colorType="secondary"
-              href="/onboarding/employer"
+              href="/onboarding?role=employer"
               className="bg-white text-brand hover:bg-slate-50"
             >
               Work With Us

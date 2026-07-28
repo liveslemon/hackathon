@@ -32,29 +32,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     let isMounted = true;
 
-    // Trigger initial session check immediately in case onAuthStateChange is delayed
+    // Use getSession (no lock contention) for initial check;
+    // onAuthStateChange will handle token refresh events.
     const checkInitialSession = async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (isMounted && session?.user) {
-        // This will trigger the logic to fetch profile and set user
-        // We actually just need to wait for onAuthStateChange usually,
-        // but if it's already stale, we force it.
-      } else if (isMounted && !session) {
-        setLoading(false); // No session, stop loading
+
+      if (isMounted && !session?.user) {
+        setLoading(false);
       }
     };
     checkInitialSession();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       try {
-        if (session?.user) {
-          setUser((prev) =>
-            prev?.id === session.user.id ? prev : session.user,
-          );
+        const currentUser = session?.user ?? null;
+
+        if (currentUser) {
+          setUser((prev) => (prev?.id === currentUser.id ? prev : currentUser));
 
           // Simple retry logic for transient network/socket errors
           let attempts = 0;
@@ -65,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const { data, error } = await supabase
               .from("profiles")
               .select("*")
-              .eq("id", session.user.id)
+              .eq("id", currentUser.id)
               .maybeSingle();
 
             if (!error) {

@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   BarChart3,
+  FileText,
 } from "lucide-react";
 import { cx } from "@/utils/cx";
 import { useState } from "react";
@@ -48,9 +49,9 @@ const Sidebar = ({
     { label: "Home", icon: Home, href: "/dashboard/student" },
     { label: "My Internships", icon: Briefcase, href: "/my-internships" },
     {
-      label: "Skill Gap Analysis",
-      icon: BarChart3,
-      href: "/dashboard/student/skills",
+      label: "CV & Career",
+      icon: FileText,
+      href: "/dashboard/student/cv",
     },
     {
       label: "SIWES Logbook",

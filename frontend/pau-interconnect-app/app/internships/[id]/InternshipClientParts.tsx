@@ -43,6 +43,11 @@ export default function InternshipClientParts({
   const [isReviewing] = useState(false);
 
   const handleApply = async () => {
+    if (coverLetter.trim().length < 10) {
+      alert("Please provide a cover letter of at least 10 characters.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await authenticatedFetch("/submit-application", {
@@ -111,7 +116,28 @@ export default function InternshipClientParts({
         }
         if (value) {
           const chunkText = decoder.decode(value, { stream: true });
-          setCoverLetter((prev) => prev + chunkText);
+          let parsed = chunkText;
+          if (parsed.includes("data:")) {
+            parsed = "";
+            const lines = chunkText.split(/\r?\n/);
+            for (const line of lines) {
+              if (line.startsWith("data:")) {
+                const raw = line.substring(5).trim();
+                if (raw === "[DONE]" || raw === "") continue;
+                try {
+                  const obj = JSON.parse(raw);
+                  if (obj.delta && obj.delta.content !== undefined)
+                    parsed += obj.delta.content;
+                  else if (obj.content !== undefined) parsed += obj.content;
+                  else if (obj.text !== undefined) parsed += obj.text;
+                  else parsed += raw;
+                } catch {
+                  parsed += raw;
+                }
+              }
+            }
+          }
+          setCoverLetter((prev) => prev + parsed);
         }
       }
     } catch (error: unknown) {

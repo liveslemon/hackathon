@@ -8,6 +8,7 @@ import LogbookReviewClient from "./LogbookReviewClient";
 
 import { getSupabaseServer } from "@/lib/supabase-server";
 import type { Profile } from "@/types/domain";
+import { getDashboardPathForRole, getUserRoleProfile } from "@/lib/role-guard";
 
 export const revalidate = 0; // Don't cache review pages
 
@@ -31,7 +32,7 @@ async function getProfile(supabase: SupabaseClient, userId: string) {
     .from("profiles")
     .select("*")
     .eq("id", userId)
-    .single();
+    .maybeSingle();
   if (error) {
     console.error("Profile Fetch Error:", error.message);
   }
@@ -61,13 +62,14 @@ export default async function EmployerLogbookPage() {
     redirect("/login/employer");
   }
 
-  const profile = await getProfile(supabase, user.id);
-  if (!profile || profile.role !== "employer") {
-    console.warn(
-      `Access denied: Profile for ${user.id} has role ${profile?.role}`,
-    );
-    redirect("/");
+  const { role, isAdmin } = await getUserRoleProfile(supabase, user.id);
+  if (!role) redirect("/onboarding");
+  if (role !== "employer") {
+    redirect(getDashboardPathForRole(role, isAdmin));
   }
+
+  const profile = await getProfile(supabase, user.id);
+  if (!profile) redirect("/onboarding");
 
   return (
     <DashboardShellWrapper userProfile={profile}>

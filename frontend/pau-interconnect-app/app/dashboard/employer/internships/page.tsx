@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getSupabaseServer } from "@/lib/supabase-server";
 import DashboardShellWrapper from "../DashboardShellWrapper";
 import { EmployerInternshipListSection } from "../EmployerParts";
+import { getDashboardPathForRole, getUserRoleProfile } from "@/lib/role-guard";
 
 export const revalidate = 0;
 
@@ -14,11 +15,19 @@ export default async function EmployerInternshipsPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login/employer");
 
+  const { role, isAdmin } = await getUserRoleProfile(supabase, user.id);
+  if (!role) redirect("/onboarding");
+  if (role !== "employer") {
+    redirect(getDashboardPathForRole(role, isAdmin));
+  }
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
+
+  if (!profile) redirect("/onboarding");
 
   return (
     <DashboardShellWrapper userProfile={profile}>

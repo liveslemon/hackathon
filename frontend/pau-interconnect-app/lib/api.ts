@@ -16,29 +16,14 @@ function toErrorMessage(error: unknown): string {
  * Browser-safe version using the singleton supabase client.
  */
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  // Use getSession() which is faster, but if it returns an expired session,
-  // we should be aware. For the most reliable fresh token, getUser()
-  // is often better as it forces a check, but getSession is standard.
+  // Use getSession() — reads cached session without acquiring a lock.
+  // The Supabase client's autoRefreshToken handles refresh in the background.
   const {
     data: { session },
     error,
   } = await supabase.auth.getSession();
 
   if (error || !session) return {};
-
-  // Check if token is expired or close to expiring (within 10 seconds)
-  const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
-  const now = Date.now();
-
-  if (expiresAt < now + 10000) {
-    // Force a refresh if it's expired or about to be
-    const { data: refreshData, error: refreshError } =
-      await supabase.auth.refreshSession();
-    if (refreshError || !refreshData.session) return {};
-    return {
-      Authorization: `Bearer ${refreshData.session.access_token}`,
-    };
-  }
 
   return {
     Authorization: `Bearer ${session.access_token}`,
@@ -64,6 +49,12 @@ export async function authenticatedFetch<TResponse = unknown>(
     logger.debug("api", "No session provided, retrieving fresh headers");
     authHeaders = await getAuthHeaders();
     logger.debug("api", "Auth headers retrieved");
+  }
+
+  if (!(authHeaders as Record<string, string>).Authorization) {
+    throw new ApiError("Your session has expired. Please sign in again.", {
+      status: 401,
+    });
   }
 
   const headers: Record<string, string> = {

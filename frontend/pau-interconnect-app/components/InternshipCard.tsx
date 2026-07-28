@@ -37,8 +37,9 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
   const checkSavedStatus = useCallback(
     async (mounted: boolean) => {
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        data: { session },
+      } = await supabase.auth.getSession();
+      const user = session?.user;
       if (!user?.id) return;
 
       const { data, error } = await supabase
@@ -73,9 +74,9 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
 
     try {
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const userId = user?.id;
+        data: { session },
+      } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
 
       if (!userId) {
         alert("Please sign in to save internships.");

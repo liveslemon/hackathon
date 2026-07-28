@@ -532,12 +532,12 @@ const LogbookClient = ({
                 History
               </Typography>
               <Button
+                component="a"
+                href="/dashboard/student/logbook/print"
+                target="_blank"
                 size="small"
                 startIcon={<PrintOutlined />}
                 sx={{ textTransform: "none", fontSize: 12 }}
-                onClick={() =>
-                  window.open("/dashboard/student/logbook/print", "_blank")
-                }
               >
                 Export
               </Button>

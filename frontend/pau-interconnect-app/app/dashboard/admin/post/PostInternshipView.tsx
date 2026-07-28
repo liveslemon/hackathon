@@ -78,8 +78,10 @@ export default function PostInternshipView() {
     setIsLoading(true);
 
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const user = userData?.user ?? null;
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const user = session?.user ?? null;
 
       let posterId: string | null = null;
       const { data: adminProfile } = await supabase

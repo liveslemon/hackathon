@@ -11,8 +11,12 @@ import {
 import DashboardShellWrapper from "./DashboardShellWrapper";
 import { getSupabaseServer } from "@/lib/supabase-server";
 import {
+  DEV_AUTH_MODE_COOKIE_NAME,
+  DEV_ROLE_COOKIE_NAME,
+  getDashboardPathForRole,
+  getActiveDevModeRole,
   getDevModeProfileForRole,
-  getDevModeRoleFromCookie,
+  getUserRoleProfile,
 } from "@/lib/role-guard";
 
 export const revalidate = 0; // Fresh dashboard data
@@ -20,9 +24,10 @@ export const revalidate = 0; // Fresh dashboard data
 export default async function EmployerDashboardPage() {
   const supabase = await getSupabaseServer();
   const cookieStore = await cookies();
-  const devRole = getDevModeRoleFromCookie(
-    cookieStore.get("dev_mode_role")?.value,
-  );
+  const devRole = getActiveDevModeRole({
+    roleCookieValue: cookieStore.get(DEV_ROLE_COOKIE_NAME)?.value,
+    modeCookieValue: cookieStore.get(DEV_AUTH_MODE_COOKIE_NAME)?.value,
+  });
   const devProfile = getDevModeProfileForRole(devRole);
   const companyName =
     typeof devProfile?.company_name === "string"
@@ -99,13 +104,19 @@ export default async function EmployerDashboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login/employer");
 
+  const { role, isAdmin } = await getUserRoleProfile(supabase, user.id);
+  if (!role) redirect("/onboarding");
+  if (role !== "employer") {
+    redirect(getDashboardPathForRole(role, isAdmin));
+  }
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (!profile || profile.role !== "employer") redirect("/");
+  if (!profile) redirect("/onboarding");
 
   return (
     <DashboardShellWrapper userProfile={profile}>

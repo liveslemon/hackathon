@@ -20,6 +20,17 @@ Create a `.env.local` file with:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_AUTH_SIGNUP_REDIRECT_URL` (optional, recommended)
+
+Example:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_AUTH_SIGNUP_REDIRECT_URL=http://localhost:3000/dashboard
+```
+
+If `NEXT_PUBLIC_AUTH_SIGNUP_REDIRECT_URL` is set, it must be allowlisted in Supabase Auth redirect URLs.
 
 Validate environment setup:
 

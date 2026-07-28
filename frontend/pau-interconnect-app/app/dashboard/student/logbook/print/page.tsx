@@ -189,6 +189,9 @@ export default function LogbookPrintView() {
             <p>
               <strong>TOTAL ENTRIES:</strong> {entries.length} Days
             </p>
+            <p className="text-xs mt-2 text-slate-500 print:text-black">
+              <strong>EXPORT GENERATED:</strong> {new Date().toLocaleString()}
+            </p>
           </div>
         </div>
       </div>

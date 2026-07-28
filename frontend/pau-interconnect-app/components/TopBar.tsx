@@ -4,8 +4,8 @@ import { Menu, Bell, Search, User, LogOut } from "lucide-react";
 import { Input } from "./ui";
 import { cx } from "@/utils/cx";
 import { usePathname } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
 import type { Profile } from "@/types/domain";
+import { fastSignOut } from "@/lib/fast-signout";
 
 interface TopBarProps {
   onMenuClick: () => void;
@@ -37,27 +37,11 @@ const TopBar = ({
     return "Search internships...";
   };
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     if (isLoggingOut) return;
     setIsLoggingOut(true);
-    try {
-      // 1. Sign out from Supabase client (requires active session token in storage)
-      await supabase.auth.signOut();
-    } catch (err) {
-      console.warn("Supabase signOut error:", err);
-    }
 
-    try {
-      // 2. Clear cookies on the server
-      await fetch("/api/auth/logout", { method: "POST" });
-    } catch (err) {
-      console.warn("Server cookie logout error:", err);
-    }
-
-    // 3. Clear other local storage
-    localStorage.clear();
-
-    window.location.href = isEmployer ? "/login/employer" : "/login/student";
+    fastSignOut(isEmployer ? "/login/employer" : "/login/student");
   };
 
   const displayName =

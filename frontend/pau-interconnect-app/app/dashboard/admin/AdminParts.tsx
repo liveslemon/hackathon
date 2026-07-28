@@ -9,7 +9,7 @@ import {
   FiUserPlus,
   FiActivity,
 } from "react-icons/fi";
-import crossFetch from "cross-fetch";
+import { supabaseFetch } from "@/lib/supabase-fetch";
 
 async function getAdminSupabase() {
   const cookieStore = await cookies();
@@ -17,7 +17,7 @@ async function getAdminSupabase() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      global: { fetch: crossFetch },
+      global: { fetch: supabaseFetch },
       cookies: {
         getAll() {
           return cookieStore.getAll();

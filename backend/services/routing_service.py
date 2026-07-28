@@ -3,6 +3,7 @@ import hashlib
 from services.embedding_service import get_embedding
 from services.llm_service import generate_completion
 from services.matching_service import compute_cosine_similarity, analyze_skills
+from services.cv_parser_service import compute_structured_match, parse_job_structured
 from services.cache_service import embedding_cache, match_result_cache
 
 logger = logging.getLogger(__name__)
@@ -21,68 +22,156 @@ async def get_cached_embedding(text: str) -> list[float]:
     embedding_cache.set(text_hash, embedding)
     return embedding
 
-async def compute_match_score(cv_text: str, job: dict) -> dict:
+async def compute_match_score(cv_text: str, job: dict, cv_structured: dict = None) -> dict:
     """
-    Orchestrates the CV to Job match process.
-    Uses embeddings for core scoring and keyword extraction for skills arrays.
+    Orchestrates the CV-to-Job match process using a refined multi-stage pipeline:
+
+    Stage 1: Structured match (fast, no AI calls) — compares parsed CV fields vs parsed job fields
+    Stage 2: Semantic embedding similarity — captures meaning beyond exact keywords
+    Stage 3: Blend scores — 55% structured + 35% semantic + 10% keyword overlap
+    Stage 4: LLM reasoning — only for matches scoring >= 40 (cost optimization)
+
+    If cv_structured is provided (pre-parsed at upload time), Stage 1 is essentially free.
     """
+    import asyncio
+
     job_id = job.get("id", "unknown_job")
-    cv_hash = hashlib.md5(cv_text.encode("utf-8")).hexdigest()
+    cv_hash = hashlib.sha256(cv_text.encode("utf-8")).hexdigest()[:16]
     cache_key = f"{cv_hash}_{job_id}"
-    
+
     cached_result = match_result_cache.get(cache_key)
     if cached_result:
         logger.info(f"Serving match from cache for Job: {job_id}")
         return cached_result
 
-    # 1. Prepare Job Text
     job_title = job.get("title") or job.get("role") or ""
     job_desc = job.get("description", "")
     reqs = job.get("requirements", "")
-    
-    # Handle list requirements if stored as array
+    company = job.get("company", "")
+
     if isinstance(reqs, list):
-        reqs_text = " ".join(reqs)
+        reqs_text = ", ".join(reqs)
         req_list = reqs
     else:
         reqs_text = str(reqs)
-        req_list = [r.strip() for r in reqs_text.split('\n') if r.strip()]
-        
-    full_job_text = f"{job_title} {job_desc} {reqs_text}"
-    
-    # 2. Get Embeddings Contextually
-    # Note: they run sequentially here, but you could run them via asyncio.gather for speed.
-    import asyncio
+        req_list = [r.strip() for r in reqs_text.replace(",", "\n").split("\n") if r.strip()]
+
+    # --- Stage 1: Structured Match (fast path, no AI calls) ---
+    structured_score = 0
+    structured_matched = []
+    structured_missing = []
+    breakdown = {}
+
+    if cv_structured:
+        # Parse job structure (cached per job or computed here)
+        job_structured = job.get("_parsed_structure")
+        if not job_structured:
+            job_structured = await parse_job_structured(job)
+
+        struct_result = compute_structured_match(cv_structured, job_structured)
+        structured_score = struct_result["score"]
+        structured_matched = struct_result["matched_skills"]
+        structured_missing = struct_result["missing_skills"]
+        breakdown = struct_result["breakdown"]
+
+    # --- Stage 2: Semantic Embedding Similarity ---
+    full_job_text = f"Role: {job_title}. Company: {company}. Description: {job_desc}. Requirements: {reqs_text}"
+    semantic_percent = 0
+    embedding_failed = False
+
     try:
         cv_emb, job_emb = await asyncio.gather(
-            get_cached_embedding(cv_text),
-            get_cached_embedding(full_job_text)
+            get_cached_embedding(cv_text[:6000]),
+            get_cached_embedding(full_job_text),
         )
+        if cv_emb and job_emb:
+            sim_score = compute_cosine_similarity(cv_emb, job_emb)
+            # Calibrated: cosine 0.30 = 0%, 0.50 = 50%, 0.70+ = 100%
+            semantic_percent = max(0, min(100, int((sim_score - 0.3) * 250)))
     except Exception as e:
-        logger.error(f"Embedding failed: {e}. Falling back to 50% match.")
-        cv_emb, job_emb = [1.0], [0.0]  # Force a safe fallback 
+        logger.warning(f"Embedding failed for job {job_id}: {e}")
+        embedding_failed = True
 
-    # 3. Compute Similarity
-    sim_score = compute_cosine_similarity(cv_emb, job_emb)
-    semantic_percent = max(0, min(100, int((sim_score - 0.2) * 125)))
-    
-    # 4. Extract Skills & Keyword Score
-    matching, missing, keyword_ratio = analyze_skills(cv_text, req_list)
-    keyword_percent = int(keyword_ratio * 100)
-    
-    # 5. Hybrid Score (70% semantic, 30% keyword)
-    final_score = int((semantic_percent * 0.7) + (keyword_percent * 0.3))
-    
+    # --- Stage 2b: Keyword fallback (if no structured data available) ---
+    keyword_percent = 0
+    if not cv_structured:
+        _, _, keyword_ratio = analyze_skills(cv_text, req_list)
+        keyword_percent = int(keyword_ratio * 100)
+
+    # --- Stage 3: Blended Score ---
+    if cv_structured and not embedding_failed:
+        # Best case: structured + semantic
+        # Structured is more accurate (field-level matching), semantic adds depth
+        final_score = int(structured_score * 0.55 + semantic_percent * 0.35 + keyword_percent * 0.10)
+    elif cv_structured:
+        # Embeddings failed but structured works
+        final_score = structured_score
+    elif not embedding_failed:
+        # No structured data, fall back to old approach
+        final_score = int(semantic_percent * 0.60 + keyword_percent * 0.40)
+    else:
+        # Both failed — keyword only
+        final_score = keyword_percent
+
+    final_score = max(0, min(100, final_score))
+
+    # Use structured skills if available, otherwise fall back to keyword extraction
+    if structured_matched or structured_missing:
+        matching = structured_matched
+        missing = structured_missing
+    else:
+        matching_kw, missing_kw, _ = analyze_skills(cv_text, req_list)
+        matching = matching_kw
+        missing = missing_kw
+
+    # --- Stage 4: LLM Reasoning (only for meaningful matches, saves cost) ---
+    reasoning = _build_fallback_reasoning(final_score, structured_score, semantic_percent, breakdown)
+
+    if final_score >= 40:
+        try:
+            reasoning_prompt = (
+                f"You are an AI career matching assistant. In 2-3 concise sentences, explain why this candidate "
+                f"is a {final_score}% match for this role.\n\n"
+                f"Role: {job_title} at {company}\n"
+                f"Requirements: {reqs_text[:500]}\n\n"
+                f"Candidate Skills Found: {', '.join(matching[:8]) if matching else 'None identified'}\n"
+                f"Missing Skills: {', '.join(missing[:5]) if missing else 'None'}\n"
+                f"Score breakdown: Skills {breakdown.get('skills', 'N/A')}%, "
+                f"Experience {breakdown.get('experience', 'N/A')}%, "
+                f"Education {breakdown.get('education', 'N/A')}%\n\n"
+                f"Be specific. Mention which skills make them strong and what gaps exist. No markdown."
+            )
+            reasoning = await generate_completion(
+                reasoning_prompt,
+                system_message="You provide brief, factual career match explanations. No markdown, no bullet points. 2-3 sentences max.",
+            )
+        except Exception as e:
+            logger.warning(f"LLM reasoning failed for job {job_id}: {e}")
+
     result = {
         "internship_id": job_id,
         "match_score": final_score,
         "matching_skills": matching,
         "missing_skills": missing,
-        "reasoning": "Hybird Score: 70% Semantic Embedding Similarity, 30% Exact Keyword Overlap."
+        "reasoning": reasoning.strip(),
+        "score_breakdown": breakdown,
     }
-    
+
     match_result_cache.set(cache_key, result)
     return result
+
+
+def _build_fallback_reasoning(final: int, structured: int, semantic: int, breakdown: dict) -> str:
+    """Generates a descriptive fallback reasoning string when LLM is skipped."""
+    parts = []
+    if breakdown:
+        parts.append(f"Skills match: {breakdown.get('skills', 0)}%")
+        parts.append(f"Experience fit: {breakdown.get('experience', 0)}%")
+        if breakdown.get('education', 0) > 50:
+            parts.append(f"Education alignment: {breakdown.get('education', 0)}%")
+    if semantic > 0:
+        parts.append(f"Semantic similarity: {semantic}%")
+    return f"Match score {final}%. " + ", ".join(parts) + "." if parts else f"Match score: {final}%."
 
 async def generate_cover_letter(student_name: str, user_email: str, profile_text: str, job: dict, existing_letter: str = "") -> str:
     """

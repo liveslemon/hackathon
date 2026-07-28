@@ -16,10 +16,13 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ---- CHANGE THESE TO YOUR DESIRED ADMIN CREDENTIALS ----
-ADMIN_EMAIL = "admin@pau.edu.ng"
-ADMIN_PASSWORD = "Admin@12345"
-ADMIN_NAME = "Admin User"
+# ---- SET THESE VIA ENVIRONMENT VARIABLES ----
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+ADMIN_NAME = os.getenv("ADMIN_NAME", "Admin User")
+
+if not ADMIN_EMAIL or not ADMIN_PASSWORD:
+    raise SystemExit("Set ADMIN_EMAIL and ADMIN_PASSWORD environment variables before running this script.")
 # ---------------------------------------------------------
 
 print(f"Creating admin user: {ADMIN_EMAIL}")
@@ -71,6 +74,5 @@ except Exception as e:
 print("\n========================================")
 print("  Admin account created successfully!")
 print(f"  Email:    {ADMIN_EMAIL}")
-print(f"  Password: {ADMIN_PASSWORD}")
 print("========================================")
 print("You can now log in with these credentials.")

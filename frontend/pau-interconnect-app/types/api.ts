@@ -1,5 +1,7 @@
 export interface ApiErrorPayload {
-  detail?: string;
+  detail?:
+    | string
+    | Array<{ loc?: (string | number)[]; msg?: string; type?: string }>;
   error?: string;
   message?: string;
 }
@@ -26,6 +28,7 @@ export function isApiErrorPayload(value: unknown): value is ApiErrorPayload {
   const record = value as Record<string, unknown>;
   return (
     typeof record.detail === "string" ||
+    Array.isArray(record.detail) ||
     typeof record.error === "string" ||
     typeof record.message === "string"
   );
@@ -33,8 +36,13 @@ export function isApiErrorPayload(value: unknown): value is ApiErrorPayload {
 
 export function toApiErrorMessage(payload: unknown, status: number): string {
   if (isApiErrorPayload(payload)) {
+    if (Array.isArray(payload.detail)) {
+      return payload.detail
+        .map((d: any) => `${d.loc?.join(".") || "Field"}: ${d.msg}`)
+        .join(", ");
+    }
     return (
-      payload.detail ||
+      (typeof payload.detail === "string" ? payload.detail : undefined) ||
       payload.error ||
       payload.message ||
       `Request failed with status ${status}`
