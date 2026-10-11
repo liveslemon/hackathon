@@ -1,5 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 import { Typography, Stack } from "@/components/ui";
 import { Button } from "@/components/ui";
 import { FileUpload } from "@/components/application/file-upload/file-upload-base";
@@ -20,6 +22,7 @@ type CvStatus =
   | "idle"
   | "uploading"
   | "processing"
+  | "analyzing"
   | "complete"
   | "failed";
 
@@ -55,7 +58,26 @@ type InitialCvData = {
   cv_url?: string | null;
   cv_structured?: unknown;
   cv_processing_status?: string | null;
+  cv_processing_error?: string | null;
+  updated_at?: string | null;
 } | null;
+
+// Background analysis normally takes 2-5 minutes. A job still "processing"
+// after this long was most likely lost (e.g. server restart).
+const STALE_ANALYSIS_MS = 20 * 60 * 1000;
+const POLL_MS = 15 * 1000;
+
+function initialStatus(data: InitialCvData, hasCv: boolean): CvStatus {
+  if (data?.cv_processing_status === "processing") {
+    const startedAt = data.updated_at ? Date.parse(data.updated_at) : NaN;
+    if (!Number.isNaN(startedAt) && Date.now() - startedAt < STALE_ANALYSIS_MS) {
+      return "analyzing";
+    }
+    return "failed";
+  }
+  if (data?.cv_processing_status === "failed") return "failed";
+  return hasCv ? "complete" : "idle";
+}
 
 function parseInitialData(data: InitialCvData): {
   hasCv: boolean;
@@ -90,6 +112,7 @@ type MetricsData = {
 };
 
 export default function CvDashboardClient({
+  userId,
   initialData,
   initialMetrics,
 }: {
@@ -97,22 +120,62 @@ export default function CvDashboardClient({
   initialData: InitialCvData;
   initialMetrics?: MetricsData;
 }) {
+  const router = useRouter();
   const initial = parseInitialData(initialData);
-  const [status, setStatus] = useState<CvStatus>(
-    initial.hasCv ? "complete" : "idle",
+  const [status, setStatus] = useState<CvStatus>(() =>
+    initialStatus(initialData, initial.hasCv),
   );
-  const [cvData] = useState<CvData>({
+  // Derived from props (not state) so router.refresh() shows fresh results.
+  const cvData: CvData = {
     has_cv: initial.hasCv,
     ats_score: initialMetrics?.ats_score ?? 0,
     career_score: initialMetrics?.career_score ?? 0,
     avg_match_rate: initialMetrics?.avg_match_rate ?? 0,
     applications_sent: initialMetrics?.applications_sent ?? 0,
     cv_structured: initial.structured,
-  });
-  const [metricsLoaded] = useState(true);
+  };
+  const metricsLoaded = true;
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState(() =>
+    initialData?.cv_processing_status === "failed"
+      ? initialData.cv_processing_error ||
+        "CV analysis failed. Please upload your CV again."
+      : initialData?.cv_processing_status === "processing"
+        ? "Your last CV analysis didn't finish. Please upload your CV again."
+        : "",
+  );
+
+  // While the backend analyses the CV, poll its status and refresh the
+  // server-rendered results when it finishes. The global popup comes from
+  // NotificationBell; this keeps the page itself in sync.
+  useEffect(() => {
+    if (status !== "analyzing" || !userId) return;
+    let cancelled = false;
+    const check = async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("cv_processing_status, cv_processing_error")
+        .eq("id", userId)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      if (data.cv_processing_status === "complete") {
+        setStatus("complete");
+        router.refresh();
+      } else if (data.cv_processing_status === "failed") {
+        setStatus("failed");
+        setErrorMessage(
+          data.cv_processing_error ||
+            "CV analysis failed. Please upload your CV again.",
+        );
+      }
+    };
+    const timer = setInterval(check, POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [status, userId, router]);
 
   const handleDropFiles = (files: FileList) => {
     const pdf = Array.from(files).find(
@@ -163,8 +226,10 @@ export default function CvDashboardClient({
         return;
       }
 
-      // Reload the page to get fresh server-rendered data
-      window.location.reload();
+      // The CV is saved; parsing and matching continue in the background.
+      setUploadedFiles([]);
+      setSelectedFile(null);
+      setStatus("analyzing");
     } catch {
       setStatus("failed");
       setErrorMessage("Network error. Please check your connection and retry.");
@@ -324,7 +389,24 @@ export default function CvDashboardClient({
           </div>
         </div>
 
-        {status === "complete" && uploadedFiles.length === 0 && hasCv ? (
+        {status === "analyzing" ? (
+          <div
+            role="status"
+            className="flex items-start gap-3 rounded-2xl bg-violet-50 border border-violet-100 p-4"
+          >
+            <Loader2 className="w-5 h-5 text-violet-600 shrink-0 mt-0.5 animate-spin" />
+            <div className="flex-1">
+              <Typography variant="body2" weight="bold" className="text-violet-800">
+                Analysing your CV. This usually takes a few minutes.
+              </Typography>
+              <Typography variant="caption" className="text-violet-700">
+                You can leave this page and keep using the app. We&apos;ll
+                show a notification as soon as your results and internship
+                matches are ready.
+              </Typography>
+            </div>
+          </div>
+        ) : status === "complete" && uploadedFiles.length === 0 && hasCv ? (
           <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 border border-emerald-100 p-4">
             <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
             <div className="flex-1">

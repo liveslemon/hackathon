@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Bell } from "lucide-react";
+import { Bell, CheckCircle2, AlertCircle, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { cx } from "@/utils/cx";
 
@@ -14,10 +15,22 @@ interface Notification {
   created_at: string;
 }
 
+// Notification types that also pop up on screen as soon as they arrive.
+const POPUP_TYPES = new Set(["cv_analysis_complete", "cv_analysis_failed"]);
+const POPUP_MS = 12000;
+
 export function NotificationBell({ userId }: { userId: string }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [popup, setPopup] = useState<Notification | null>(null);
+  const router = useRouter();
   const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  useEffect(() => {
+    if (!popup) return;
+    const timer = setTimeout(() => setPopup(null), POPUP_MS);
+    return () => clearTimeout(timer);
+  }, [popup]);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -44,7 +57,13 @@ export function NotificationBell({ userId }: { userId: string }) {
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          setNotifications((prev) => [payload.new as Notification, ...prev]);
+          const notif = payload.new as Notification;
+          setNotifications((prev) => [notif, ...prev]);
+          if (POPUP_TYPES.has(notif.type)) {
+            setPopup(notif);
+            // Pages showing CV-derived data re-render with the new results.
+            router.refresh();
+          }
         },
       )
       .subscribe();
@@ -52,7 +71,7 @@ export function NotificationBell({ userId }: { userId: string }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [userId, router]);
 
   const handleMarkAsRead = async (id: string) => {
     await supabase.from("notifications").update({ is_read: true }).eq("id", id);
@@ -70,8 +89,50 @@ export function NotificationBell({ userId }: { userId: string }) {
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
   };
 
+  const openNotification = (notif: Notification) => {
+    handleMarkAsRead(notif.id);
+    setPopup(null);
+    setIsOpen(false);
+    if (notif.link) router.push(notif.link);
+  };
+
   return (
     <div className="relative">
+      {popup && (
+        <div
+          role="alert"
+          className="fixed bottom-6 right-6 z-[100] w-[calc(100%-3rem)] max-w-sm rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl"
+        >
+          <div className="flex items-start gap-3">
+            {popup.type === "cv_analysis_failed" ? (
+              <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+            ) : (
+              <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-slate-800">{popup.title}</p>
+              {popup.body && (
+                <p className="text-xs text-slate-500 mt-0.5">{popup.body}</p>
+              )}
+              {popup.link && (
+                <button
+                  onClick={() => openNotification(popup)}
+                  className="mt-2 text-xs font-semibold text-brand hover:underline"
+                >
+                  {popup.type === "cv_analysis_failed" ? "Try again" : "View results"}
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => setPopup(null)}
+              aria-label="Dismiss"
+              className="p-1 rounded-lg text-slate-400 hover:bg-slate-100"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 rounded-xl hover:bg-slate-100"
@@ -106,10 +167,7 @@ export function NotificationBell({ userId }: { userId: string }) {
               notifications.map((notif) => (
                 <button
                   key={notif.id}
-                  onClick={() => {
-                    handleMarkAsRead(notif.id);
-                    if (notif.link) window.location.href = notif.link;
-                  }}
+                  onClick={() => openNotification(notif)}
                   className={cx(
                     "w-full text-left p-4 hover:bg-slate-50 transition-colors",
                     !notif.is_read && "bg-brand/5",

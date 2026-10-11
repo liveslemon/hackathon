@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isOpenInternship } from "@/lib/internship-columns";
 import {
   Send,
   Clock,
@@ -16,7 +17,13 @@ import { cx } from "@/utils/cx";
 import { authenticatedFetch, authenticatedFetchStream } from "@/lib/api";
 
 interface InternshipClientPartsProps {
-  internship: { id: string; company?: string; role?: string };
+  internship: {
+    id: string;
+    company?: string;
+    role?: string;
+    status?: string | null;
+    deadline?: string | null;
+  };
   hasApplied: boolean;
   applicationStatus: string | null;
   applicationStage: string | null;
@@ -210,6 +217,7 @@ export default function InternshipClientParts({
   const isRejected = currentStage === "rejected";
 
   const appStatus = applicationStatus?.toLowerCase() || "";
+  const isClosed = !hasApplied && !isOpenInternship(internship);
   const statusData = hasApplied
     ? statusConfig[appStatus] || statusConfig.pending
     : null;
@@ -299,8 +307,8 @@ export default function InternshipClientParts({
       <div className="space-y-2.5">
         {/* Apply / Status Button */}
         <button
-          onClick={() => !hasApplied && setApplyModalOpen(true)}
-          disabled={hasApplied}
+          onClick={() => !hasApplied && !isClosed && setApplyModalOpen(true)}
+          disabled={hasApplied || isClosed}
           className={cx(
             "w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white transition-colors",
             hasApplied
@@ -308,10 +316,14 @@ export default function InternshipClientParts({
                   "cursor-default opacity-90",
                   statusData?.className || "bg-indigo-600",
                 )
-              : "bg-slate-800 hover:bg-slate-700",
+              : isClosed
+                ? "bg-slate-400 cursor-not-allowed"
+                : "bg-slate-800 hover:bg-slate-700",
           )}
         >
-          {hasApplied && statusData ? (
+          {isClosed ? (
+            "Applications closed"
+          ) : hasApplied && statusData ? (
             <>
               <statusData.icon className="w-4 h-4" />
               {statusData.label}

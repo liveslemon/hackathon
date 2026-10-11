@@ -10,7 +10,29 @@ interface LogbookEntry {
   activities_enhanced: string | null;
   activities_raw: string;
   status: string;
+  feedback_notes?: string | null;
+  reviewed_at?: string | null;
 }
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// "YYYY-MM-DD" parsed as a local date (new Date("YYYY-MM-DD") is UTC midnight).
+function localDate(iso: string): Date {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function mondayOf(date: Date): Date {
+  const monday = new Date(date);
+  monday.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+  return monday;
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  approved: "APPROVED",
+  pending: "PENDING REVIEW",
+  flagged: "RETURNED FOR CORRECTION",
+};
 
 interface InternshipSummary {
   role?: string;
@@ -19,7 +41,8 @@ interface InternshipSummary {
 
 interface ProfileSummary {
   full_name?: string;
-  department?: string;
+  course?: string;
+  level?: string;
 }
 
 interface AppliedInternship {
@@ -37,6 +60,7 @@ export default function LogbookPrintView() {
   const [internship, setInternship] = useState<InternshipSummary | null>(null);
   const [entries, setEntries] = useState<LogbookEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [approvedOnly, setApprovedOnly] = useState(false);
 
   // Wait for auth to be resolved before fetching data
   useEffect(() => {
@@ -53,7 +77,7 @@ export default function LogbookPrintView() {
         else {
           const { data } = await supabase
             .from("profiles")
-            .select("*")
+            .select("full_name, course, level")
             .eq("id", user.id)
             .single();
           setProfile((data ?? null) as ProfileSummary | null);
@@ -79,7 +103,7 @@ export default function LogbookPrintView() {
           10000,
         );
         const sorted = (logRes.entries || []).sort(
-          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+          (a, b) => localDate(a.date).getTime() - localDate(b.date).getTime(),
         );
         setEntries(sorted);
       } catch (err) {
@@ -91,12 +115,17 @@ export default function LogbookPrintView() {
     fetchAll();
   }, [user, authLoading, authProfile]);
 
-  // Group entries by week number (relative to first entry)
-  const groupEntriesByWeek = () => {
-    if (entries.length === 0) return [];
+  const approvedCount = entries.filter((e) => e.status === "approved").length;
+  const visibleEntries = approvedOnly
+    ? entries.filter((e) => e.status === "approved")
+    : entries;
 
-    // Use the sorted entries we already have from the fetch
-    const firstDate = new Date(entries[0].date);
+  // Group into calendar weeks (Mon-Sun). Week 1 is the week of the first
+  // entry, so numbering matches the SIWES "Week N" convention.
+  const groupEntriesByWeek = () => {
+    if (visibleEntries.length === 0) return [];
+
+    const firstMonday = mondayOf(localDate(visibleEntries[0].date));
     const weeks: {
       weekNumber: number;
       startDate: string;
@@ -104,16 +133,14 @@ export default function LogbookPrintView() {
       days: LogbookEntry[];
     }[] = [];
 
-    entries.forEach((entry) => {
-      const entryDate = new Date(entry.date);
-      const diffTime = Math.abs(entryDate.getTime() - firstDate.getTime());
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      const weekNumber = Math.floor(diffDays / 7) + 1;
+    visibleEntries.forEach((entry) => {
+      const entryMonday = mondayOf(localDate(entry.date));
+      const weekNumber =
+        Math.round((entryMonday.getTime() - firstMonday.getTime()) / (7 * DAY_MS)) + 1;
 
       let week = weeks.find((w) => w.weekNumber === weekNumber);
       if (!week) {
-        const wStart = new Date(firstDate);
-        wStart.setDate(firstDate.getDate() + (weekNumber - 1) * 7);
+        const wStart = entryMonday;
         const wEnd = new Date(wStart);
         wEnd.setDate(wStart.getDate() + 6);
 
@@ -171,7 +198,10 @@ export default function LogbookPrintView() {
               <strong>INSTITUTION:</strong> PAN-ATLANTIC UNIVERSITY
             </p>
             <p>
-              <strong>DEPARTMENT:</strong> {profile?.department || "N/A"}
+              <strong>COURSE:</strong> {profile?.course || "N/A"}
+            </p>
+            <p>
+              <strong>LEVEL:</strong> {profile?.level || "N/A"}
             </p>
           </div>
           <div className="space-y-1 border-l-2 border-black pl-6">
@@ -187,7 +217,8 @@ export default function LogbookPrintView() {
               </>
             )}
             <p>
-              <strong>TOTAL ENTRIES:</strong> {entries.length} Days
+              <strong>TOTAL ENTRIES:</strong> {entries.length} days (
+              {approvedCount} approved by supervisor)
             </p>
             <p className="text-xs mt-2 text-slate-500 print:text-black">
               <strong>EXPORT GENERATED:</strong> {new Date().toLocaleString()}
@@ -221,7 +252,7 @@ export default function LogbookPrintView() {
                   >
                     <div className="flex border-b border-black bg-slate-50">
                       <div className="w-40 border-r border-black p-2 font-bold text-xs uppercase shrink-0">
-                        {new Date(day.date).toLocaleDateString([], {
+                        {localDate(day.date).toLocaleDateString([], {
                           weekday: "long",
                         })}
                         <br />
@@ -229,13 +260,32 @@ export default function LogbookPrintView() {
                           {day.date}
                         </span>
                       </div>
-                      <div className="p-2 text-[10px] font-bold text-slate-400 uppercase flex items-center">
+                      <div className="p-2 text-[10px] font-bold text-slate-400 uppercase flex items-center flex-1">
                         Daily Progress Report
                       </div>
+                      <div
+                        className={
+                          "p-2 text-[10px] font-bold uppercase flex items-center border-l border-black " +
+                          (day.status === "approved"
+                            ? "text-emerald-700 print:text-black"
+                            : "text-amber-700 print:text-black")
+                        }
+                      >
+                        {STATUS_LABEL[day.status] ?? day.status?.toUpperCase()}
+                        {day.status === "approved" && day.reviewed_at
+                          ? ` · ${new Date(day.reviewed_at).toLocaleDateString()}`
+                          : ""}
+                      </div>
                     </div>
-                    <div className="p-4 text-sm leading-relaxed min-h-[80px]">
+                    <div className="p-4 text-sm leading-relaxed min-h-[80px] whitespace-pre-line">
                       {day.activities_enhanced || day.activities_raw}
                     </div>
+                    {day.feedback_notes && (
+                      <div className="px-4 pb-3 text-xs italic">
+                        <strong className="not-italic">Supervisor feedback:</strong>{" "}
+                        {day.feedback_notes}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -265,7 +315,15 @@ export default function LogbookPrintView() {
         )}
       </div>
 
-      <div className="mt-12 text-center print:hidden pb-20">
+      <div className="mt-12 text-center print:hidden pb-20 space-y-4">
+        <label className="flex items-center justify-center gap-2 text-sm font-sans">
+          <input
+            type="checkbox"
+            checked={approvedOnly}
+            onChange={(e) => setApprovedOnly(e.target.checked)}
+          />
+          Only include entries approved by my supervisor
+        </label>
         <button
           onClick={() => window.print()}
           className="bg-black text-white px-10 py-3 rounded-full font-bold hover:scale-105 transition-transform shadow-lg"

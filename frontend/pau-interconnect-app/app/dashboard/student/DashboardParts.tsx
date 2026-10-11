@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { INTERNSHIP_LIST_COLUMNS, isOpenInternship } from "@/lib/internship-columns";
 import { cookies } from "next/headers";
 import { supabaseFetch } from "@/lib/supabase-fetch";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -179,7 +180,7 @@ export async function InternshipGridSection() {
 
   // Parallelize the three heavy data fetches
   const [internshipsResult, matchesResult, appliedResult] = await Promise.all([
-    supabase.from("internships").select("*"),
+    supabase.from("internships").select(INTERNSHIP_LIST_COLUMNS),
     supabase
       .from("match_results")
       .select("internship_id, match_score")
@@ -200,7 +201,13 @@ export async function InternshipGridSection() {
 
   const stageMap = new Map(applications.map((a) => [a.internship_id, a.stage]));
 
-  const internshipsWithMatches: InternshipWithMatch[] = internshipsData.map(
+  // Discovery shows open roles; keep ones the student applied to so the
+  // Applied / Accepted / Rejected filters still find them after closing.
+  const visibleInternships = internshipsData.filter(
+    (internship) => isOpenInternship(internship) || statusMap.has(internship.id),
+  );
+
+  const internshipsWithMatches: InternshipWithMatch[] = visibleInternships.map(
     (internship) => ({
       ...internship,
       matchPercentage:

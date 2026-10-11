@@ -77,7 +77,9 @@ export default async function CvPage() {
   // Fetch CV data server-side so the client renders instantly
   const { data: cvProfile } = await supabase
     .from("profiles")
-    .select("cv_text, cv_url, cv_structured, cv_processing_status")
+    .select(
+      "cv_text, cv_url, cv_structured, cv_processing_status, cv_processing_error, updated_at",
+    )
     .eq("id", user.id)
     .maybeSingle();
 

@@ -12,31 +12,82 @@ import {
 } from "lucide-react";
 import { cx } from "@/utils/cx";
 
+type TargetJob = { id: string; role: string; company: string };
+
+type SkillGapAnalysis = {
+  match_percentage?: number;
+  match_source?: "platform" | "ai_estimate";
+  strengths_summary?: string;
+  recommendations?: string[];
+  current_skills?: string[];
+  missing_skills?: Array<{
+    skill: string;
+    priority?: "High" | "Medium" | "Low" | string;
+    why?: string;
+    estimated_learning_time?: string;
+    resource?: string;
+  }>;
+};
+
+// PostgREST .or() filters are comma/paren-delimited; strip characters that
+// would break (or inject into) the filter expression.
+function sanitizeSearch(q: string): string {
+  return q.replace(/[,()%*\\]/g, " ").trim();
+}
+
 export default function SkillGapClient() {
-  const [internships, setInternships] = useState<
-    Array<{ id: string; role: string; company: string }>
-  >([]);
+  const [internships, setInternships] = useState<TargetJob[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [selectedId, setSelectedId] = useState<string>("");
   const [selectedLabel, setSelectedLabel] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
-  const [analysis, setAnalysis] = useState<{
-    match_percentage?: number;
-    recommendations?: string[];
-    current_skills?: string[];
-    missing_skills?: Array<{
-      skill: string;
-      priority?: "High" | "Medium" | "Low" | string;
-      estimated_learning_time?: string;
-    }>;
-  } | null>(null);
+  const [analysis, setAnalysis] = useState<SkillGapAnalysis | null>(null);
+  const [suggestions, setSuggestions] = useState<
+    Array<TargetJob & { match_score: number }>
+  >([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Suggest the student's best-matching open internships so they don't have
+  // to search for a target role.
+  useEffect(() => {
+    (async () => {
+      const { supabase } = await import("@/lib/supabaseClient");
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user.id;
+      if (!userId) return;
+      const { data } = await supabase
+        .from("match_results")
+        .select("match_score, internships(id, role, company, status, deadline)")
+        .eq("user_id", userId)
+        .order("match_score", { ascending: false })
+        .limit(12);
+      const now = Date.now();
+      const open = (data || [])
+        .map((row) => {
+          const job = (Array.isArray(row.internships)
+            ? row.internships[0]
+            : row.internships) as
+            | (TargetJob & { status?: string; deadline?: string | null })
+            | null;
+          return job ? { ...job, match_score: row.match_score ?? 0 } : null;
+        })
+        .filter(
+          (j): j is TargetJob & { match_score: number; status?: string; deadline?: string | null } =>
+            Boolean(j) &&
+            (j!.status ?? "active") === "active" &&
+            (!j!.deadline || Date.parse(j!.deadline) >= now),
+        )
+        .slice(0, 4);
+      setSuggestions(open);
+    })();
+  }, []);
+
   // Debounced search: query Supabase with text filter
   useEffect(() => {
-    if (searchQuery.trim().length < 2) {
+    const q = sanitizeSearch(searchQuery);
+    if (q.length < 2) {
       setInternships([]);
       setShowDropdown(false);
       return;
@@ -48,15 +99,20 @@ export default function SkillGapClient() {
         const { supabase } = await import("@/lib/supabaseClient");
         const { data } = await supabase
           .from("internships")
-          .select("id, role, company")
-          .or(`role.ilike.%${searchQuery}%,company.ilike.%${searchQuery}%`)
+          .select("id, role, company, deadline")
+          .eq("status", "active")
+          .or(`role.ilike.%${q}%,company.ilike.%${q}%`)
           .order("created_at", { ascending: false })
-          .limit(10);
+          .limit(20);
 
-        const jobs = (data || []).filter(
-          (j): j is { id: string; role: string; company: string } =>
-            Boolean(j.id && j.role && j.company),
-        );
+        const now = Date.now();
+        const jobs = (data || [])
+          .filter(
+            (j) =>
+              Boolean(j.id && j.role && j.company) &&
+              (!j.deadline || Date.parse(j.deadline) >= now),
+          )
+          .slice(0, 10) as TargetJob[];
         setInternships(jobs);
         setShowDropdown(jobs.length > 0);
       } catch {
@@ -83,16 +139,11 @@ export default function SkillGapClient() {
     setAnalysis(null);
     try {
       const { authenticatedFetch, backendUrl } = await import("@/lib/api");
-      const data = await authenticatedFetch<{
-        match_percentage?: number;
-        recommendations?: string[];
-        current_skills?: string[];
-        missing_skills?: Array<{
-          skill: string;
-          priority?: "High" | "Medium" | "Low" | string;
-          estimated_learning_time?: string;
-        }>;
-      }>(backendUrl(`/api/analysis/skill-gap?internship_id=${selectedId}`));
+      const data = await authenticatedFetch<SkillGapAnalysis>(
+        backendUrl(`/api/analysis/skill-gap?internship_id=${selectedId}`),
+        {},
+        45000, // LLM call with provider fallback
+      );
       setAnalysis(data);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Analysis failed");
@@ -174,6 +225,31 @@ export default function SkillGapClient() {
             )}
           </Button>
         </div>
+        {suggestions.length > 0 && (
+          <div className="mt-4">
+            <p className="text-xs font-medium text-slate-500 mb-2">
+              Or pick one of your top matches
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((job) => (
+                <button
+                  key={job.id}
+                  type="button"
+                  onClick={() => handleSelect(job)}
+                  className={cx(
+                    "px-3 py-1.5 rounded-full border text-xs font-medium transition-colors",
+                    selectedId === job.id
+                      ? "bg-brand text-white border-brand"
+                      : "bg-white text-slate-600 border-slate-200 hover:border-brand/40",
+                  )}
+                >
+                  {job.role} · {job.company}{" "}
+                  <span className="opacity-70">{job.match_score}%</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {error && (
           <div className="mt-4 p-4 bg-red-50 text-red-600 rounded-xl text-sm">
             {error}
@@ -211,8 +287,15 @@ export default function SkillGapClient() {
                     Match Score
                   </Typography>
                   <Typography variant="body2" className="text-slate-400 mt-1">
-                    Based on requirements
+                    {analysis.match_source === "platform"
+                      ? "Same score as on your internship matches"
+                      : "AI estimate (no platform match yet)"}
                   </Typography>
+                  {analysis.strengths_summary && (
+                    <Typography variant="body2" className="text-slate-600 mt-4">
+                      {analysis.strengths_summary}
+                    </Typography>
+                  )}
                 </div>
 
                 <div className="md:col-span-2 bg-white rounded-[32px] p-8 border border-slate-100/60 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
@@ -312,11 +395,21 @@ export default function SkillGapClient() {
                             <AlertCircle className="w-3 h-3" /> {ms.priority}{" "}
                             Priority
                           </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />{" "}
-                            {ms.estimated_learning_time}
-                          </span>
+                          {ms.estimated_learning_time && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />{" "}
+                              {ms.estimated_learning_time}
+                            </span>
+                          )}
                         </div>
+                        {ms.why && (
+                          <p className="text-xs text-slate-500 mt-2">{ms.why}</p>
+                        )}
+                        {ms.resource && (
+                          <p className="text-xs text-brand mt-1">
+                            Learn: {ms.resource}
+                          </p>
+                        )}
                       </div>
                     </div>
                   ))}
