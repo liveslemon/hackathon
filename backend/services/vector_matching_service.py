@@ -1,3 +1,4 @@
+import asyncio
 """
 Vector-Based Matching Service.
 
@@ -41,9 +42,9 @@ async def store_cv_embedding(user_id: str, cv_text: str) -> Optional[list[float]
             return None
 
         # Store in Supabase
-        supabase.table("profiles").update(
+        (await asyncio.to_thread(supabase.table("profiles").update(
             {"cv_embedding": embedding}
-        ).eq("id", user_id).execute()
+        ).eq("id", user_id).execute))
 
         logger.info(f"[VectorMatch] Stored CV embedding for user {user_id}")
         return embedding
@@ -74,10 +75,10 @@ async def store_job_embedding(internship_id: str, job: dict) -> Optional[list[fl
         # Also parse job structure (one-time LLM call per job)
         job_structured = await parse_job_structured(job)
 
-        supabase.table("internships").update({
+        (await asyncio.to_thread(supabase.table("internships").update({
             "job_embedding": embedding,
             "job_structured": job_structured,
-        }).eq("id", internship_id).execute()
+        }).eq("id", internship_id).execute))
 
         logger.info(f"[VectorMatch] Stored embedding + structure for internship {internship_id}")
         return embedding
@@ -109,10 +110,10 @@ async def find_top_matches_for_user(user_id: str, cv_text: str, cv_structured: d
         # This requires an RPC call if using the Supabase Python client for vector distance.
         # We'll use the rpc method if available, otherwise fallback to fetching all.
         try:
-            res = supabase.rpc(
+            res = (await asyncio.to_thread(supabase.rpc(
                 "match_internships", 
                 {"query_embedding": cv_embedding, "match_threshold": 0.3, "match_count": top_k * 2}
-            ).execute()
+            ).execute))
             top_jobs_data = res.data
             
             # Reformat to match the expected structure
@@ -125,9 +126,9 @@ async def find_top_matches_for_user(user_id: str, cv_text: str, cv_structured: d
         except Exception as rpc_e:
             # Fallback to Python if the RPC isn't created yet
             logger.info(f"[VectorMatch] pgvector RPC not found, building Python fallback: {rpc_e}")
-            res = supabase.table("internships").select(
+            res = (await asyncio.to_thread(supabase.table("internships").select(
                 "id, role, company, description, requirements, category, job_embedding, job_structured"
-            ).execute()
+            ).execute))
             internships = res.data or []
             
             scored = []
@@ -246,9 +247,9 @@ async def find_top_students_for_job(internship_id: str, job: dict, top_k: int = 
 
     # Fetch students with embeddings
     try:
-        res = supabase.table("profiles").select(
+        res = (await asyncio.to_thread(supabase.table("profiles").select(
             "id, cv_text, cv_structured, cv_embedding"
-        ).eq("role", "student").not_("cv_embedding", "is", "null").execute()
+        ).eq("role", "student").not_("cv_embedding", "is", "null").execute))
         students = res.data or []
     except Exception as e:
         logger.error(f"[VectorMatch] Failed to fetch students: {e}")
@@ -290,7 +291,7 @@ async def find_top_students_for_job(internship_id: str, job: dict, top_k: int = 
 async def _get_or_compute_cv_embedding(user_id: str, cv_text: str) -> Optional[list[float]]:
     """Get existing CV embedding from DB, or compute and store it."""
     try:
-        res = supabase.table("profiles").select("cv_embedding").eq("id", user_id).single().execute()
+        res = await asyncio.to_thread(supabase.table("profiles").select("cv_embedding").eq("id", user_id).single().execute)
         existing = res.data.get("cv_embedding") if res.data else None
         if existing:
             return existing
@@ -304,7 +305,7 @@ async def _get_or_compute_cv_embedding(user_id: str, cv_text: str) -> Optional[l
 async def _get_or_compute_job_embedding(internship_id: str, job: dict) -> Optional[list[float]]:
     """Get existing job embedding from DB, or compute and store it."""
     try:
-        res = supabase.table("internships").select("job_embedding").eq("id", internship_id).single().execute()
+        res = await asyncio.to_thread(supabase.table("internships").select("job_embedding").eq("id", internship_id).single().execute)
         existing = res.data.get("job_embedding") if res.data else None
         if existing:
             return existing

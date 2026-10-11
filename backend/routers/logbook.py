@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime
 from typing import Optional
@@ -63,12 +64,12 @@ async def upsert_entry(
     # We upsert to allow them to edit today's entry until it's approved.
     try:
         # First check if today's entry exists
-        existing = (
+        existing = await asyncio.to_thread(
             supabase.table("logbook_entries")
             .select("*")
             .eq("student_id", payload.student_id)
             .eq("date", today)
-            .execute()
+            .execute
         )
 
         data = {
@@ -87,14 +88,16 @@ async def upsert_entry(
                     detail="Today's entry is already approved and cannot be edited.",
                 )
 
-            res = (
+            res = await asyncio.to_thread(
                 supabase.table("logbook_entries")
                 .update(data)
                 .eq("id", existing.data[0]["id"])
-                .execute()
+                .execute
             )
         else:
-            res = supabase.table("logbook_entries").insert(data).execute()
+            res = await asyncio.to_thread(
+                supabase.table("logbook_entries").insert(data).execute
+            )
 
         return {
             "message": "Logbook entry saved successfully.",
@@ -118,13 +121,13 @@ async def get_student_entries(
         raise HTTPException(status_code=403, detail="Forbidden: User ID mismatch.")
     try:
         offset = (page - 1) * page_size
-        res = (
+        res = await asyncio.to_thread(
             supabase.table("logbook_entries")
             .select("*")
             .eq("student_id", student_id)
             .order("date", desc=True)
             .range(offset, offset + page_size - 1)
-            .execute()
+            .execute
         )
         return {"entries": res.data or [], "page": page, "page_size": page_size}
     except Exception as e:
@@ -143,13 +146,13 @@ async def get_employer_entries(
         raise HTTPException(status_code=403, detail="Forbidden: User ID mismatch.")
     try:
         offset = (page - 1) * page_size
-        res = (
+        res = await asyncio.to_thread(
             supabase.table("logbook_entries")
             .select("*, profiles!student_id(full_name, course, level)")
             .eq("employer_id", employer_id)
             .order("date", desc=True)
             .range(offset, offset + page_size - 1)
-            .execute()
+            .execute
         )
         return {"entries": res.data or [], "page": page, "page_size": page_size}
     except Exception as e:
@@ -157,13 +160,13 @@ async def get_employer_entries(
         # fallback without join if foreign key alias fails
         try:
             offset = (page - 1) * page_size
-            res2 = (
+            res2 = await asyncio.to_thread(
                 supabase.table("logbook_entries")
                 .select("*")
                 .eq("employer_id", employer_id)
                 .order("date", desc=True)
                 .range(offset, offset + page_size - 1)
-                .execute()
+                .execute
             )
             return {"entries": res2.data or [], "page": page, "page_size": page_size}
         except Exception:
@@ -178,8 +181,8 @@ async def update_entry_status(
 ):
     try:
         # Verify ownership
-        existing = (
-            supabase.table("logbook_entries").select("*").eq("id", entry_id).execute()
+        existing = await asyncio.to_thread(
+            supabase.table("logbook_entries").select("*").eq("id", entry_id).execute
         )
         if not existing.data:
             raise HTTPException(status_code=404, detail="Entry not found.")
@@ -194,11 +197,11 @@ async def update_entry_status(
         if payload.feedback_notes is not None:
             update_data["feedback_notes"] = payload.feedback_notes
 
-        res = (
+        res = await asyncio.to_thread(
             supabase.table("logbook_entries")
             .update(update_data)
             .eq("id", entry_id)
-            .execute()
+            .execute
         )
         return {
             "message": "Status updated successfully.",

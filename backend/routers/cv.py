@@ -68,7 +68,7 @@ async def process_matches_in_background(user_id: str, cv_text: str, internships:
             # Step 3: Store results
             matches_found = 0
             for res in results:
-                upsert_match_result(user_id, res.get("internship_id"), res)
+                await asyncio.to_thread(upsert_match_result, user_id, res.get("internship_id"), res)
                 matches_found += 1
 
             logger.info(
@@ -105,9 +105,9 @@ async def process_new_internship_background(iid: str, job: dict, students: list)
                 try:
                     uid = student_match["user_id"]
                     # Fetch full student data
-                    res = supabase.table("profiles").select(
+                    res = (await asyncio.to_thread(supabase.table("profiles").select(
                         "id, cv_text, cv_structured"
-                    ).eq("id", uid).single().execute()
+                    ).eq("id", uid).single().execute))
                     student = res.data
                     if not student or not student.get("cv_text"):
                         return 0
@@ -122,7 +122,7 @@ async def process_new_internship_background(iid: str, job: dict, students: list)
 
                     result = await compute_match_score(student["cv_text"], job, cv_structured=cv_structured)
                     if result:
-                        upsert_match_result(uid, iid, result)
+                        await asyncio.to_thread(upsert_match_result, uid, iid, result)
                         return 1
                 except Exception as e:
                     logger.error(f"AI Skip for {student_match.get('user_id')}: {e}")
@@ -156,7 +156,7 @@ async def upload_and_analyze(
 
     temp_path = None
     try:
-        profile = get_user_profile(user_id)
+        profile = await asyncio.to_thread(get_user_profile, user_id)
         if not file.filename.lower().endswith(".pdf"):
             raise HTTPException(status_code=400, detail="Only PDFs are supported.")
 
@@ -203,9 +203,9 @@ async def upload_and_analyze(
         cv_structured = await parse_cv_structured(cv_text)
 
         # Store CV text, URL, and structured data
-        save_cv_text_and_url(user_id, cv_url, cv_text, cv_structured=cv_structured)
+        await asyncio.to_thread(save_cv_text_and_url, user_id, cv_url, cv_text, cv_structured=cv_structured)
 
-        internships = fetch_internships()
+        internships = await asyncio.to_thread(fetch_internships)
         if internships:
             background_tasks.add_task(
                 process_matches_in_background, user_id, cv_text, internships, cv_structured
@@ -236,17 +236,16 @@ async def analyze_new_internship(
 ):
     try:
         iid = payload.internship_id
-        res_job = supabase.table("internships").select("*").eq("id", iid).execute()
+        res_job = await asyncio.to_thread(supabase.table("internships").select("*").eq("id", iid).execute)
         if not res_job.data:
             raise HTTPException(status_code=404, detail="Internship not found.")
 
         job = res_job.data[0]
         res_students = (
-            supabase.table("profiles")
+            (await asyncio.to_thread(supabase.table("profiles")
             .select("id, cv_text, cv_structured")
             .eq("role", "student")
-            .neq("cv_text", None)
-            .execute()
+            .neq("cv_text", None).execute))
         )
         students = res_students.data or []
 
@@ -275,7 +274,7 @@ async def analyze_existing(
     if payload.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Forbidden: User ID mismatch.")
     try:
-        p = get_user_profile(payload.user_id)
+        p = await asyncio.to_thread(get_user_profile, payload.user_id)
         if not p.get("cv_text"):
             raise HTTPException(status_code=400, detail="No CV found. Please upload a CV first.")
 
@@ -289,7 +288,7 @@ async def analyze_existing(
             except (ValueError, TypeError):
                 pass
 
-        jobs = fetch_internships()
+        jobs = await asyncio.to_thread(fetch_internships)
         if jobs:
             background_tasks.add_task(
                 process_matches_in_background, payload.user_id, p["cv_text"], jobs, cv_structured
