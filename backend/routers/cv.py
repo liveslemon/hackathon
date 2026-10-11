@@ -305,20 +305,46 @@ async def analyze_existing(
 
 @router.post("/refresh-cv-url")
 @router.post("/api/refresh-cv-url")
+def _can_view_student_cv(viewer_id: str, student_id: str) -> bool:
+    """Self, admins, or an employer the student applied to / logs hours with.
+    Roles come from the database; user_metadata is user-editable."""
+    if viewer_id == student_id:
+        return True
+    viewer = supabase.table("profiles").select("role, is_admin").eq("id", viewer_id).maybe_single().execute()
+    v = viewer.data if viewer else None
+    if not v:
+        return False
+    if v.get("is_admin") is True or v.get("role") == "admin":
+        return True
+    if v.get("role") != "employer":
+        return False
+    apps = (
+        supabase.table("applied_internships")
+        .select("id, internships!inner(employer_id, poster_id)")
+        .eq("user_id", student_id)
+        .or_(f"employer_id.eq.{viewer_id},poster_id.eq.{viewer_id}", reference_table="internships")
+        .limit(1)
+        .execute()
+    )
+    if apps.data:
+        return True
+    logs = (
+        supabase.table("logbook_entries")
+        .select("id")
+        .eq("student_id", student_id)
+        .eq("employer_id", viewer_id)
+        .limit(1)
+        .execute()
+    )
+    return bool(logs.data)
+
+
 def refresh_url(payload: AnalyzeRequest, current_user=Depends(get_current_user)):
-    # Authorization: Student can refresh their own, or an employer can refresh any student's
-    if (
-        payload.user_id != current_user.id
-        and current_user.user_metadata.get("role") != "employer"
-        and getattr(current_user, "role", None) != "employer"
-    ):
-        # Double check role from profile if not in JWT
-        profile = get_user_profile(current_user.id)
-        if profile.get("role") != "employer" and profile.get("role") != "admin":
-            raise HTTPException(
-                status_code=403,
-                detail="Forbidden: You do not have permission to refresh this URL.",
-            )
+    if not _can_view_student_cv(current_user.id, payload.user_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: You do not have permission to view this CV.",
+        )
 
     try:
         p = get_user_profile(payload.user_id)
