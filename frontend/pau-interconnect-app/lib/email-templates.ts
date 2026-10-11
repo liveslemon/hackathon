@@ -1,3 +1,4 @@
+import { getAppUrl } from "@/lib/env";
 export function applicationReceivedEmail(data: {
   employerName: string;
   studentName: string;
@@ -17,8 +18,7 @@ export function applicationReceivedEmail(data: {
         <p style="color: #64748b; margin-top: 24px; font-size: 12px;">
           You're receiving this because you have email notifications enabled.
           <br />
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/employer/settings" style="color: #4f46e5; text-decoration: none;">Manage preferences</a> |
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/unsubscribe" style="color: #4f46e5; text-decoration: none;">Unsubscribe</a>
+          <a href="${getAppUrl()}/dashboard/employer/settings" style="color: #4f46e5; text-decoration: none;">Manage email preferences</a>
         </p>
       </div>
     `,
@@ -51,12 +51,11 @@ export function applicationStatusEmail(data: {
                <p>Your application status is now: <strong>${data.status}</strong></p>`
         }
         ${data.feedback ? `<p><strong>Feedback:</strong> ${data.feedback}</p>` : ""}
-        <a href="${process.env.NEXT_PUBLIC_APP_URL}/my-internships" style="display: inline-block; background: #4f46e5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px;">
+        <a href="${getAppUrl()}/my-internships" style="display: inline-block; background: #4f46e5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px;">
           View My Applications
         </a>
         <p style="color: #64748b; margin-top: 24px; font-size: 12px;">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/student/settings" style="color: #4f46e5; text-decoration: none;">Manage preferences</a> |
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/unsubscribe" style="color: #4f46e5; text-decoration: none;">Unsubscribe</a>
+          <a href="${getAppUrl()}/dashboard/student/settings" style="color: #4f46e5; text-decoration: none;">Manage email preferences</a>
         </p>
       </div>
     `,
@@ -76,12 +75,11 @@ export function logbookFlaggedEmail(data: {
         <p>Hi ${data.studentName},</p>
         <p>Your logbook entry for <strong>${data.date}</strong> has been flagged for revision.</p>
         <p><strong>Feedback:</strong> ${data.feedback}</p>
-        <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/student/logbook" style="display: inline-block; background: #4f46e5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px;">
+        <a href="${getAppUrl()}/dashboard/student/logbook" style="display: inline-block; background: #4f46e5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px;">
           Update Entry
         </a>
         <p style="color: #64748b; margin-top: 24px; font-size: 12px;">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/student/settings" style="color: #4f46e5; text-decoration: none;">Manage preferences</a> |
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/unsubscribe" style="color: #4f46e5; text-decoration: none;">Unsubscribe</a>
+          <a href="${getAppUrl()}/dashboard/student/settings" style="color: #4f46e5; text-decoration: none;">Manage email preferences</a>
         </p>
       </div>
     `,

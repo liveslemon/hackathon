@@ -53,7 +53,7 @@ Deno.serve(async () => {
           html: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <p>Hi ${profilesResult.full_name},</p>
             <p>Your posting "<strong>${posting.role}</strong>" has a deadline in 3 days with ${count || 0} applicants so far.</p>
-            <a href="${Deno.env.get("NEXT_PUBLIC_APP_URL") || "https://interconnect.pau.edu.ng"}/dashboard/employer/internships/${posting.id}" style="display: inline-block; background: #4f46e5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px;">
+            <a href="${Deno.env.get("NEXT_PUBLIC_APP_URL") || "https://interconnect-ten.vercel.app"}/dashboard/employer/internships/${posting.id}" style="display: inline-block; background: #4f46e5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px;">
               Review Applications
             </a>
           </div>`,
