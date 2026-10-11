@@ -1,3 +1,4 @@
+import asyncio
 # ==============================================================================
 # PAU Interconnect Backend API (v4.2-async-modular)
 # ==============================================================================
@@ -23,7 +24,10 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Manage startup/shutdown lifecycle — close HTTP clients on shutdown."""
     log_startup_diagnostics()
+    from services.job_queue import worker_loop
+    worker = asyncio.create_task(worker_loop())
     yield
+    worker.cancel()
     # Shutdown: close long-lived HTTP clients
     try:
         from services.embedding_service import _EMBEDDING_CLIENT
