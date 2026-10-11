@@ -6,6 +6,15 @@ import type { AuthSessionLike } from "@/types/domain";
 
 const BACKEND_URL = getBackendUrl();
 
+/**
+ * Absolute FastAPI URL for a path. authenticatedFetch treats any "/api/..."
+ * path as a Next.js route, so FastAPI endpoints that live under /api must be
+ * passed through this.
+ */
+export function backendUrl(path: string): string {
+  return `${BACKEND_URL}${path}`;
+}
+
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return String(error);

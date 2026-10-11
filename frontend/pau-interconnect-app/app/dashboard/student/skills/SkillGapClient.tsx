@@ -34,12 +34,12 @@ export default function SkillGapClient() {
     // Load student's saved or applied internships to use as targets
     async function loadTargets() {
       try {
-        const { authenticatedFetch } = await import("@/lib/api");
+        const { authenticatedFetch, backendUrl } = await import("@/lib/api");
         const data = await authenticatedFetch<{
           applications?: Array<{
             internships?: { id: string; role: string; company: string } | null;
           }>;
-        }>("/api/applications/student");
+        }>(backendUrl("/api/applications/student"));
         const apps = data.applications || [];
         // Extract unique internships from applications
         const uniqueJobs = apps
@@ -62,7 +62,7 @@ export default function SkillGapClient() {
     setError("");
     setAnalysis(null);
     try {
-      const { authenticatedFetch } = await import("@/lib/api");
+      const { authenticatedFetch, backendUrl } = await import("@/lib/api");
       const data = await authenticatedFetch<{
         match_percentage?: number;
         recommendations?: string[];
@@ -72,7 +72,7 @@ export default function SkillGapClient() {
           priority?: "High" | "Medium" | "Low" | string;
           estimated_learning_time?: string;
         }>;
-      }>(`/api/analysis/skill-gap?internship_id=${selectedId}`);
+      }>(backendUrl(`/api/analysis/skill-gap?internship_id=${selectedId}`));
       setAnalysis(data);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Analysis failed");
