@@ -28,7 +28,7 @@ async def build_cover_letter(
     if payload.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Forbidden: User ID mismatch.")
     try:
-        profile = get_user_profile(payload.user_id)
+        profile = await asyncio.to_thread(get_user_profile, payload.user_id)
         cv_text = profile.get("cv_text")
         if not cv_text:
             raise HTTPException(
@@ -36,11 +36,10 @@ async def build_cover_letter(
             )
 
         job_res = (
-            supabase.table("internships")
+            (await asyncio.to_thread(supabase.table("internships")
             .select("*")
             .eq("id", payload.internship_id)
-            .maybe_single()
-            .execute()
+            .maybe_single().execute))
         )
         if not job_res or not job_res.data:
             raise HTTPException(status_code=404, detail="Internship not found.")
@@ -48,7 +47,7 @@ async def build_cover_letter(
 
         user_email = "[email]"
         try:
-            auth_user = supabase.auth.admin.get_user_by_id(payload.user_id)
+            auth_user = await asyncio.to_thread(supabase.auth.admin.get_user_by_id, payload.user_id)
             if auth_user and auth_user.user:
                 user_email = auth_user.user.email or "[email]"
         except Exception as auth_e:
@@ -81,7 +80,7 @@ async def build_cover_letter_stream(
         raise HTTPException(status_code=403, detail="Forbidden: User ID mismatch.")
 
     try:
-        profile = get_user_profile(payload.user_id)
+        profile = await asyncio.to_thread(get_user_profile, payload.user_id)
         cv_text = profile.get("cv_text")
         if not cv_text:
             raise HTTPException(
@@ -89,11 +88,10 @@ async def build_cover_letter_stream(
             )
 
         job_res = (
-            supabase.table("internships")
+            (await asyncio.to_thread(supabase.table("internships")
             .select("*")
             .eq("id", payload.internship_id)
-            .maybe_single()
-            .execute()
+            .maybe_single().execute))
         )
         if not job_res or not job_res.data:
             raise HTTPException(status_code=404, detail="Internship not found.")
@@ -101,7 +99,7 @@ async def build_cover_letter_stream(
 
         user_email = "[email]"
         try:
-            auth_user = supabase.auth.admin.get_user_by_id(payload.user_id)
+            auth_user = await asyncio.to_thread(supabase.auth.admin.get_user_by_id, payload.user_id)
             if auth_user and auth_user.user:
                 user_email = auth_user.user.email or "[email]"
         except Exception as auth_e:
