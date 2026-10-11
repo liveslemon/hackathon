@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     TOGETHER_API_KEY: str = ""
     OPENROUTER_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-flash-latest"
     OPENROUTER_FREE_MODEL: str = "google/gemma-4-31b-it:free"
 
     # --- Email ---
