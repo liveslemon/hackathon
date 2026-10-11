@@ -6,6 +6,7 @@ import uuid as uuid_lib
 
 from core.db import supabase
 from core.security import get_current_user
+from core.rate_limit import rate_limit
 from fastapi import APIRouter, Depends, HTTPException
 from services.llm_service import generate_completion
 
@@ -131,7 +132,8 @@ def parse_json_from_llm(content: str) -> dict:
 
 @router.get("/api/analysis/skill-gap")
 async def get_skill_gap_analysis(
-    internship_id: str, current_user=Depends(get_current_user)
+    internship_id: str,
+    current_user=Depends(rate_limit("skill_gap", 30, 3600)),
 ):
     try:
         uuid_lib.UUID(internship_id)

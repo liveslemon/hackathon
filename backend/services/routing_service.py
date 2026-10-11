@@ -314,7 +314,7 @@ async def enhance_logbook_entry(raw_activities: str) -> str:
     )
     
     try:
-        polished = await generate_completion(user_prompt, system_message=system_prompt, model="llama-3.3-70b-versatile")
+        polished = await generate_completion(user_prompt, system_message=system_prompt)
         return polished.strip()
     except Exception as e:
         logger.error(f"Routing Service - Logbook Enhance Failed: {e}")

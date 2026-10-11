@@ -6,6 +6,7 @@ import uuid
 
 from core.db import supabase
 from core.security import get_current_user, verify_admin
+from core.rate_limit import rate_limit
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -148,7 +149,7 @@ async def upload_and_analyze(
     background_tasks: BackgroundTasks,
     user_id: str = Form(...),
     file: UploadFile = File(...),
-    current_user=Depends(get_current_user),
+    current_user=Depends(rate_limit("cv_analyze", 5, 3600)),
 ):
     if user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Forbidden: User ID mismatch.")
@@ -269,7 +270,7 @@ async def analyze_new_internship(
 async def analyze_existing(
     payload: AnalyzeRequest,
     background_tasks: BackgroundTasks,
-    current_user=Depends(get_current_user),
+    current_user=Depends(rate_limit("cv_analyze", 5, 3600)),
 ):
     if payload.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Forbidden: User ID mismatch.")
