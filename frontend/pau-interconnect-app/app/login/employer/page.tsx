@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getNextPath } from "@/lib/post-login";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -48,7 +49,7 @@ export default function EmployerLogin() {
           supabase,
           data.user.id,
         );
-        const destination = getDashboardPathForRole(role, isAdmin);
+        const destination = getNextPath() ?? getDashboardPathForRole(role, isAdmin);
         router.push(destination);
       } else {
         router.push("/dashboard/employer");

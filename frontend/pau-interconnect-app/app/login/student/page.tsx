@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { getNextPath } from "@/lib/post-login";
 import Image from "next/image";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
@@ -91,7 +92,9 @@ const Login = () => {
         supabase,
         user?.id ?? "",
       );
-      const destination = getDashboardPathForRole(role, isAdmin);
+      // Back to the page that sent them here (e.g. an email link), if any.
+      const destination =
+        role === "student" ? (getNextPath() ?? getDashboardPathForRole(role, isAdmin)) : getDashboardPathForRole(role, isAdmin);
       setTimeout(() => {
         router.push(destination);
       }, 800);

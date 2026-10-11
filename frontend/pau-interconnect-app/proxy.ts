@@ -1,4 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
+import { loginPathFor } from "./lib/post-login";
+import {
+  DEV_AUTH_MODE_COOKIE_NAME,
+  DEV_ROLE_COOKIE_NAME,
+  getActiveDevModeRole,
+} from "./lib/role-guard";
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseFetch } from "./lib/supabase-fetch";
 
@@ -37,7 +43,24 @@ export async function proxy(request: NextRequest) {
 
   try {
     // getUser validates with the server, which is essential for production-grade security.
-    await supabase.auth.getUser();
+    const { data, error } = await supabase.auth.getUser();
+
+    // Logged out on a protected page: go to login and come back afterwards
+    // (e.g. "View My Applications" in an email). Only when the session is
+    // definitely missing, not on a transient Auth error.
+    const loginPath = loginPathFor(request.nextUrl.pathname);
+    const sessionMissing = !data.user && (!error || error.name === "AuthSessionMissingError");
+    const devMockRole = getActiveDevModeRole({
+      roleCookieValue: request.cookies.get(DEV_ROLE_COOKIE_NAME)?.value,
+      modeCookieValue: request.cookies.get(DEV_AUTH_MODE_COOKIE_NAME)?.value,
+    });
+    if (loginPath && sessionMissing && !devMockRole) {
+      const url = request.nextUrl.clone();
+      url.pathname = loginPath;
+      url.search = "";
+      url.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
+      return NextResponse.redirect(url);
+    }
   } catch {
     // Silently handle
   }
