@@ -48,24 +48,7 @@ export default async function StudentSettingsPage() {
         </header>
         <div className="px-4 sm:px-0">
           <StudentSettingsClient
-            initialSettings={
-              profile?.settings as {
-                notifications: {
-                  new_matches: boolean;
-                  application_updates: boolean;
-                  interview_invitations: boolean;
-                  employer_messages: boolean;
-                  saved_reminders: boolean;
-                  weekly_digest: boolean;
-                };
-                privacy: {
-                  profile_visibility: "everyone" | "employers" | "only_me";
-                  cv_visibility: "everyone" | "employers" | "only_me";
-                  phone_visibility: "everyone" | "employers" | "only_me";
-                  email_visibility: "everyone" | "employers" | "only_me";
-                };
-              } | null
-            }
+            initialSettings={profile?.settings ?? null}
           />
         </div>
       </div>

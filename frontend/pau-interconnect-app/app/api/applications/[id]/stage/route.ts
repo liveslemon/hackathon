@@ -75,12 +75,20 @@ export async function PATCH(req: Request, { params }: any) {
   try {
     const { data: student } = await supabase
       .from("profiles")
-      .select("email, full_name, notification_preferences")
+      .select("email, full_name, notification_preferences, settings")
       .eq("id", application.user_id)
       .single();
 
-    const prefs = student?.notification_preferences as any;
-    if ((!prefs || prefs.email_status_updates !== false) && student?.email) {
+    const legacyPrefs = student?.notification_preferences as
+      | { email_status_updates?: boolean }
+      | null;
+    const settingsPrefs = (
+      student?.settings as { notifications?: { application_updates?: boolean } } | null
+    )?.notifications;
+    const wantsEmail =
+      settingsPrefs?.application_updates !== false &&
+      legacyPrefs?.email_status_updates !== false;
+    if (wantsEmail && student?.email) {
       const emailData = applicationStatusEmail({
         studentName: student.full_name || "Student",
         role: (application.internships as any)?.role || "Internship",

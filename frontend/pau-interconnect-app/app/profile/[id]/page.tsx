@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { maskStudentForEmployer } from "@/lib/privacy";
 import { cookies } from "next/headers";
 import { redirect, notFound } from "next/navigation";
 import { supabaseFetch } from "@/lib/supabase-fetch";
@@ -63,7 +64,9 @@ export default async function ViewStudentProfilePage({
   return (
     <DashboardShell userProfile={viewerProfile}>
       <div className="max-w-4xl mx-auto pb-12 px-4 sm:px-0">
-        <StudentPublicProfile profile={studentProfile} />
+        <StudentPublicProfile
+          profile={isOwnProfile ? studentProfile : maskStudentForEmployer(studentProfile)}
+        />
       </div>
     </DashboardShell>
   );

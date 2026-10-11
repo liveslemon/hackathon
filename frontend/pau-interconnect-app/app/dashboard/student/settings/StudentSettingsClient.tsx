@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { readPrivacy } from "@/lib/privacy";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Input } from "@/components/ui";
@@ -20,20 +21,16 @@ import {
 import { cx } from "@/utils/cx";
 import { useTheme } from "next-themes";
 
+// Only preferences the app actually honours. CV-analysis results are always
+// shown because the student asked for them.
 type NotificationPrefs = {
-  new_matches: boolean;
   application_updates: boolean;
-  interview_invitations: boolean;
   employer_messages: boolean;
-  saved_reminders: boolean;
-  weekly_digest: boolean;
 };
 
 type PrivacyPrefs = {
-  profile_visibility: "everyone" | "employers" | "only_me";
-  cv_visibility: "everyone" | "employers" | "only_me";
-  phone_visibility: "everyone" | "employers" | "only_me";
-  email_visibility: "everyone" | "employers" | "only_me";
+  phone_visibility: "employers" | "only_me";
+  email_visibility: "employers" | "only_me";
 };
 
 type SettingsState = {
@@ -41,38 +38,26 @@ type SettingsState = {
   privacy: PrivacyPrefs;
 };
 
-const defaultNotifications: NotificationPrefs = {
-  new_matches: true,
-  application_updates: true,
-  interview_invitations: true,
-  employer_messages: true,
-  saved_reminders: false,
-  weekly_digest: true,
-};
-
-const defaultPrivacy: PrivacyPrefs = {
-  profile_visibility: "employers",
-  cv_visibility: "employers",
-  phone_visibility: "only_me",
-  email_visibility: "employers",
-};
-
 export default function StudentSettingsClient({
   initialSettings,
 }: {
-  initialSettings: SettingsState | null;
+  // Raw profiles.settings; older saves may hold keys/values no longer offered.
+  initialSettings: unknown;
 }) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const [settings, setSettings] = useState<SettingsState>({
-    notifications: {
-      ...defaultNotifications,
-      ...(initialSettings?.notifications ?? {}),
-    },
-    privacy: {
-      ...defaultPrivacy,
-      ...(initialSettings?.privacy ?? {}),
-    },
+  const [settings, setSettings] = useState<SettingsState>(() => {
+    const saved = (initialSettings ?? {}) as {
+      notifications?: Partial<Record<keyof NotificationPrefs, unknown>>;
+    };
+    return {
+      notifications: {
+        application_updates:
+          saved.notifications?.application_updates !== false,
+        employer_messages: saved.notifications?.employer_messages !== false,
+      },
+      privacy: readPrivacy(initialSettings),
+    };
   });
   const [isSaving, setIsSaving] = useState(false);
   const [status, setStatus] = useState<{
@@ -80,6 +65,8 @@ export default function StudentSettingsClient({
     message: string;
   } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     newPassword: "",
@@ -153,12 +140,25 @@ export default function StudentSettingsClient({
   };
 
   const handleDeleteAccount = async () => {
-    setStatus({
-      type: "error",
-      message:
-        "Account deletion requires admin approval. Please contact support.",
-    });
-    setShowDeleteConfirm(false);
+    if (deleteConfirmText !== "DELETE") return;
+    setIsDeleting(true);
+    setStatus(null);
+    try {
+      const { authenticatedFetch, backendUrl } = await import("@/lib/api");
+      await authenticatedFetch(backendUrl("/api/me/delete"), {
+        method: "POST",
+        body: JSON.stringify({ confirm: "DELETE" }),
+      }, 30000);
+      await supabase.auth.signOut();
+      router.push("/login/student?deleted=1");
+    } catch (err: unknown) {
+      setStatus({
+        type: "error",
+        message:
+          err instanceof Error ? err.message : "Could not delete your account.",
+      });
+      setIsDeleting(false);
+    }
   };
 
   const toggleNotification = (key: keyof NotificationPrefs) => {
@@ -308,14 +308,34 @@ export default function StudentSettingsClient({
 
           <hr className="border-slate-100" />
 
-          {/* Delete Account */}
+          {/* Download data */}
           <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-slate-700">
+                Download my data
+              </p>
+              <p className="text-xs text-slate-400">
+                Your profile, CV analysis, applications and logbook as a JSON file
+              </p>
+            </div>
+            <a
+              href="/api/me/export"
+              className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors"
+            >
+              Download
+            </a>
+          </div>
+
+          {/* Delete Account */}
+          <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-rose-600">
                 Delete Account
               </p>
               <p className="text-xs text-slate-400">
-                Permanently delete your account and all data
+                Permanently deletes your account, CV, applications, matches and
+                logbook entries. This can&apos;t be undone. Download your data
+                first if you need your SIWES logbook.
               </p>
             </div>
             {!showDeleteConfirm ? (
@@ -327,15 +347,26 @@ export default function StudentSettingsClient({
                 Delete
               </button>
             ) : (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 justify-end">
+                <input
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="Type DELETE"
+                  aria-label="Type DELETE to confirm"
+                  className="w-28 px-2 py-1.5 text-xs rounded-lg border border-rose-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+                />
                 <button
                   onClick={handleDeleteAccount}
-                  className="px-3 py-1.5 text-xs font-semibold text-white bg-rose-600 rounded-lg hover:bg-rose-700 transition-colors"
+                  disabled={deleteConfirmText !== "DELETE" || isDeleting}
+                  className="px-3 py-1.5 text-xs font-semibold text-white bg-rose-600 rounded-lg hover:bg-rose-700 disabled:opacity-50 transition-colors"
                 >
-                  Confirm Delete
+                  {isDeleting ? "Deleting..." : "Delete forever"}
                 </button>
                 <button
-                  onClick={() => setShowDeleteConfirm(false)}
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setDeleteConfirmText("");
+                  }}
                   className="px-3 py-1.5 text-xs font-semibold text-slate-500 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
                 >
                   Cancel
@@ -356,34 +387,14 @@ export default function StudentSettingsClient({
           {(
             [
               {
-                key: "new_matches",
-                label: "New internship matches",
-                desc: "When AI finds internships matching your profile",
-              },
-              {
                 key: "application_updates",
-                label: "Application updates",
-                desc: "Status changes on your applications",
-              },
-              {
-                key: "interview_invitations",
-                label: "Interview invitations",
-                desc: "When an employer invites you for an interview",
+                label: "Application updates by email",
+                desc: "When an employer moves your application to a new stage, including interview invitations and offers",
               },
               {
                 key: "employer_messages",
                 label: "Employer messages",
-                desc: "Direct messages from employers",
-              },
-              {
-                key: "saved_reminders",
-                label: "Saved internship reminders",
-                desc: "Deadline reminders for saved internships",
-              },
-              {
-                key: "weekly_digest",
-                label: "Weekly digest",
-                desc: "Weekly summary of new opportunities",
+                desc: "In-app notification when an employer messages you",
               },
             ] as const
           ).map(({ key, label, desc }) => (
@@ -423,12 +434,12 @@ export default function StudentSettingsClient({
         </div>
         <div className="p-6 space-y-5">
           <p className="text-xs text-slate-400">
-            Control who can see your information
+            Your profile and CV are only visible to you, employers you apply
+            to or intern with, and PAU admins. Other students can&apos;t see
+            them.
           </p>
           {(
             [
-              { key: "profile_visibility", label: "Profile" },
-              { key: "cv_visibility", label: "CV / Resume" },
               { key: "phone_visibility", label: "Phone Number" },
               { key: "email_visibility", label: "Email Address" },
             ] as const
@@ -442,9 +453,8 @@ export default function StudentSettingsClient({
                 }
                 className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               >
-                <option value="everyone">Everyone</option>
-                <option value="employers">Employers Only</option>
-                <option value="only_me">Only Me</option>
+                <option value="employers">Employers I apply to</option>
+                <option value="only_me">Only me</option>
               </select>
             </div>
           ))}

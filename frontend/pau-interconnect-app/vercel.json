@@ -2,5 +2,6 @@
   "version": 2,
   "buildCommand": "next build",
   "installCommand": "npm install",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "regions": ["dub1"]
 }

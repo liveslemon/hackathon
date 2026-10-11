@@ -1,4 +1,5 @@
 import React, { Suspense } from "react";
+import { maskStudentForEmployer } from "@/lib/privacy";
 import { redirect } from "next/navigation";
 import { Stack, Typography } from "@/components/ui";
 import DashboardShellWrapper from "../../DashboardShellWrapper";
@@ -52,7 +53,7 @@ async function getApplicants(internshipId: string) {
     const { data, error } = await supabase
       .from("applied_internships")
       .select(
-        "id, status, stage, match_score, created_at, cover_letter, profiles:profiles!user_id(id, full_name, email, course, level, cv_url)",
+        "id, status, stage, match_score, created_at, cover_letter, profiles:profiles!user_id(id, full_name, email, course, level, cv_url, settings)",
       )
       .eq("internship_id", internshipId)
       .order("created_at", { ascending: false });
@@ -61,7 +62,13 @@ async function getApplicants(internshipId: string) {
       console.error("Error fetching applicants:", error.message);
       return [];
     }
-    return (data || []) as Applicant[];
+    return (data || []).map((app) => {
+      const profile = Array.isArray(app.profiles) ? app.profiles[0] : app.profiles;
+      return {
+        ...app,
+        profiles: profile ? maskStudentForEmployer(profile) : profile,
+      };
+    }) as Applicant[];
   } catch (err) {
     console.error("Error fetching applicants:", err);
     return [];

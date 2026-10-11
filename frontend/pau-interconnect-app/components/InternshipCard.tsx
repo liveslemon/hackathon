@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import Image from "next/image";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
@@ -80,7 +81,7 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
       const userId = user?.id;
 
       if (!userId) {
-        alert("Please sign in to save internships.");
+        toast.error("Please sign in to save internships.");
         setIsLoading(false);
         return;
       }
@@ -181,7 +182,7 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
       }
       setCardStage("accepted");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to accept offer");
+      toast.error(err instanceof Error ? err.message : "Failed to accept offer");
     } finally {
       setIsAccepting(false);
     }
