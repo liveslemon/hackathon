@@ -32,19 +32,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     let isMounted = true;
 
-    // Use getSession (no lock contention) for initial check;
-    // onAuthStateChange will handle token refresh events.
-    const checkInitialSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (isMounted && !session?.user) {
-        setLoading(false);
-      }
-    };
-    checkInitialSession();
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {

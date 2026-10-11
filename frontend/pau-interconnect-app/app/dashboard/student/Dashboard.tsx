@@ -8,6 +8,7 @@ import DashboardShell from "@/components/DashboardShell";
 import LogbookWidget from "@/components/LogbookWidget";
 import InternshipCard from "@/components/InternshipCard";
 import { toStringArray, type Profile } from "@/types/domain";
+import { useAuth } from "@/context/AuthContext";
 
 interface Internship {
   id: string;
@@ -21,6 +22,7 @@ interface Internship {
   interests: string[];
   matchPercentage?: number;
   applicationStatus?: string;
+  applicationStage?: string;
 }
 
 const Dashboard = ({
@@ -30,6 +32,7 @@ const Dashboard = ({
   userProfile: Profile | null;
   initialInternships: Internship[];
 }) => {
+  const { user } = useAuth();
   const [internships, setInternships] =
     useState<Internship[]>(initialInternships);
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,10 +77,6 @@ const Dashboard = ({
 
   const refreshData = useCallback(async () => {
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const user = session?.user;
       if (!user) return;
 
       const { data: internshipsData } = await supabase
@@ -113,7 +112,7 @@ const Dashboard = ({
     } catch (err) {
       console.warn("Error refreshing data:", err);
     }
-  }, [internships]);
+  }, [internships, user]);
 
   useEffect(() => {
     const onSavedUpdate = () => refreshData();

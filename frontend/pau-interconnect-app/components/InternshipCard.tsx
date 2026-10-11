@@ -14,6 +14,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/context/AuthContext";
+import { ApplicationProgress } from "@/components/ApplicationProgress";
 
 interface InternshipCardProps {
   internship: {
@@ -26,20 +28,22 @@ interface InternshipCardProps {
     matchPercentage?: number;
     imageUrl?: string;
     applicationStatus?: string;
+    applicationStage?: string;
+    applicationId?: string;
     poster_id?: string;
+    employer_id?: string;
   };
 }
 
 export default function InternshipCard({ internship }: InternshipCardProps) {
   const [isSaved, setIsSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [cardStage, setCardStage] = useState(internship.applicationStage);
+  const [isAccepting, setIsAccepting] = useState(false);
+  const { user } = useAuth();
 
   const checkSavedStatus = useCallback(
     async (mounted: boolean) => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const user = session?.user;
       if (!user?.id) return;
 
       const { data, error } = await supabase
@@ -51,7 +55,7 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
 
       if (!error && mounted) setIsSaved(Boolean(data));
     },
-    [internship.id],
+    [internship.id, user?.id],
   );
 
   useEffect(() => {
@@ -73,10 +77,7 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
     setIsLoading(true);
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const userId = session?.user?.id;
+      const userId = user?.id;
 
       if (!userId) {
         alert("Please sign in to save internships.");
@@ -146,8 +147,45 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
     },
   };
 
-  const appStatus = internship.applicationStatus?.toLowerCase() || "";
-  const statusData = statusConfig[appStatus];
+  // Prefer stage over status for display
+  const displayStatus =
+    cardStage && cardStage !== "applied" && cardStage !== "pending"
+      ? cardStage
+      : internship.applicationStatus?.toLowerCase() || "";
+
+  const statusData =
+    statusConfig[displayStatus] ||
+    (displayStatus
+      ? {
+          label: displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1),
+          icon: Loader2,
+          color: "text-purple-600 bg-purple-50 border-purple-100",
+        }
+      : null);
+
+  const handleAcceptOffer = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!internship.applicationId) return;
+    setIsAccepting(true);
+    try {
+      const res = await fetch(
+        `/api/applications/${internship.applicationId}/accept`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to accept offer");
+      }
+      setCardStage("accepted");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to accept offer");
+    } finally {
+      setIsAccepting(false);
+    }
+  };
 
   return (
     <div className="group bg-white rounded-xl border border-slate-100 hover:border-slate-200 transition-all duration-200 hover:shadow-md overflow-hidden flex flex-col h-full">
@@ -202,10 +240,11 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
               {internship.role}
             </h3>
           </Link>
-          {internship.poster_id ? (
+          {internship.poster_id || internship.employer_id ? (
             <Link
-              href={`/companies/${internship.poster_id}`}
+              href={`/companies/${internship.poster_id || internship.employer_id}`}
               className="text-xs text-slate-400 mt-1 font-medium hover:text-indigo-600 hover:underline"
+              onClick={(e) => e.stopPropagation()}
             >
               {internship.company}
             </Link>
@@ -229,29 +268,48 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-3 border-t border-slate-50 flex items-center justify-between">
-        <span className="text-[10px] font-semibold text-slate-300 uppercase tracking-wider">
-          {internship.category}
-        </span>
-
-        {statusData ? (
-          <span
-            className={cx(
-              "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border",
-              statusData.color,
-            )}
-          >
-            <statusData.icon className="w-3 h-3" />
-            {statusData.label}
+      <div className="px-4 py-3 border-t border-slate-50 flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-semibold text-slate-300 uppercase tracking-wider">
+            {internship.category}
           </span>
-        ) : (
-          <Link
-            href={`/internships/${internship.id}`}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 text-white text-[11px] font-semibold hover:bg-slate-700 transition-colors"
+
+          {statusData ? (
+            <span
+              className={cx(
+                "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border",
+                statusData.color,
+              )}
+            >
+              <statusData.icon className="w-3 h-3" />
+              {statusData.label}
+            </span>
+          ) : (
+            <Link
+              href={`/internships/${internship.id}`}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 text-white text-[11px] font-semibold hover:bg-slate-700 transition-colors"
+            >
+              Apply
+              <ArrowUpRight className="w-3 h-3" />
+            </Link>
+          )}
+        </div>
+
+        {displayStatus && <ApplicationProgress stage={displayStatus} />}
+
+        {cardStage === "offered" && internship.applicationId && (
+          <button
+            onClick={handleAcceptOffer}
+            disabled={isAccepting}
+            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition-colors"
           >
-            Apply
-            <ArrowUpRight className="w-3 h-3" />
-          </Link>
+            {isAccepting ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <CheckCircle className="w-3.5 h-3.5" />
+            )}
+            Accept Offer
+          </button>
         )}
       </div>
     </div>

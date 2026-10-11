@@ -177,7 +177,10 @@ const LogbookClient = ({
   };
 
   const handleSubmit = async () => {
-    if (!rawText.trim() || !studentId || !employerId) {
+    if (!rawText.trim()) return;
+    if (!studentId || !employerId) {
+      console.error("Cannot save: missing studentId or employerId", { studentId, employerId });
+      alert("Unable to save entry — your internship assignment could not be resolved. Please reload the page.");
       return;
     }
 

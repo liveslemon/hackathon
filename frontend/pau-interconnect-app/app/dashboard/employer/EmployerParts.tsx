@@ -1,10 +1,11 @@
+import { EmployerActivityClient } from "./EmployerActivityClient";
 import { getSupabaseServer } from "@/lib/supabase-server";
 import DashboardHeader from "@/components/DashboardHeader";
 import { Typography, Stack } from "@/components/ui";
 import { Briefcase, Plus, List, Edit3 } from "lucide-react";
 import Link from "next/link";
 import { cx } from "@/utils/cx";
-import { EmployerActivityClient } from "./EmployerActivityClient";
+import { EmployerQuickActionsClient } from "./EmployerQuickActionsClient";
 
 // --- Header ---
 export async function EmployerHeaderSection() {
@@ -24,70 +25,11 @@ export async function EmployerHeaderSection() {
 }
 
 // --- Quick Actions Toolbar ---
-export function EmployerQuickActionsSection({
-  profile: _profile,
-}: {
-  profile: unknown;
-}) {
-  void _profile;
-  const actions = [
-    {
-      label: "Add Posting",
-      icon: Plus,
-      href: "#",
-      isModalTrigger: true,
-      color: "text-brand",
-      bg: "bg-brand/5",
-    },
-    {
-      label: "My Hub",
-      icon: List,
-      href: "/dashboard/employer/internships",
-      color: "text-slate-600",
-      bg: "bg-slate-50",
-    },
-    {
-      label: "Logbooks",
-      icon: Edit3,
-      href: "/dashboard/employer/logbook",
-      color: "text-slate-600",
-      bg: "bg-slate-50",
-    },
-  ];
-
+export function EmployerQuickActionsSection({ profile }: { profile: any }) {
   return (
-    <div className="flex flex-wrap items-center gap-4 mb-10">
-      {actions.map((action) => (
-        <Link
-          key={action.label}
-          href={action.href}
-          className="group flex-1 min-w-[140px]"
-        >
-          <div
-            className={cx(
-              "h-14 px-6 rounded-2xl flex items-center gap-3 transition-all duration-300 border border-slate-100 hover:border-brand/30 hover:shadow-sm hover:bg-white",
-              action.bg,
-            )}
-          >
-            <div
-              className={cx(
-                "shrink-0 transition-transform group-hover:scale-110",
-                action.color,
-              )}
-            >
-              <action.icon className="w-5 h-5" />
-            </div>
-            <Typography
-              variant="body2"
-              weight="bold"
-              className="group-hover:text-brand transition-colors truncate"
-            >
-              {action.label}
-            </Typography>
-          </div>
-        </Link>
-      ))}
-    </div>
+    <EmployerQuickActionsClient
+      profile={profile as { id: string; company_name: string }}
+    />
   );
 }
 
@@ -177,7 +119,9 @@ export async function EmployerRecentApplicantsSection() {
 
   const { data: recentApps } = await supabase
     .from("applied_internships")
-    .select("*, profiles(full_name, course), internships(role)")
+    .select(
+      "*, profiles:profiles!user_id(full_name, course), internships(role)",
+    )
     .in("internship_id", ids)
     .order("created_at", { ascending: false })
     .limit(5);
@@ -224,7 +168,7 @@ export async function EmployerLogbookAlertsSection() {
 
   const { data: pendingLogs } = await supabase
     .from("logbook_entries")
-    .select("*, profiles!logbook_entries_student_id_fkey(full_name)")
+    .select("*, profiles!student_id(full_name)")
     .eq("employer_id", user.id)
     .eq("status", "pending")
     .order("date", { ascending: false })

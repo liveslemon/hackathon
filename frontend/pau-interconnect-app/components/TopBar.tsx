@@ -1,11 +1,12 @@
 "use client";
 import React from "react";
-import { Menu, Bell, Search, User, LogOut } from "lucide-react";
+import { Menu, Search, User, LogOut } from "lucide-react";
 import { Input } from "./ui";
 import { cx } from "@/utils/cx";
 import { usePathname } from "next/navigation";
 import type { Profile } from "@/types/domain";
 import { fastSignOut } from "@/lib/fast-signout";
+import { NotificationBell } from "@/components/NotificationBell";
 
 interface TopBarProps {
   onMenuClick: () => void;
@@ -86,10 +87,7 @@ const TopBar = ({
 
           {/* Right side controls */}
           <div className="flex items-center gap-1 shrink-0">
-            <button className="relative p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
-              <Bell className="w-[18px] h-[18px]" />
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full" />
-            </button>
+            {userProfile?.id && <NotificationBell userId={userProfile.id} />}
 
             <div className="w-px h-5 bg-slate-100 mx-1" />
 

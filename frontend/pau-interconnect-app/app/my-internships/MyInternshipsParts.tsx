@@ -43,7 +43,7 @@ export async function MyInternshipsSections() {
       .eq("user_id", userId),
     supabase
       .from("applied_internships")
-      .select("internship_id, status")
+      .select("id, internship_id, status, stage")
       .eq("user_id", userId),
   ]);
 
@@ -52,10 +52,20 @@ export async function MyInternshipsSections() {
     matchRes.data.forEach((m) => matchMap.set(m.internship_id, m.match_score));
 
   const statusMap = new Map();
+  const stageMap = new Map();
+  const applicationIdMap = new Map();
   if (appliedRes.data) {
     appliedRes.data.forEach(
-      (r: { internship_id: string; status: string | null }) =>
-        statusMap.set(r.internship_id, r.status),
+      (r: {
+        id: string;
+        internship_id: string;
+        status: string | null;
+        stage: string | null;
+      }) => {
+        statusMap.set(r.internship_id, r.status);
+        stageMap.set(r.internship_id, r.stage);
+        applicationIdMap.set(r.internship_id, r.id);
+      },
     );
   }
 
@@ -86,6 +96,8 @@ export async function MyInternshipsSections() {
     ...i,
     matchPercentage: matchMap.get(i.id),
     applicationStatus: statusMap.get(i.id),
+    applicationStage: stageMap.get(i.id) || "applied",
+    applicationId: applicationIdMap.get(i.id),
   }));
 
   const expiringInternships = appliedInternships.filter((internship) => {

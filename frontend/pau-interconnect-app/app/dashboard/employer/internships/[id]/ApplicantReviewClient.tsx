@@ -9,21 +9,30 @@ import {
   CheckCircle,
   XCircle,
   User,
+  MessageSquare,
 } from "lucide-react";
 import { authenticatedFetch, ensureFreshCvUrl } from "@/lib/api";
+import { PipelineView } from "./PipelineView";
+import { Download } from "lucide-react";
+import { downloadCSV } from "@/lib/csv";
 
-type ApplicantProfile = {
+export type ApplicantProfile = {
   id?: string;
   full_name?: string;
+  email?: string;
   course?: string;
   level?: string;
   cv_url?: string;
 };
 
+import { DecisionTimeline } from "@/components/DecisionTimeline";
+
 export type Applicant = {
   id: string;
   status?: string;
+  stage?: string;
   match_score?: number;
+  created_at?: string;
   cover_letter?: string;
   profiles?: ApplicantProfile;
 };
@@ -34,13 +43,17 @@ interface ApplicantReviewClientProps {
   userProfile: unknown;
 }
 
+import { useRouter } from "next/navigation";
+
 export default function ApplicantReviewClient({
   internship,
   applicants: initialApplicants,
 }: ApplicantReviewClientProps) {
+  const router = useRouter();
   const [applicants, setApplicants] = useState<Applicant[]>(initialApplicants);
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedAppId, setExpandedAppId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "pipeline">("list");
 
   const toggleExpand = (id: string) => {
     setExpandedAppId((prev) => (prev === id ? null : id));
@@ -61,21 +74,30 @@ export default function ApplicantReviewClient({
     applicationId: string,
     newStatus: string,
   ) => {
-    try {
-      await authenticatedFetch(`/applications/${applicationId}/status`, {
-        method: "PUT",
-        body: JSON.stringify({ status: newStatus }),
-      });
+    // Map list-view status values to pipeline stage values
+    const stageValue = newStatus === "pending" ? "applied" : newStatus;
+    const statusValue =
+      stageValue === "accepted"
+        ? "accepted"
+        : stageValue === "rejected"
+          ? "rejected"
+          : "pending";
 
-      // Optimistic UI Update
+    try {
+      await authenticatedFetch(`/api/applications/${applicationId}/stage`, {
+        method: "PATCH",
+        body: JSON.stringify({ stage: stageValue }),
+      });
       setApplicants((prev) =>
         prev.map((app) =>
-          app.id === applicationId ? { ...app, status: newStatus } : app,
+          app.id === applicationId
+            ? { ...app, stage: stageValue, status: statusValue }
+            : app,
         ),
       );
     } catch (err: unknown) {
       alert(
-        "Failed to update student status: " +
+        "Failed to update student state: " +
           (err instanceof Error ? err.message : "Unknown error"),
       );
     }
@@ -109,6 +131,68 @@ export default function ApplicantReviewClient({
         </div>
       </header>
 
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setViewMode("list")}
+            className={cx(
+              "px-3 py-1.5 rounded-lg text-sm",
+              viewMode === "list"
+                ? "bg-slate-900 text-white"
+                : "bg-slate-100 text-slate-700",
+            )}
+          >
+            List View
+          </button>
+          <button
+            onClick={() => setViewMode("pipeline")}
+            className={cx(
+              "px-3 py-1.5 rounded-lg text-sm",
+              viewMode === "pipeline"
+                ? "bg-slate-900 text-white"
+                : "bg-slate-100 text-slate-700",
+            )}
+          >
+            Pipeline View
+          </button>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const headers = [
+              "Name",
+              "Email",
+              "Course",
+              "Level",
+              "Match Score",
+              "Status",
+              "Stage",
+              "Applied Date",
+              "Cover Letter",
+            ];
+            const rows = filteredApplicants.map((app) => [
+              app.profiles?.full_name || "",
+              app.profiles?.email || "",
+              app.profiles?.course || "",
+              app.profiles?.level || "",
+              String(app.match_score || 0),
+              app.status || "pending",
+              app.stage || "applied",
+              app.created_at || "",
+              (app.cover_letter || "").replace(/\n/g, " "),
+            ]);
+            downloadCSV(
+              headers,
+              rows,
+              `applicants-${internship?.role?.replace(/\s/g, "-") || "export"}`,
+            );
+          }}
+        >
+          <Download className="w-4 h-4 mr-1" /> Export CSV
+        </Button>
+      </div>
+
       {applicants.length === 0 ? (
         <div className="p-20 text-center bg-white rounded-[40px] border border-slate-100 shadow-sm">
           <div className="w-16 h-16 bg-slate-50 rounded-[28px] flex items-center justify-center mx-auto mb-6 text-slate-300 border border-slate-100">
@@ -126,6 +210,11 @@ export default function ApplicantReviewClient({
             review.
           </Typography>
         </div>
+      ) : viewMode === "pipeline" ? (
+        <PipelineView
+          applicants={filteredApplicants}
+          onStageChange={handleStatusChange}
+        />
       ) : (
         <Stack spacing={2}>
           {filteredApplicants.map((app) => {
@@ -190,14 +279,14 @@ export default function ApplicantReviewClient({
                           size="sm"
                           className={cx(
                             "text-[10px] font-bold tracking-wider border-none",
-                            app.status === "accepted"
+                            app.stage === "accepted"
                               ? "bg-emerald-50 text-emerald-600"
-                              : app.status === "rejected"
+                              : app.stage === "rejected"
                                 ? "bg-rose-50 text-rose-600"
                                 : "bg-brand/5 text-brand",
                           )}
                         >
-                          {app.status?.toUpperCase() || "PENDING"}
+                          {(app.stage || "APPLIED").toUpperCase()}
                         </Badge>
                       </div>
                     </div>
@@ -237,6 +326,7 @@ export default function ApplicantReviewClient({
                               "The candidate did not provide a personal statement."}
                           </Typography>
                         </div>
+                        <DecisionTimeline applicationId={app.id} />
                       </div>
 
                       {/* Right Column (30%) - Student Actions */}
@@ -306,37 +396,57 @@ export default function ApplicantReviewClient({
                                 weight="bold"
                                 className="text-slate-400"
                               >
-                                STATUS:
+                                STAGE:
                               </Typography>
                               <Typography
                                 variant="caption"
                                 weight="bold"
                                 className={cx(
-                                  app.status === "accepted"
+                                  app.stage === "accepted"
                                     ? "text-emerald-500"
-                                    : app.status === "rejected"
+                                    : app.stage === "rejected"
                                       ? "text-rose-500"
                                       : "text-brand",
                                 )}
                               >
-                                {app.status?.toUpperCase() || "PENDING"}
+                                {(app.stage || "applied").toUpperCase()}
                               </Typography>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
+                            <select
+                              value={app.stage || "applied"}
+                              onChange={(e) =>
+                                handleStatusChange(app.id, e.target.value)
+                              }
+                              className="w-full h-11 rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-700 bg-slate-50 hover:bg-white focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
+                            >
+                              <option value="applied">Applied</option>
+                              <option value="reviewed">Reviewed</option>
+                              <option value="shortlisted">Shortlisted</option>
+                              <option value="interview">Interview</option>
+                              <option value="offered">Offered</option>
+                              {app.stage === "accepted" && (
+                                <option value="accepted" disabled>
+                                  Accepted (by student)
+                                </option>
+                              )}
+                              <option value="rejected">Rejected</option>
+                            </select>
+
+                            <div className="grid grid-cols-2 gap-3 mt-2">
                               <button
                                 onClick={() =>
-                                  handleStatusChange(app.id, "accepted")
+                                  handleStatusChange(app.id, "offered")
                                 }
                                 className={cx(
                                   "h-11 rounded-xl flex items-center justify-center gap-2 font-bold transition-all text-sm",
-                                  app.status === "accepted"
+                                  app.stage === "offered"
                                     ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20"
                                     : "bg-emerald-50 text-emerald-700 border border-emerald-100 hover:bg-emerald-100",
                                 )}
                               >
                                 <CheckCircle size={18} />
-                                Accept
+                                Offer
                               </button>
 
                               <button
@@ -345,7 +455,7 @@ export default function ApplicantReviewClient({
                                 }
                                 className={cx(
                                   "h-11 rounded-xl flex items-center justify-center gap-2 font-bold transition-all text-sm",
-                                  app.status === "rejected"
+                                  app.stage === "rejected"
                                     ? "bg-rose-600 text-white shadow-lg shadow-rose-600/20"
                                     : "bg-white border border-rose-200 text-rose-600 hover:bg-rose-50",
                                 )}
@@ -355,16 +465,28 @@ export default function ApplicantReviewClient({
                               </button>
                             </div>
 
-                            {app.status !== "pending" && (
+                            <div className="flex gap-2">
+                              {app.stage !== "applied" &&
+                                app.stage !== "accepted" &&
+                                app.stage !== "rejected" && (
+                                  <button
+                                    onClick={() =>
+                                      handleStatusChange(app.id, "applied")
+                                    }
+                                    className="mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] hover:text-brand transition-colors text-center py-2 flex-1"
+                                  >
+                                    Reset to Applied
+                                  </button>
+                                )}
                               <button
                                 onClick={() =>
-                                  handleStatusChange(app.id, "pending")
+                                  router.push(`/messages?application=${app.id}`)
                                 }
-                                className="mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] hover:text-brand transition-colors text-center py-2"
+                                className="mt-2 text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em] border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-center py-2 flex-1 flex items-center justify-center gap-1"
                               >
-                                Reset to Pending
+                                <MessageSquare size={14} /> Message
                               </button>
-                            )}
+                            </div>
                           </div>
                         </div>
                       </div>

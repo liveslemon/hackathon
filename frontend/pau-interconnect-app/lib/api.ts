@@ -40,21 +40,28 @@ export async function authenticatedFetch<TResponse = unknown>(
   timeoutMs: number = 15000,
   existingSession?: AuthSessionLike,
 ): Promise<TResponse> {
-  let authHeaders = {};
+  const isLocalApi = endpoint.startsWith("/api/");
 
-  if (existingSession?.access_token) {
-    logger.debug("api", "Using provided session token (bypassing getSession)");
-    authHeaders = { Authorization: `Bearer ${existingSession.access_token}` };
-  } else {
-    logger.debug("api", "No session provided, retrieving fresh headers");
-    authHeaders = await getAuthHeaders();
-    logger.debug("api", "Auth headers retrieved");
-  }
+  let authHeaders: Record<string, string> = {};
 
-  if (!(authHeaders as Record<string, string>).Authorization) {
-    throw new ApiError("Your session has expired. Please sign in again.", {
-      status: 401,
-    });
+  if (!isLocalApi) {
+    if (existingSession?.access_token) {
+      logger.debug(
+        "api",
+        "Using provided session token (bypassing getSession)",
+      );
+      authHeaders = { Authorization: `Bearer ${existingSession.access_token}` };
+    } else {
+      logger.debug("api", "No session provided, retrieving fresh headers");
+      authHeaders = await getAuthHeaders();
+      logger.debug("api", "Auth headers retrieved");
+    }
+
+    if (!authHeaders.Authorization) {
+      throw new ApiError("Your session has expired. Please sign in again.", {
+        status: 401,
+      });
+    }
   }
 
   const headers: Record<string, string> = {
@@ -68,7 +75,9 @@ export async function authenticatedFetch<TResponse = unknown>(
 
   const url = endpoint.startsWith("http")
     ? endpoint
-    : `${BACKEND_URL}${endpoint}`;
+    : isLocalApi
+      ? endpoint
+      : `${BACKEND_URL}${endpoint}`;
 
   let attempts = 0;
   while (attempts < 2) {
@@ -151,7 +160,9 @@ export async function authenticatedFetchStream(
 
   const url = endpoint.startsWith("http")
     ? endpoint
-    : `${BACKEND_URL}${endpoint}`;
+    : endpoint.startsWith("/api/")
+      ? endpoint
+      : `${BACKEND_URL}${endpoint}`;
 
   const response = await fetch(url, {
     ...options,
