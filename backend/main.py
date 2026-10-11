@@ -48,7 +48,8 @@ app = FastAPI(
 )
 
 # --- CORS (Improvement 01: no wildcard + credentials) ---
-_origins = [o.strip() for o in settings.FRONTEND_URL.split(",") if o.strip()]
+# Browsers send Origin without a trailing slash; normalise so "https://x.app/" still matches.
+_origins = [o.strip().rstrip("/") for o in settings.FRONTEND_URL.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_origins,
