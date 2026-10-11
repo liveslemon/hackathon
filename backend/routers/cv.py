@@ -20,6 +20,7 @@ from fastapi import (
 from schemas.requests import AnalyzeNewInternshipRequest, AnalyzeRequest
 from services.routing_service import compute_match_score
 from services.cv_analysis_service import run_cv_analysis
+from services.cv_ocr_service import ocr_pdf
 from services.supabase_service import (
     extract_text,
     fetch_internships,
@@ -192,11 +193,15 @@ async def upload_and_analyze(
         cv_text = await asyncio.to_thread(extract_text, temp_path)
 
         if not cv_text or len(cv_text.strip()) < MIN_CV_TEXT_LENGTH:
+            # Scanned / image-only PDF: fall back to OCR.
+            cv_text = await ocr_pdf(content)
+
+        if not cv_text or len(cv_text.strip()) < MIN_CV_TEXT_LENGTH:
             logger.warning(f"CV text extraction yielded insufficient text for user {user_id} ({len(cv_text.strip())} chars)")
             raise HTTPException(
                 status_code=400,
-                detail="Could not extract enough text from your PDF. "
-                "Please ensure your CV is not a scanned image and contains selectable text.",
+                detail="Could not read enough text from your PDF, even with OCR. "
+                "Please upload a clearer scan or a PDF exported from Word/Google Docs.",
             )
 
         cv_text = clean_cv_text(cv_text)
