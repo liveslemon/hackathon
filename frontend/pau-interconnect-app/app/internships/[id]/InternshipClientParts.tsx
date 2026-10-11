@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { isOpenInternship } from "@/lib/internship-columns";
 import {
   Send,
@@ -64,7 +65,7 @@ export default function InternshipClientParts({
       });
       setCurrentStage("accepted");
     } catch (error: unknown) {
-      alert(error instanceof Error ? error.message : "Failed to accept offer.");
+      toast.error(error instanceof Error ? error.message : "Failed to accept offer.");
     } finally {
       setIsAccepting(false);
     }
@@ -72,7 +73,7 @@ export default function InternshipClientParts({
 
   const handleApply = async () => {
     if (coverLetter.trim().length < 10) {
-      alert("Please provide a cover letter of at least 10 characters.");
+      toast.error("Please provide a cover letter of at least 10 characters.");
       return;
     }
 
@@ -88,12 +89,12 @@ export default function InternshipClientParts({
 
       setHasApplied(true);
       setApplyModalOpen(false);
-      alert(
+      toast.success(
         "Application submitted successfully! The employer has been notified.",
       );
     } catch (error: unknown) {
       console.error("Application error:", error);
-      alert(
+      toast.error(
         error instanceof Error
           ? error.message
           : "Failed to submit application.",
@@ -168,7 +169,7 @@ export default function InternshipClientParts({
       }
     } catch (error: unknown) {
       console.error("Drafting stream error:", error);
-      alert(
+      toast.error(
         error instanceof Error
           ? error.message
           : "An error occurred while drafting the cover letter.",

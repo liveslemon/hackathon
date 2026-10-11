@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   Alert,
   Box,
@@ -192,7 +193,7 @@ const LogbookClient = ({
     if (!rawText.trim()) return;
     if (!studentId || !employerId) {
       console.error("Cannot save: missing studentId or employerId", { studentId, employerId });
-      alert("Unable to save entry — your internship assignment could not be resolved. Please reload the page.");
+      toast.error("Unable to save entry — your internship assignment could not be resolved. Please reload the page.");
       return;
     }
 

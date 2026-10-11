@@ -167,6 +167,52 @@ type ProfileState = {
   [key: string]: unknown;
 };
 
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+/** Returns a message for the first invalid field, or null. */
+function validateProfile(
+  profile: ProfileState,
+  projects: Project[],
+  certifications: Certification[],
+): string | null {
+  const phone = profile.phone?.trim();
+  if (phone && !/^\+?[\d\s()-]{7,20}$/.test(phone)) {
+    return "Enter a valid phone number, e.g. +234 801 234 5678.";
+  }
+  const cgpa = profile.cgpa?.toString().trim();
+  if (cgpa) {
+    const n = Number(cgpa);
+    if (Number.isNaN(n) || n < 0 || n > 5) {
+      return "CGPA must be a number between 0 and 5.";
+    }
+  }
+  const links: Array<[string, string | undefined]> = [
+    ...Object.entries(profile.portfolio_links || {}).map(
+      ([k, v]) => [`${k} link`, v as string | undefined] as [string, string | undefined],
+    ),
+    ...projects.flatMap((p) => [
+      [`"${p.title || "Project"}" GitHub link`, p.github_url],
+      [`"${p.title || "Project"}" demo link`, p.demo_url],
+    ] as Array<[string, string | undefined]>),
+    ...certifications.map(
+      (c) => [`"${c.name || "Certification"}" credential link`, c.credential_url] as [string, string | undefined],
+    ),
+  ];
+  for (const [label, value] of links) {
+    if (value && value.trim() && !isHttpUrl(value.trim())) {
+      return `The ${label} must be a full URL starting with https://`;
+    }
+  }
+  return null;
+}
+
 export default function ProfileClient({
   initialProfile,
   userEmail,
@@ -371,6 +417,11 @@ export default function ProfileClient({
   };
 
   const handleSave = async () => {
+    const invalid = validateProfile(profile, projectsArray, certificationsArray);
+    if (invalid) {
+      setStatus({ type: "error", message: invalid });
+      return;
+    }
     setIsSaving(true);
     setStatus(null);
     try {
