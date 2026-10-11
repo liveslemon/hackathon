@@ -37,7 +37,8 @@ export function getSignupRedirectUrl(): string | undefined {
 }
 
 export function getBackendUrl(): string {
-  if (env.NEXT_PUBLIC_BACKEND_URL) return env.NEXT_PUBLIC_BACKEND_URL;
+  // Strip trailing slashes so `${url}${path}` never yields "//path".
+  if (env.NEXT_PUBLIC_BACKEND_URL) return env.NEXT_PUBLIC_BACKEND_URL.replace(/\/+$/, "");
   return env.NODE_ENV === "development"
     ? "http://localhost:8000"
     : "https://pau-interconnect-backend.onrender.com";
