@@ -16,7 +16,11 @@ interface Notification {
 }
 
 // Notification types that also pop up on screen as soon as they arrive.
-const POPUP_TYPES = new Set(["cv_analysis_complete", "cv_analysis_failed"]);
+const POPUP_TYPES = new Set([
+  "cv_analysis_complete",
+  "cv_analysis_failed",
+  "application_update",
+]);
 const POPUP_MS = 12000;
 
 export function NotificationBell({ userId }: { userId: string }) {
@@ -119,7 +123,11 @@ export function NotificationBell({ userId }: { userId: string }) {
                   onClick={() => openNotification(popup)}
                   className="mt-2 text-xs font-semibold text-brand hover:underline"
                 >
-                  {popup.type === "cv_analysis_failed" ? "Try again" : "View results"}
+                  {popup.type === "cv_analysis_failed"
+                    ? "Try again"
+                    : popup.type === "application_update"
+                      ? "View application"
+                      : "View results"}
                 </button>
               )}
             </div>
