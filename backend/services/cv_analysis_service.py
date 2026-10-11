@@ -165,10 +165,81 @@ def _set_status(user_id: str, status: str, error: str | None = None, extra: dict
     supabase.table("profiles").update(update).eq("id", user_id).execute()
 
 
-async def run_cv_analysis(user_id: str, cv_text: str, job_id: str | None = None) -> None:
-    """Parse the CV, auto-fill the profile, compute matches, then notify the student."""
+_MATCH_PROFILE_COLUMNS = "cv_text, cv_structured, skills, experience, projects, certifications, course, interests"
+
+
+def _matching_inputs(profile: dict) -> tuple[str, dict]:
+    """CV text plus what the student added on their profile, so profile edits
+    (new skills, projects, experience) count towards matching."""
+    extras = []
+    skills = [s for s in (profile.get("skills") or []) if isinstance(s, str) and s.strip()]
+    if skills:
+        extras.append("Skills: " + ", ".join(skills))
+    for exp in profile.get("experience") or []:
+        if isinstance(exp, dict) and (exp.get("role") or exp.get("company")):
+            extras.append(f"Experience: {exp.get('role', '')} at {exp.get('company', '')}. {exp.get('description', '')}".strip())
+    for proj in profile.get("projects") or []:
+        if isinstance(proj, dict) and proj.get("title"):
+            tech = ", ".join(proj.get("technologies") or [])
+            extras.append(f"Project: {proj['title']}. {proj.get('description', '')} {('Tech: ' + tech) if tech else ''}".strip())
+    for cert in profile.get("certifications") or []:
+        if isinstance(cert, dict) and cert.get("name"):
+            extras.append(f"Certification: {cert['name']} {cert.get('issuer', '')}".strip())
+    if profile.get("course"):
+        extras.append(f"Course of study: {profile['course']}")
+    interests = profile.get("interests")
+    if isinstance(interests, list) and interests:
+        extras.append("Interests: " + ", ".join(map(str, interests)))
+
+    text = (profile.get("cv_text") or "").strip()
+    if extras:
+        text = f"{text}\n\nAdditional details from the student's profile:\n" + "\n".join(extras)
+
+    structured = dict(profile.get("cv_structured") or {})
+    if skills:
+        cv_skills = structured.get("skills")
+        if isinstance(cv_skills, dict):
+            merged = dict(cv_skills)
+            merged["technical"] = list(dict.fromkeys([*(cv_skills.get("technical") or []), *skills]))
+        else:
+            merged = list(dict.fromkeys([*(cv_skills or []), *skills]))
+        structured["skills"] = merged
+    return text, structured
+
+
+async def _rematch(user_id: str) -> int:
+    """Recompute this student's matches from their CV + profile. Returns the match count."""
     from routers.cv import process_matches_in_background  # avoid circular import
 
+    profile = await asyncio.to_thread(
+        lambda: supabase.table("profiles").select(_MATCH_PROFILE_COLUMNS).eq("id", user_id).single().execute()
+    )
+    text, structured = _matching_inputs(profile.data or {})
+    if not text.strip():
+        return 0
+    # Matches from previous inputs would otherwise linger with stale scores.
+    await asyncio.to_thread(
+        lambda: supabase.table("match_results").delete().eq("user_id", user_id).execute()
+    )
+    if not await process_matches_in_background(user_id, text, [], structured):
+        raise RuntimeError("Matching failed after retries")
+    count = await asyncio.to_thread(
+        lambda: supabase.table("match_results").select("id", count="exact").eq("user_id", user_id).execute()
+    )
+    return count.count or 0
+
+
+async def rematch_from_profile(user_id: str) -> None:
+    """Background task after a profile edit. Silent: the student didn't ask for a report."""
+    try:
+        n = await _rematch(user_id)
+        logger.info(f"[CVAnalysis] Re-matched {user_id} after profile edit ({n} matches)")
+    except Exception as e:
+        logger.error(f"[CVAnalysis] Profile re-match failed for {user_id}: {e}", exc_info=True)
+
+
+async def run_cv_analysis(user_id: str, cv_text: str, job_id: str | None = None) -> None:
+    """Parse the CV, auto-fill the profile, compute matches, then notify the student."""
     try:
         cv_structured = await parse_cv_structured(cv_text)
 
@@ -187,17 +258,7 @@ async def run_cv_analysis(user_id: str, cv_text: str, job_id: str | None = None)
             .execute()
         )
 
-        # Matches from a previous CV would otherwise linger with stale scores.
-        await asyncio.to_thread(
-            lambda: supabase.table("match_results").delete().eq("user_id", user_id).execute()
-        )
-        if not await process_matches_in_background(user_id, cv_text, [], cv_structured):
-            raise RuntimeError("Matching failed after retries")
-
-        match_count = await asyncio.to_thread(
-            lambda: supabase.table("match_results").select("id", count="exact").eq("user_id", user_id).execute()
-        )
-        n = match_count.count or 0
+        n = await _rematch(user_id)
 
         await asyncio.to_thread(_set_status, user_id, "complete")
         await asyncio.to_thread(_finish_job, job_id, "complete")

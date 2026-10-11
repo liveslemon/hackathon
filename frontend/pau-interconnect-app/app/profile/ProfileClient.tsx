@@ -413,7 +413,22 @@ export default function ProfileClient({
         .eq("id", userId);
       if (error) throw error;
 
-      setStatus({ type: "success", message: "Profile saved successfully!" });
+      // Skills, projects and experience feed internship matching; refresh
+      // matches in the background (fire and forget).
+      if (hasCv) {
+        import("@/lib/api")
+          .then(({ authenticatedFetch, backendUrl }) =>
+            authenticatedFetch(backendUrl("/api/me/refresh-matches"), { method: "POST" }),
+          )
+          .catch(() => {});
+      }
+
+      setStatus({
+        type: "success",
+        message: hasCv
+          ? "Profile saved! Your internship matches will update in a few minutes."
+          : "Profile saved successfully!",
+      });
       setIsEditing(false);
     } catch (err: unknown) {
       setStatus({
