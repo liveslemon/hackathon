@@ -141,9 +141,9 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
         company_logo_url: logoUrl,
         company_banner_url: bannerUrl,
       };
-      const { authenticatedFetch } = await import("@/lib/api");
+      const { authenticatedFetch, backendUrl } = await import("@/lib/api");
 
-      await authenticatedFetch<{ success?: boolean }>("/api/employer/profile", {
+      await authenticatedFetch<{ success?: boolean }>(backendUrl("/api/employer/profile"), {
         method: "PATCH",
         body: JSON.stringify(payload),
       });

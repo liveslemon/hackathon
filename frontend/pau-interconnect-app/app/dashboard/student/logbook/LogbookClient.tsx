@@ -24,7 +24,7 @@ import {
 
 import DashboardShell from "@/components/DashboardShell";
 import { useAuth } from "@/context/AuthContext";
-import { authenticatedFetch } from "@/lib/api";
+import { authenticatedFetch, backendUrl } from "@/lib/api";
 import type { AuthSessionLike } from "@/types/domain";
 
 interface LogbookEntry {
@@ -158,12 +158,12 @@ const LogbookClient = ({
     setIsEnhancing(true);
     try {
       const data = await authenticatedFetch<{ enhanced_text?: string }>(
-        "/api/logbook/enhance",
+        backendUrl("/api/logbook/enhance"),
         {
           method: "POST",
           body: JSON.stringify({ raw_text: rawText }),
         },
-        15000,
+        45000, // LLM call with provider fallback
         existingSession,
       );
       if (data.enhanced_text) {
