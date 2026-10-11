@@ -238,6 +238,18 @@ async def rematch_from_profile(user_id: str) -> None:
         logger.error(f"[CVAnalysis] Profile re-match failed for {user_id}: {e}", exc_info=True)
 
 
+CV_FAILED_MESSAGE = "We couldn't finish analysing your CV. Please try uploading it again."
+
+
+def fail_cv_analysis(user_id: str, message: str = CV_FAILED_MESSAGE) -> None:
+    """Mark the student's CV analysis failed and tell them."""
+    try:
+        _set_status(user_id, "failed", message)
+    except Exception:
+        logger.exception("[CVAnalysis] Could not record failure status")
+    _notify(user_id, "cv_analysis_failed", "CV analysis failed", message)
+
+
 async def run_cv_analysis(user_id: str, cv_text: str, job_id: str | None = None) -> None:
     """Parse the CV, auto-fill the profile, compute matches, then notify the student."""
     try:
@@ -272,10 +284,5 @@ async def run_cv_analysis(user_id: str, cv_text: str, job_id: str | None = None)
         logger.info(f"[CVAnalysis] Completed for {user_id} ({n} matches, filled {sorted(fill)})")
     except Exception as e:
         logger.error(f"[CVAnalysis] Failed for {user_id}: {e}", exc_info=True)
-        message = "We couldn't finish analysing your CV. Please try uploading it again."
-        try:
-            await asyncio.to_thread(_set_status, user_id, "failed", message)
-            await asyncio.to_thread(_finish_job, job_id, "failed", message)
-        except Exception:
-            logger.exception("[CVAnalysis] Could not record failure status")
-        await asyncio.to_thread(_notify, user_id, "cv_analysis_failed", "CV analysis failed", message)
+        await asyncio.to_thread(_finish_job, job_id, "failed", CV_FAILED_MESSAGE)
+        await asyncio.to_thread(fail_cv_analysis, user_id)

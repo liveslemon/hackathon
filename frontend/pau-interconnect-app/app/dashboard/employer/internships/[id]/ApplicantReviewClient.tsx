@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { toast } from "sonner";
 import { cx } from "@/utils/cx";
 import { Typography, Stack, Button, Badge } from "@/components/ui";
 import {
@@ -84,10 +85,22 @@ export default function ApplicantReviewClient({
           : "pending";
 
     try {
-      await authenticatedFetch(`/api/applications/${applicationId}/stage`, {
+      const result = await authenticatedFetch<{
+        email?: { status: string; reason?: string; error?: string };
+      }>(`/api/applications/${applicationId}/stage`, {
         method: "PATCH",
         body: JSON.stringify({ stage: stageValue }),
       });
+      const email = result?.email;
+      if (email?.status === "sent") {
+        toast.success("Stage updated. The student was emailed.");
+      } else if (email && email.reason !== "not attempted") {
+        toast.warning(
+          `Stage updated and the student was notified in-app, but no email was sent: ${
+            email.reason ?? email.error ?? "unknown reason"
+          }`,
+        );
+      }
       setApplicants((prev) =>
         prev.map((app) =>
           app.id === applicationId
@@ -96,7 +109,7 @@ export default function ApplicantReviewClient({
         ),
       );
     } catch (err: unknown) {
-      alert(
+      toast.error(
         "Failed to update student state: " +
           (err instanceof Error ? err.message : "Unknown error"),
       );

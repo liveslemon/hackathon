@@ -16,11 +16,20 @@ interface SendEmailInput {
 
 const FROM_NAME = process.env.EMAIL_FROM_NAME || "PAU InterConnect";
 
-async function sendWithBrevo({ to, subject, html, text }: SendEmailInput, apiKey: string) {
+/** What happened, so callers can report it (no secrets included). */
+export type EmailResult =
+  | { status: "sent"; provider: "brevo" | "resend" }
+  | { status: "skipped"; reason: string }
+  | { status: "failed"; provider: "brevo" | "resend"; error: string };
+
+async function sendWithBrevo(
+  { to, subject, html, text }: SendEmailInput,
+  apiKey: string,
+): Promise<EmailResult> {
   const from = process.env.EMAIL_FROM_ADDRESS;
   if (!from) {
     console.warn("EMAIL_FROM_ADDRESS is not set; skipping Brevo email to", to);
-    return;
+    return { status: "skipped", reason: "EMAIL_FROM_ADDRESS is not set" };
   }
   const res = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
@@ -37,10 +46,18 @@ async function sendWithBrevo({ to, subject, html, text }: SendEmailInput, apiKey
       ...(text ? { textContent: text } : {}),
     }),
   });
-  if (!res.ok) console.error("Brevo email failed:", res.status, await res.text());
+  if (!res.ok) {
+    const error = `${res.status} ${(await res.text()).slice(0, 300)}`;
+    console.error("Brevo email failed:", error);
+    return { status: "failed", provider: "brevo", error };
+  }
+  return { status: "sent", provider: "brevo" };
 }
 
-async function sendWithResend({ to, subject, html, text }: SendEmailInput, apiKey: string) {
+async function sendWithResend(
+  { to, subject, html, text }: SendEmailInput,
+  apiKey: string,
+): Promise<EmailResult> {
   const from = process.env.EMAIL_FROM_ADDRESS || "notifications@interconnect.pau.edu.ng";
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -50,17 +67,28 @@ async function sendWithResend({ to, subject, html, text }: SendEmailInput, apiKe
     },
     body: JSON.stringify({ from: `${FROM_NAME} <${from}>`, to, subject, html, text }),
   });
-  if (!res.ok) console.error("Resend email failed:", res.status, await res.text());
+  if (!res.ok) {
+    const error = `${res.status} ${(await res.text()).slice(0, 300)}`;
+    console.error("Resend email failed:", error);
+    return { status: "failed", provider: "resend", error };
+  }
+  return { status: "sent", provider: "resend" };
 }
 
-export async function sendEmail(input: SendEmailInput) {
+export async function sendEmail(input: SendEmailInput): Promise<EmailResult> {
   const brevoKey = process.env.BREVO_API_KEY;
   const resendKey = process.env.RESEND_API_KEY;
   try {
     if (brevoKey) return await sendWithBrevo(input, brevoKey);
     if (resendKey) return await sendWithResend(input, resendKey);
     console.warn("No email provider configured (BREVO_API_KEY). Skipping email to:", input.to, "Subject:", input.subject);
+    return { status: "skipped", reason: "BREVO_API_KEY is not set in this deployment" };
   } catch (err) {
     console.error("Email send request failed:", err);
+    return {
+      status: "failed",
+      provider: brevoKey ? "brevo" : "resend",
+      error: err instanceof Error ? err.message : String(err),
+    };
   }
 }

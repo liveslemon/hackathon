@@ -85,31 +85,6 @@ export async function POST(request: Request) {
 
   const now = new Date().toISOString();
 
-  const { data: job, error: jobInsertError } = await supabase
-    .from("cv_processing_jobs")
-    .insert({
-      user_id: user.id,
-      status: "queued",
-      source: "dashboard",
-      error_message: null,
-      created_at: now,
-      updated_at: now,
-    })
-    .select("id")
-    .single();
-
-  const hasJobTracking = !jobInsertError;
-  if (jobInsertError && !isMissingSchemaObjectError(jobInsertError)) {
-    return NextResponse.json(
-      {
-        status: "error",
-        code: "JOB_CREATE_FAILED",
-        message: "Failed to start CV processing. Please try again.",
-      },
-      { status: 500 },
-    );
-  }
-
   const profileTrackingUpdate = await supabase
     .from("profiles")
     .update({
@@ -136,7 +111,6 @@ export async function POST(request: Request) {
   const backendForm = new FormData();
   backendForm.set("user_id", user.id);
   backendForm.set("file", file, file.name);
-  if (job?.id) backendForm.set("job_id", job.id);
 
   // Get the user's JWT to authenticate with the backend.
   const cookieStore = await cookies();
@@ -184,16 +158,6 @@ export async function POST(request: Request) {
 
     if (!backendRes.ok || (payload as { error?: unknown })?.error) {
       const message = toSafeErrorMessage(payload);
-      if (hasJobTracking && job?.id) {
-        await supabase
-          .from("cv_processing_jobs")
-          .update({
-            status: "failed",
-            error_message: message,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", job.id);
-      }
 
       await supabase
         .from("profiles")
@@ -215,12 +179,11 @@ export async function POST(request: Request) {
     }
 
     // The backend saved the CV and is analysing it in the background
-    // (parsing, profile auto-fill, matching). It marks the profile and job
+    // (parsing, profile auto-fill, matching). It marks the profile
     // complete and sends a notification when done.
     return NextResponse.json(
       {
         status: "processing",
-        jobId: job?.id ?? null,
         message:
           "CV received. Analysis usually takes a few minutes; we'll notify you when it's done.",
       },
@@ -228,17 +191,6 @@ export async function POST(request: Request) {
     );
   } catch {
     const fallbackMessage = "CV processing failed due to a network issue.";
-
-    if (hasJobTracking && job?.id) {
-      await supabase
-        .from("cv_processing_jobs")
-        .update({
-          status: "failed",
-          error_message: fallbackMessage,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", job.id);
-    }
 
     await supabase
       .from("profiles")

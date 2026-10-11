@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabase-server";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, type EmailResult } from "@/lib/email";
 import { applicationStatusEmail } from "@/lib/email-templates";
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -71,7 +71,12 @@ export async function PATCH(req: Request, { params }: any) {
     notes: notes || null,
   });
 
-  // Try to send email
+  // Try to send email. The result is returned so the employer UI (and the
+  // browser's network tab) shows whether the student was emailed.
+  let email: EmailResult | { status: "skipped"; reason: string } = {
+    status: "skipped",
+    reason: "not attempted",
+  };
   try {
     const { data: student } = await supabase
       .from("profiles")
@@ -88,7 +93,11 @@ export async function PATCH(req: Request, { params }: any) {
     const wantsEmail =
       settingsPrefs?.application_updates !== false &&
       legacyPrefs?.email_status_updates !== false;
-    if (wantsEmail && student?.email) {
+    if (!student?.email) {
+      email = { status: "skipped", reason: "student has no email address" };
+    } else if (!wantsEmail) {
+      email = { status: "skipped", reason: "student turned off application emails" };
+    } else {
       const emailData = applicationStatusEmail({
         studentName: student.full_name || "Student",
         role: (application.internships as any)?.role || "Internship",
@@ -96,11 +105,12 @@ export async function PATCH(req: Request, { params }: any) {
         status: stage,
         feedback: notes,
       });
-      await sendEmail({ to: student.email, ...emailData });
+      email = await sendEmail({ to: student.email, ...emailData });
     }
   } catch (err) {
     console.error("Failed to send stage change email:", err);
+    email = { status: "skipped", reason: "error preparing email" };
   }
 
-  return NextResponse.json({ success: true, stage });
+  return NextResponse.json({ success: true, stage, email });
 }

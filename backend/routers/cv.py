@@ -19,7 +19,7 @@ from fastapi import (
 )
 from schemas.requests import AnalyzeNewInternshipRequest, AnalyzeRequest
 from services.routing_service import compute_match_score
-from services.cv_analysis_service import run_cv_analysis
+from services.job_queue import CV_ANALYSIS, enqueue
 from services.cv_ocr_service import ocr_pdf
 from services.supabase_service import (
     extract_text,
@@ -215,7 +215,8 @@ async def upload_and_analyze(
             .eq("id", user_id)
             .execute()
         )
-        background_tasks.add_task(run_cv_analysis, user_id, cv_text, job_id or None)
+        # Durable queue (survives restarts) instead of an in-process task.
+        await asyncio.to_thread(enqueue, user_id, CV_ANALYSIS, job_id or None)
 
         return {
             "status": "processing",

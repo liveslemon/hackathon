@@ -3,12 +3,12 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid as uuid_lib
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional
 from core.security import get_current_user
 from core.rate_limit import rate_limit
-from services.cv_analysis_service import rematch_from_profile
+from services.job_queue import PROFILE_REMATCH, enqueue
 from services.supabase_service import supabase
 
 logger = logging.getLogger(__name__)
@@ -172,9 +172,8 @@ async def delete_my_account(payload: DeleteAccountRequest, current_user=Depends(
 
 @router.post("/api/me/refresh-matches")
 async def refresh_my_matches(
-    background_tasks: BackgroundTasks,
     current_user=Depends(rate_limit("refresh_matches", 10, 3600)),
 ):
     """Re-run matching after the student edits their profile (skills, projects, ...)."""
-    background_tasks.add_task(rematch_from_profile, current_user.id)
+    await asyncio.to_thread(enqueue, current_user.id, PROFILE_REMATCH, None, "profile")
     return {"status": "processing"}

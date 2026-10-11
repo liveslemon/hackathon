@@ -173,7 +173,18 @@ def _build_fallback_reasoning(final: int, structured: int, semantic: int, breakd
         parts.append(f"Semantic similarity: {semantic}%")
     return f"Match score {final}%. " + ", ".join(parts) + "." if parts else f"Match score: {final}%."
 
-async def generate_cover_letter(student_name: str, user_email: str, profile_text: str, job: dict, existing_letter: str = "") -> str:
+def _contact_block(student_name: str, user_email: str, phone: str = "") -> str:
+    """Contact header for a letter. Lines without data are left out rather
+    than filled with placeholders like "[phone number]"."""
+    lines = [f"Name: {student_name}"]
+    if user_email and user_email != "[email]":
+        lines.append(f"Email: {user_email}")
+    if phone and phone.strip():
+        lines.append(f"Phone: {phone.strip()}")
+    return "\n".join(lines)
+
+
+async def generate_cover_letter(student_name: str, user_email: str, profile_text: str, job: dict, existing_letter: str = "", phone: str = "") -> str:
     """
     Generates or enhances a professional motivation letter using the LLM Service.
     If existing_letter is provided, enhances it. Otherwise, drafts from scratch.
@@ -184,11 +195,7 @@ async def generate_cover_letter(student_name: str, user_email: str, profile_text
     
     system_prompt = "You are an expert career advisor who writes compelling, authentic motivation letters that focus on genuine interest and alignment with the company's mission."
     
-    contact_block = (
-        f"Name: {student_name}\n"
-        f"Email: {user_email}\n"
-        f"Phone: [phone number]"
-    )
+    contact_block = _contact_block(student_name, user_email, phone)
     
     if existing_letter.strip():
         # ENHANCE MODE: use a strict editing system prompt
@@ -234,7 +241,7 @@ async def generate_cover_letter(student_name: str, user_email: str, profile_text
         logger.error(f"Routing Service - Cover Letter Fallback Failed: {e}")
         raise ValueError("Could not generate cover letter at this time. All API providers failed.")
 
-async def generate_cover_letter_stream(student_name: str, user_email: str, profile_text: str, job: dict, existing_letter: str = ""):
+async def generate_cover_letter_stream(student_name: str, user_email: str, profile_text: str, job: dict, existing_letter: str = "", phone: str = ""):
     """
     Streams a professional motivation letter using the LLM Service.
     """
@@ -244,11 +251,7 @@ async def generate_cover_letter_stream(student_name: str, user_email: str, profi
     
     system_prompt = "You are an expert career advisor who writes compelling, authentic motivation letters that focus on genuine interest and alignment with the company's mission."
     
-    contact_block = (
-        f"Name: {student_name}\n"
-        f"Email: {user_email}\n"
-        f"Phone: [phone number]"
-    )
+    contact_block = _contact_block(student_name, user_email, phone)
     
     if existing_letter.strip():
         # ENHANCE MODE: use a strict editing system prompt
