@@ -2,7 +2,8 @@ name: Keep Render Backend Alive
 
 on:
   schedule:
-    # Run every 14 minutes to prevent Render's 15-minute inactivity spin-down on the free tier
+    # Every 14 minutes: prevents Render's 15-minute free-tier spin-down, and because
+    # /ready queries the database it also keeps the free Supabase project from pausing.
     - cron: "*/14 * * * *"
   workflow_dispatch: # Allows manual trigger from the GitHub Actions tab
 
@@ -10,18 +11,19 @@ jobs:
   keep-alive:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Backend Health Endpoint
+      - name: Ping backend readiness endpoint (touches Supabase)
         run: |
-          echo "Pinging the Render backend to prevent cold start..."
-          
-          # We check the /health endpoint. 
-          # Note: Adjust the URL below if your actual Render URL includes a random suffix (e.g. pau-interconnect-backend-abcd.onrender.com)
-          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://interconnect-backend-2c5e.onrender.com/health)
-          
-          if [ "$STATUS_CODE" -eq 200 ]; then
-            echo "Success: Backend is awake (Status: $STATUS_CODE)"
-          else
-            echo "Warning: Received non-200 status code (Status: $STATUS_CODE)"
-            # We don't exit with error here so the cron doesn't spam failure emails if it's temporarily down,
-            # but it will still actively wake the server up.
-          fi
+          URL=https://interconnect-backend-2c5e.onrender.com/ready
+
+          # Retry once to ride out a Render cold start.
+          for attempt in 1 2; do
+            STATUS_CODE=$(curl -s -o response.json -w "%{http_code}" --max-time 90 "$URL" || echo "000")
+            echo "Attempt $attempt: HTTP $STATUS_CODE $(cat response.json 2>/dev/null)"
+            [ "$STATUS_CODE" -eq 200 ] && exit 0
+            sleep 20
+          done
+
+          # Fail so GitHub emails you: 503 means the database is unreachable
+          # (e.g. the Supabase project was paused or deleted).
+          echo "::error::Backend not ready (HTTP $STATUS_CODE)"
+          exit 1
