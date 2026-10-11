@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { readPrivacy } from "@/lib/privacy";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Input } from "@/components/ui";
@@ -20,20 +21,16 @@ import {
 import { cx } from "@/utils/cx";
 import { useTheme } from "next-themes";
 
+// Only preferences the app actually honours. CV-analysis results are always
+// shown because the student asked for them.
 type NotificationPrefs = {
-  new_matches: boolean;
   application_updates: boolean;
-  interview_invitations: boolean;
   employer_messages: boolean;
-  saved_reminders: boolean;
-  weekly_digest: boolean;
 };
 
 type PrivacyPrefs = {
-  profile_visibility: "everyone" | "employers" | "only_me";
-  cv_visibility: "everyone" | "employers" | "only_me";
-  phone_visibility: "everyone" | "employers" | "only_me";
-  email_visibility: "everyone" | "employers" | "only_me";
+  phone_visibility: "employers" | "only_me";
+  email_visibility: "employers" | "only_me";
 };
 
 type SettingsState = {
@@ -41,38 +38,26 @@ type SettingsState = {
   privacy: PrivacyPrefs;
 };
 
-const defaultNotifications: NotificationPrefs = {
-  new_matches: true,
-  application_updates: true,
-  interview_invitations: true,
-  employer_messages: true,
-  saved_reminders: false,
-  weekly_digest: true,
-};
-
-const defaultPrivacy: PrivacyPrefs = {
-  profile_visibility: "employers",
-  cv_visibility: "employers",
-  phone_visibility: "only_me",
-  email_visibility: "employers",
-};
-
 export default function StudentSettingsClient({
   initialSettings,
 }: {
-  initialSettings: SettingsState | null;
+  // Raw profiles.settings; older saves may hold keys/values no longer offered.
+  initialSettings: unknown;
 }) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const [settings, setSettings] = useState<SettingsState>({
-    notifications: {
-      ...defaultNotifications,
-      ...(initialSettings?.notifications ?? {}),
-    },
-    privacy: {
-      ...defaultPrivacy,
-      ...(initialSettings?.privacy ?? {}),
-    },
+  const [settings, setSettings] = useState<SettingsState>(() => {
+    const saved = (initialSettings ?? {}) as {
+      notifications?: Partial<Record<keyof NotificationPrefs, unknown>>;
+    };
+    return {
+      notifications: {
+        application_updates:
+          saved.notifications?.application_updates !== false,
+        employer_messages: saved.notifications?.employer_messages !== false,
+      },
+      privacy: readPrivacy(initialSettings),
+    };
   });
   const [isSaving, setIsSaving] = useState(false);
   const [status, setStatus] = useState<{
@@ -356,34 +341,14 @@ export default function StudentSettingsClient({
           {(
             [
               {
-                key: "new_matches",
-                label: "New internship matches",
-                desc: "When AI finds internships matching your profile",
-              },
-              {
                 key: "application_updates",
-                label: "Application updates",
-                desc: "Status changes on your applications",
-              },
-              {
-                key: "interview_invitations",
-                label: "Interview invitations",
-                desc: "When an employer invites you for an interview",
+                label: "Application updates by email",
+                desc: "When an employer moves your application to a new stage, including interview invitations and offers",
               },
               {
                 key: "employer_messages",
                 label: "Employer messages",
-                desc: "Direct messages from employers",
-              },
-              {
-                key: "saved_reminders",
-                label: "Saved internship reminders",
-                desc: "Deadline reminders for saved internships",
-              },
-              {
-                key: "weekly_digest",
-                label: "Weekly digest",
-                desc: "Weekly summary of new opportunities",
+                desc: "In-app notification when an employer messages you",
               },
             ] as const
           ).map(({ key, label, desc }) => (
@@ -423,12 +388,12 @@ export default function StudentSettingsClient({
         </div>
         <div className="p-6 space-y-5">
           <p className="text-xs text-slate-400">
-            Control who can see your information
+            Your profile and CV are only visible to you, employers you apply
+            to or intern with, and PAU admins. Other students can&apos;t see
+            them.
           </p>
           {(
             [
-              { key: "profile_visibility", label: "Profile" },
-              { key: "cv_visibility", label: "CV / Resume" },
               { key: "phone_visibility", label: "Phone Number" },
               { key: "email_visibility", label: "Email Address" },
             ] as const
@@ -442,9 +407,8 @@ export default function StudentSettingsClient({
                 }
                 className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               >
-                <option value="everyone">Everyone</option>
-                <option value="employers">Employers Only</option>
-                <option value="only_me">Only Me</option>
+                <option value="employers">Employers I apply to</option>
+                <option value="only_me">Only me</option>
               </select>
             </div>
           ))}

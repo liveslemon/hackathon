@@ -20,10 +20,10 @@ export default async function ReportsPage() {
     .from("applied_internships")
     .select(
       `
-      student_id,
+      student_id:user_id,
       status,
       internships!inner(employer_id, role),
-      profiles!student_id(full_name, email, course, level)
+      profiles!user_id(full_name, course, level)
     `,
     )
     .eq("internships.employer_id", user.id)
