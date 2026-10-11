@@ -1,10 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { getNextPath } from "@/lib/post-login";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button, Input, Typography } from "@/components/ui";
+
+function adminDestination(): string {
+  const next = getNextPath();
+  return next?.startsWith("/dashboard/admin") ? next : "/dashboard/admin";
+}
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -35,7 +41,7 @@ export default function AdminLogin() {
       if (authData.user) {
         // Special Elevation for the primary admin email
         if (authData.user.email === "hillary.ilona@pau.edu.ng") {
-          router.push("/dashboard/admin");
+          router.push(adminDestination());
           return;
         }
 
@@ -57,7 +63,7 @@ export default function AdminLogin() {
       }
 
       // 3. Redirect to admin dashboard
-      router.push("/dashboard/admin");
+      router.push(adminDestination());
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : "Login failed. Please try again.",
