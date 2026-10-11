@@ -13,11 +13,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { student_id, employer_id, activities_raw, activities_enhanced, date: requestedDate } = body;
+  // employer_id is ignored: the database derives the supervisor from the
+  // student's placement (application_id), so it can't be spoofed.
+  const { student_id, application_id, activities_raw, activities_enhanced, date: requestedDate } = body;
 
-  if (!student_id || !employer_id || !activities_raw) {
+  if (!student_id || !activities_raw) {
     return NextResponse.json(
-      { error: "student_id, employer_id, and activities_raw are required" },
+      { error: "student_id and activities_raw are required" },
       { status: 400 },
     );
   }
@@ -56,7 +58,7 @@ export async function POST(req: Request) {
     .upsert(
       {
         student_id,
-        employer_id,
+        application_id: application_id ?? null,
         date,
         activities_raw,
         activities_enhanced: activities_enhanced || null,
@@ -68,7 +70,10 @@ export async function POST(req: Request) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // 42501 = rule enforced in the database (no active placement, ended
+    // placement, approved entry): show the student the reason.
+    const status = error.code === "42501" ? 400 : 500;
+    return NextResponse.json({ error: error.message }, { status });
   }
 
   return NextResponse.json({ entry: data });
