@@ -4,6 +4,7 @@ from functools import partial
 from fastapi import APIRouter, Depends, HTTPException, Query
 from core.security import verify_admin
 from core.db import supabase
+from services.llm_service import llm_client
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -38,6 +39,13 @@ async def fetch_admin_stats(current_user=Depends(verify_admin)):
     except Exception as e:
         logger.error(f"Error fetching admin stats: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch admin stats.")
+
+
+@router.get("/api/admin/llm-health")
+async def llm_health(current_user=Depends(verify_admin)):
+    """Report which LLM providers are reachable with the deployed keys."""
+    results = await llm_client.check_providers()
+    return {"working": sum(r["ok"] for r in results), "providers": results}
 
 
 @router.get("/admin/analytics")
