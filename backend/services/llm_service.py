@@ -14,7 +14,7 @@ _LLM_SEMAPHORE = asyncio.Semaphore(2)
 class UnifiedLLMClient:
     """
     Provides a fallback mechanism for chat completions:
-    Groq -> Together AI -> OpenRouter -> NVIDIA LLaMA (Original)
+    Groq -> NVIDIA -> Together AI -> OpenRouter
     """
     
     def __init__(self):
@@ -22,11 +22,18 @@ class UnifiedLLMClient:
         
         timeout_config = settings.LLM_TIMEOUT
         
+        # Order: providers verified working first; paid fallbacks after.
         if settings.GROQ_API_KEY:
             self.providers.append({
                 "client": AsyncOpenAI(api_key=settings.GROQ_API_KEY, base_url="https://api.groq.com/openai/v1", timeout=timeout_config),
-                "model": "llama-3.3-70b-versatile",
+                "model": "openai/gpt-oss-120b",
                 "name": "Groq"
+            })
+        if settings.NVIDIA_API_KEY:
+            self.providers.append({
+                "client": AsyncOpenAI(api_key=settings.NVIDIA_API_KEY, base_url="https://integrate.api.nvidia.com/v1", timeout=timeout_config),
+                "model": "openai/gpt-oss-20b",
+                "name": "NVIDIA"
             })
         if settings.TOGETHER_API_KEY:
             self.providers.append({
@@ -39,13 +46,6 @@ class UnifiedLLMClient:
                 "client": AsyncOpenAI(api_key=settings.OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1", timeout=timeout_config),
                 "model": "meta-llama/llama-3.3-70b-instruct",
                 "name": "OpenRouter"
-            })
-        # Legacy fallback
-        if settings.NVIDIA_API_KEY:
-            self.providers.append({
-                "client": AsyncOpenAI(api_key=settings.NVIDIA_API_KEY, base_url="https://integrate.api.nvidia.com/v1", timeout=timeout_config),
-                "model": "meta/llama-3.1-70b-instruct",
-                "name": "NVIDIA"
             })
 
     async def generate_text(self, prompt: str, system_message: str = "You are a helpful assistant.", model: str = "", json_mode: bool = False) -> str:
