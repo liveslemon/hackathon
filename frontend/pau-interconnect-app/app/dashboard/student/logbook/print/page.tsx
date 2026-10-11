@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { PLACEMENT_COLUMNS, toPlacements, type Placement } from "@/lib/placements";
 import { supabase } from "@/lib/supabaseClient";
 import { authenticatedFetch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -12,6 +13,7 @@ interface LogbookEntry {
   status: string;
   feedback_notes?: string | null;
   reviewed_at?: string | null;
+  application_id?: string | null;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -45,11 +47,6 @@ interface ProfileSummary {
   level?: string;
 }
 
-interface AppliedInternship {
-  status?: string;
-  internship?: InternshipSummary | InternshipSummary[];
-}
-
 interface LogbookFetchResponse {
   entries?: LogbookEntry[];
 }
@@ -61,6 +58,7 @@ export default function LogbookPrintView() {
   const [entries, setEntries] = useState<LogbookEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [approvedOnly, setApprovedOnly] = useState(false);
+  const [placement, setPlacement] = useState<Placement | null>(null);
 
   // Wait for auth to be resolved before fetching data
   useEffect(() => {
@@ -84,25 +82,28 @@ export default function LogbookPrintView() {
         }
         const { data: apps } = await supabase
           .from("applied_internships")
-          .select("status, internship:internships (role, company)")
-          .eq("user_id", user.id);
-        const accepted = (apps as AppliedInternship[] | null)?.find((a) => {
-          const s = a.status?.toLowerCase();
-          return s === "accepted" || s === "approved";
-        });
-        if (accepted) {
-          const internshipData = Array.isArray(accepted.internship)
-            ? accepted.internship[0]
-            : accepted.internship;
-          if (internshipData) setInternship(internshipData);
-        }
+          .select(PLACEMENT_COLUMNS)
+          .eq("user_id", user.id)
+          .not("placement_status", "is", null);
+        const placements = toPlacements(apps);
+        const wanted = new URLSearchParams(window.location.search).get("placement");
+        const chosen =
+          placements.find((p) => p.id === wanted) ?? placements[0] ?? null;
+        setPlacement(chosen);
+        if (chosen) setInternship({ role: chosen.role, company: chosen.company });
 
         const logRes = await authenticatedFetch<LogbookFetchResponse>(
           `/api/logbook/student?student_id=${user.id}`,
           {},
           10000,
         );
-        const sorted = (logRes.entries || []).sort(
+        // Only this placement's entries (pre-placement rows belong to the active one).
+        const forPlacement = (logRes.entries || []).filter((e) =>
+          e.application_id
+            ? e.application_id === chosen?.id
+            : chosen?.placement_status === "active",
+        );
+        const sorted = forPlacement.sort(
           (a, b) => localDate(a.date).getTime() - localDate(b.date).getTime(),
         );
         setEntries(sorted);
@@ -214,6 +215,15 @@ export default function LogbookPrintView() {
                 <p>
                   <strong>ROLE:</strong> {internship.role?.toUpperCase()}
                 </p>
+                {placement?.started_at && (
+                  <p>
+                    <strong>PERIOD:</strong>{" "}
+                    {new Date(placement.started_at).toLocaleDateString()} –{" "}
+                    {placement.ended_at
+                      ? new Date(placement.ended_at).toLocaleDateString()
+                      : "PRESENT"}
+                  </p>
+                )}
               </>
             )}
             <p>

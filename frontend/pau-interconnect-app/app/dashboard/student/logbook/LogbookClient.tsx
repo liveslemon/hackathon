@@ -32,6 +32,7 @@ import {
   earliestBackfillDate,
   todayInLagos,
 } from "@/lib/logbook-dates";
+import { placementLabel, type Placement } from "@/lib/placements";
 import type { AuthSessionLike } from "@/types/domain";
 
 interface LogbookEntry {
@@ -41,29 +42,20 @@ interface LogbookEntry {
   activities_enhanced: string | null;
   status: string;
   employer_id: string;
+  application_id?: string | null;
   feedback_notes?: string;
-}
-
-interface InternshipRef {
-  poster_id?: string;
-  employer_id?: string;
-  role?: string;
-  company?: string;
 }
 
 interface LogbookClientProps {
   initialProfile: { id?: string } | null;
-  initialApplications: Array<{
-    status?: string;
-    internship?: InternshipRef | InternshipRef[];
-  }>;
+  placements: Placement[];
   initialEntries: LogbookEntry[];
   session: { access_token?: string; user?: { id?: string } } | null;
 }
 
 const LogbookClient = ({
   initialProfile,
-  initialApplications,
+  placements,
   initialEntries,
   session: initialSession,
 }: LogbookClientProps) => {
@@ -83,12 +75,16 @@ const LogbookClient = ({
   const [enhancedText, setEnhancedText] = useState("");
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [employerId, setEmployerId] = useState<string | null>(null);
-  const [hasStarted, setHasStarted] = useState(false);
-  const [internshipDetails, setInternshipDetails] = useState<{
-    role?: string;
-    company?: string;
-  } | null>(null);
+  // One logbook per placement. Default to the active one; past ones are read-only.
+  const activePlacement = placements.find((p) => p.placement_status === "active") ?? null;
+  const [placementId, setPlacementId] = useState<string | null>(
+    activePlacement?.id ?? placements[0]?.id ?? null,
+  );
+  const selectedPlacement = placements.find((p) => p.id === placementId) ?? null;
+  const placementIsActive = selectedPlacement?.placement_status === "active";
+  const hasStarted = placements.length > 0;
+  const internshipDetails = selectedPlacement;
+  const [isCompleting, setIsCompleting] = useState(false);
 
   const studentId =
     initialProfile?.id ||
@@ -105,30 +101,6 @@ const LogbookClient = ({
   );
 
   useEffect(() => {
-    if (initialApplications.length > 0) {
-      const acceptedApp = initialApplications.find(
-        (a) =>
-          a.status?.toLowerCase() === "accepted" ||
-          a.status?.toLowerCase() === "approved",
-      );
-
-      if (acceptedApp) {
-        const internshipData = Array.isArray(acceptedApp.internship)
-          ? acceptedApp.internship[0]
-          : acceptedApp.internship;
-
-        if (internshipData) {
-          const resolvedEmployerId =
-            internshipData.poster_id || internshipData.employer_id;
-          setHasStarted(true);
-          if (resolvedEmployerId) {
-            setEmployerId(resolvedEmployerId);
-          }
-          setInternshipDetails(internshipData);
-        }
-      }
-    }
-
     if (studentId && !authLoading) {
       const loadHistory = async () => {
         try {
@@ -155,7 +127,45 @@ const LogbookClient = ({
 
       void loadHistory();
     }
-  }, [initialApplications, studentId, authLoading, existingSession]);
+  }, [studentId, authLoading, existingSession]);
+
+  // Entries for the placement being viewed. Rows from before placements
+  // existed have no application_id and belong to the active placement.
+  const visibleEntries = entries.filter((e) =>
+    e.application_id ? e.application_id === placementId : placementIsActive,
+  );
+
+  const switchPlacement = (id: string) => {
+    setPlacementId(id);
+    setSelectedEntry(null);
+    setRawText("");
+    setEnhancedText("");
+    setSaveError("");
+  };
+
+  const handleCompletePlacement = async () => {
+    if (!activePlacement) return;
+    const ok = window.confirm(
+      `Mark your internship at ${activePlacement.company ?? "this company"} as complete? ` +
+        "Its logbook becomes read-only (your supervisor can still review pending entries), " +
+        "and you'll be able to accept a new offer.",
+    );
+    if (!ok) return;
+    setIsCompleting(true);
+    try {
+      await authenticatedFetch(
+        `/api/applications/${activePlacement.id}/complete`,
+        { method: "POST" },
+        15000,
+        existingSession,
+      );
+      toast.success("Internship marked complete. Your logbook is saved and read-only.");
+      window.location.reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not complete the internship.");
+      setIsCompleting(false);
+    }
+  };
 
   const selectEntry = (entry: LogbookEntry) => {
     setSelectedEntry(entry);
@@ -191,8 +201,8 @@ const LogbookClient = ({
 
   const handleSubmit = async () => {
     if (!rawText.trim()) return;
-    if (!studentId || !employerId) {
-      console.error("Cannot save: missing studentId or employerId", { studentId, employerId });
+    if (!studentId || !placementIsActive || !placementId) {
+      console.error("Cannot save: no active placement", { studentId, placementId });
       toast.error("Unable to save entry — your internship assignment could not be resolved. Please reload the page.");
       return;
     }
@@ -206,7 +216,7 @@ const LogbookClient = ({
           method: "POST",
           body: JSON.stringify({
             student_id: studentId,
-            employer_id: employerId,
+            application_id: placementId,
             date: selectedEntry?.date ?? newEntryDate,
             activities_raw: rawText,
             activities_enhanced: enhancedText || null,
@@ -290,6 +300,41 @@ const LogbookClient = ({
               <Typography variant="body2" color="text.primary" fontWeight={700}>
                 {internshipDetails?.company}
               </Typography>
+              <Typography variant="caption" color="text.secondary">
+                · {placementIsActive ? "Active placement" : "Completed placement (read only)"}
+              </Typography>
+            </Stack>
+            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mt: 2 }} flexWrap="wrap">
+              {placements.length > 1 && (
+                <select
+                  aria-label="Choose internship placement"
+                  value={placementId ?? ""}
+                  onChange={(e) => switchPlacement(e.target.value)}
+                  style={{
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 8,
+                    padding: "6px 8px",
+                    fontSize: 13,
+                    maxWidth: "100%",
+                  }}
+                >
+                  {placements.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {placementLabel(p)}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {placementIsActive && (
+                <Button
+                  size="small"
+                  onClick={handleCompletePlacement}
+                  disabled={isCompleting}
+                  sx={{ textTransform: "none", fontSize: 12 }}
+                >
+                  {isCompleting ? "Completing..." : "Mark internship complete"}
+                </Button>
+              )}
             </Stack>
           </Box>
           <Divider />
@@ -314,11 +359,9 @@ const LogbookClient = ({
 
             {(() => {
               // "isPastEntry" = read-only: approved, or older than the backfill window.
-              const isPastEntry = !canEditEntry(
-                selectedEntry,
-                selectedEntry?.date ?? newEntryDate,
-                today,
-              );
+              const isPastEntry =
+                (!placementIsActive && selectedEntry?.status !== "flagged") ||
+                !canEditEntry(selectedEntry, selectedEntry?.date ?? newEntryDate, today);
               const isApproved =
                 selectedEntry?.status === "approved" ||
                 (todayEntry?.status === "approved" && !selectedEntry);
@@ -351,11 +394,20 @@ const LogbookClient = ({
                   )}
                   {isPastEntry && (
                     <Alert severity="warning" sx={{ borderRadius: 2 }}>
-                      Entries older than {BACKFILL_DAYS} days are{" "}
-                      <strong>read only</strong>.
+                      {placementIsActive ? (
+                        <>
+                          Entries older than {BACKFILL_DAYS} days are{" "}
+                          <strong>read only</strong>.
+                        </>
+                      ) : (
+                        <>
+                          This internship has ended, so its logbook is{" "}
+                          <strong>read only</strong>.
+                        </>
+                      )}
                     </Alert>
                   )}
-                  {!selectedEntry && (
+                  {!selectedEntry && placementIsActive && (
                     <Stack direction="row" spacing={1.5} alignItems="center">
                       <label
                         htmlFor="logbook-date"
@@ -371,7 +423,7 @@ const LogbookClient = ({
                         max={today}
                         onChange={(e) => {
                           const date = e.target.value;
-                          const existing = entries.find((en) => en.date === date);
+                          const existing = visibleEntries.find((en) => en.date === date);
                           if (existing) selectEntry(existing);
                           else setNewEntryDate(date);
                         }}
@@ -592,7 +644,7 @@ const LogbookClient = ({
               </Typography>
               <Button
                 component="a"
-                href="/dashboard/student/logbook/print"
+                href={`/dashboard/student/logbook/print${placementId ? `?placement=${placementId}` : ""}`}
                 target="_blank"
                 size="small"
                 startIcon={<PrintOutlined />}
@@ -603,7 +655,7 @@ const LogbookClient = ({
             </Stack>
 
             <List disablePadding>
-              {entries.map((entry) => (
+              {visibleEntries.map((entry) => (
                 <ListItemButton
                   key={entry.id}
                   onClick={() => selectEntry(entry)}

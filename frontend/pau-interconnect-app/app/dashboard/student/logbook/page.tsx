@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import LogbookClient from "./LogbookClient";
+import { PLACEMENT_COLUMNS, toPlacements } from "@/lib/placements";
 import { getSupabaseServer } from "@/lib/supabase-server";
 import { getDashboardPathForRole, getUserRoleProfile } from "@/lib/role-guard";
 
@@ -25,17 +26,14 @@ export default async function StudentLogbookPage() {
   // 2. Fetch critical internship info on server (High priority, no spinner needed)
   const { data: apps } = await supabase
     .from("applied_internships")
-    .select("status, internship:internships (poster_id, employer_id, role, company)")
-    .eq("user_id", user.id);
-
-  console.log(
-    `[Logbook Server] Found ${apps?.length || 0} applications for ${user.id}`,
-  );
+    .select(PLACEMENT_COLUMNS)
+    .eq("user_id", user.id)
+    .not("placement_status", "is", null);
 
   return (
     <LogbookClient
       initialProfile={null}
-      initialApplications={apps || []}
+      placements={toPlacements(apps)}
       initialEntries={[]} // Still deferred to client to keep page load snappy
       session={session}
     />

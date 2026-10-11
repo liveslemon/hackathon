@@ -44,7 +44,12 @@ export async function POST(req: Request, { params }: any) {
     .eq("id", applicationId);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // The database refuses a second active placement with a readable message.
+    const conflict = error.message?.includes("active internship placement");
+    return NextResponse.json(
+      { error: error.message },
+      { status: conflict ? 409 : 500 },
+    );
   }
 
   // Record in stage history
