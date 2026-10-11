@@ -46,3 +46,21 @@ describe("sendEmail", () => {
     expect(result).toMatchObject({ error: expect.stringContaining("Sender is not valid") });
   });
 });
+
+describe("email links", () => {
+  it("are absolute https URLs even without NEXT_PUBLIC_APP_URL", async () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "");
+    vi.stubEnv("VERCEL_PROJECT_PRODUCTION_URL", "interconnect-ten.vercel.app");
+    const { applicationStatusEmail } = await import("@/lib/email-templates");
+    const { html } = applicationStatusEmail({
+      studentName: "Jane",
+      role: "Data Intern",
+      company: "Paystack",
+      status: "offered",
+    });
+    const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
+    expect(hrefs.length).toBeGreaterThan(0);
+    for (const href of hrefs) expect(href).toMatch(/^https:\/\/interconnect-ten\.vercel\.app\//);
+    expect(hrefs).toContain("https://interconnect-ten.vercel.app/my-internships");
+  });
+});

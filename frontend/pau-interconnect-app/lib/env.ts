@@ -36,6 +36,20 @@ export function getSignupRedirectUrl(): string | undefined {
   return env.NEXT_PUBLIC_AUTH_SIGNUP_REDIRECT_URL;
 }
 
+/**
+ * Public URL of the site, for links in emails. NEXT_PUBLIC_APP_URL wins;
+ * otherwise Vercel's own production domain (set automatically on Vercel).
+ */
+export function getAppUrl(): string {
+  const explicit = process.env.NEXT_PUBLIC_APP_URL;
+  if (explicit) return explicit.replace(/\/+$/, "");
+  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (vercel) return `https://${vercel}`;
+  return env.NODE_ENV === "development"
+    ? "http://localhost:3000"
+    : "https://interconnect-ten.vercel.app";
+}
+
 export function getBackendUrl(): string {
   // Strip trailing slashes so `${url}${path}` never yields "//path".
   if (env.NEXT_PUBLIC_BACKEND_URL) return env.NEXT_PUBLIC_BACKEND_URL.replace(/\/+$/, "");
