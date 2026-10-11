@@ -32,61 +32,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     let isMounted = true;
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const loadProfile = async (userId: string) => {
       try {
-        const currentUser = session?.user ?? null;
-
-        if (currentUser) {
-          setUser((prev) => (prev?.id === currentUser.id ? prev : currentUser));
-
-          // Simple retry logic for transient network/socket errors
-          let attempts = 0;
-          let profileData: AuthProfile = null;
-          let profileError: { message?: string } | null = null;
-
-          while (attempts < 2) {
-            const { data, error } = await supabase
-              .from("profiles")
-              .select("*")
-              .eq("id", currentUser.id)
-              .maybeSingle();
-
-            if (!error) {
-              profileData = (data as AuthProfile) ?? null;
-              break;
-            }
-
-            profileError = error as { message?: string };
-            attempts++;
-            if (attempts < 2) {
-              await new Promise((resolve) => setTimeout(resolve, 1000));
-            }
+        // Simple retry logic for transient network/socket errors
+        let profileData: AuthProfile = null;
+        let profileError: { message?: string } | null = null;
+        for (let attempt = 0; attempt < 2; attempt++) {
+          const { data, error } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", userId)
+            .maybeSingle();
+          if (!error) {
+            profileData = (data as AuthProfile) ?? null;
+            profileError = null;
+            break;
           }
-
-          if (profileError) {
-            console.warn(
-              "Profile fetch issue (likely transient):",
-              profileError.message || "Unknown profile fetch error",
-            );
-          }
-
-          if (isMounted) {
-            setProfile(profileData);
-          }
-        } else {
-          if (isMounted) {
-            setUser(null);
-            setProfile(null);
-          }
+          profileError = error as { message?: string };
+          if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 1000));
         }
+        if (profileError) {
+          console.warn(
+            "Profile fetch issue (likely transient):",
+            profileError.message || "Unknown profile fetch error",
+          );
+        }
+        if (isMounted) setProfile(profileData);
       } catch {
         // Swallow common refresh errors
       } finally {
         clearTimeout(safetyTimeout);
         if (isMounted) setLoading(false);
       }
+    };
+
+    // The callback runs while supabase-js holds its auth lock. Awaiting any
+    // Supabase call in here waits on that same lock until it is forcibly
+    // stolen ("AbortError: Lock was stolen by another request"), failing
+    // every request queued behind it. So: update state synchronously and run
+    // the profile query after the callback returns, as Supabase recommends.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const currentUser = session?.user ?? null;
+      if (!currentUser) {
+        if (isMounted) {
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+        }
+        clearTimeout(safetyTimeout);
+        return;
+      }
+      setUser((prev) => (prev?.id === currentUser.id ? prev : currentUser));
+      setTimeout(() => {
+        void loadProfile(currentUser.id);
+      }, 0);
     });
 
     return () => {
