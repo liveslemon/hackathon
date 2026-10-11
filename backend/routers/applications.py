@@ -62,6 +62,7 @@ async def build_cover_letter(
             profile_text=cv_text,
             job=job,
             existing_letter=payload.existing_letter,
+            phone=profile.get("phone") or "",
         )
         return {"cover_letter": cover_letter}
     except HTTPException:
@@ -119,6 +120,7 @@ async def build_cover_letter_stream(
                     profile_text=cv_text,
                     job=job,
                     existing_letter=payload.existing_letter,
+                    phone=profile.get("phone") or "",
                 ):
                     if asyncio.get_event_loop().time() > deadline:
                         yield "\n\n[Generation timed out. Please try again.]"
