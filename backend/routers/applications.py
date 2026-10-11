@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import resend
@@ -106,8 +107,6 @@ async def build_cover_letter_stream(
             logger.warning(
                 f"[Draft Stream] Could not fetch auth email for {payload.user_id}: {auth_e}"
             )
-
-        import asyncio
 
         from services.routing_service import generate_cover_letter_stream
 
