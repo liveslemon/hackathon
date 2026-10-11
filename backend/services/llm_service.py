@@ -26,13 +26,13 @@ class UnifiedLLMClient:
         # OpenRouter slot uses a ":free" model and Together is last.
         if settings.GROQ_API_KEY:
             self.providers.append({
-                "client": AsyncOpenAI(api_key=settings.GROQ_API_KEY, base_url="https://api.groq.com/openai/v1", timeout=timeout_config),
+                "client": AsyncOpenAI(api_key=settings.GROQ_API_KEY, base_url="https://api.groq.com/openai/v1", timeout=timeout_config, max_retries=0),
                 "model": "openai/gpt-oss-120b",
                 "name": "Groq"
             })
         if settings.NVIDIA_API_KEY:
             self.providers.append({
-                "client": AsyncOpenAI(api_key=settings.NVIDIA_API_KEY, base_url="https://integrate.api.nvidia.com/v1", timeout=timeout_config),
+                "client": AsyncOpenAI(api_key=settings.NVIDIA_API_KEY, base_url="https://integrate.api.nvidia.com/v1", timeout=timeout_config, max_retries=0),
                 "model": "openai/gpt-oss-20b",
                 "name": "NVIDIA"
             })
@@ -44,6 +44,7 @@ class UnifiedLLMClient:
                     base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
                     default_headers={"x-goog-api-key": settings.GEMINI_API_KEY},
                     timeout=timeout_config,
+                    max_retries=0,
                 ),
                 "model": settings.GEMINI_MODEL,
                 "name": "Gemini"
@@ -51,19 +52,19 @@ class UnifiedLLMClient:
         if settings.COHERE_API_KEY:
             # Same key as embeddings; trial keys share one monthly call cap.
             self.providers.append({
-                "client": AsyncOpenAI(api_key=settings.COHERE_API_KEY, base_url="https://api.cohere.ai/compatibility/v1", timeout=timeout_config),
+                "client": AsyncOpenAI(api_key=settings.COHERE_API_KEY, base_url="https://api.cohere.ai/compatibility/v1", timeout=timeout_config, max_retries=0),
                 "model": "command-a-03-2025",
                 "name": "Cohere"
             })
         if settings.OPENROUTER_API_KEY:
             self.providers.append({
-                "client": AsyncOpenAI(api_key=settings.OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1", timeout=timeout_config),
+                "client": AsyncOpenAI(api_key=settings.OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1", timeout=timeout_config, max_retries=0),
                 "model": settings.OPENROUTER_FREE_MODEL,
                 "name": "OpenRouter"
             })
         if settings.TOGETHER_API_KEY:
             self.providers.append({
-                "client": AsyncOpenAI(api_key=settings.TOGETHER_API_KEY, base_url="https://api.together.xyz/v1", timeout=timeout_config),
+                "client": AsyncOpenAI(api_key=settings.TOGETHER_API_KEY, base_url="https://api.together.xyz/v1", timeout=timeout_config, max_retries=0),
                 "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
                 "name": "Together"
             })
@@ -134,6 +135,27 @@ class UnifiedLLMClient:
                 last_error = e
 
         raise ValueError(f"All LLM providers failed. Last error: {last_error}")
+
+    async def check_providers(self) -> list[dict]:
+        """Ping every configured provider once; used by the admin health endpoint."""
+        import time
+
+        async def ping(provider: dict) -> dict:
+            started = time.monotonic()
+            try:
+                response = await provider["client"].chat.completions.create(
+                    model=provider["model"],
+                    messages=[{"role": "user", "content": "Reply with OK."}],
+                    max_tokens=200,
+                )
+                reply = (response.choices[0].message.content or "").strip()
+                return {"name": provider["name"], "model": provider["model"], "ok": True,
+                        "reply": reply[:50], "ms": int((time.monotonic() - started) * 1000)}
+            except Exception as e:
+                return {"name": provider["name"], "model": provider["model"], "ok": False,
+                        "error": str(e)[:300], "ms": int((time.monotonic() - started) * 1000)}
+
+        return await asyncio.gather(*(ping(p) for p in self.providers))
 
 llm_client = UnifiedLLMClient()
 
