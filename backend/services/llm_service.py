@@ -38,7 +38,13 @@ class UnifiedLLMClient:
             })
         if settings.GEMINI_API_KEY:
             self.providers.append({
-                "client": AsyncOpenAI(api_key=settings.GEMINI_API_KEY, base_url="https://generativelanguage.googleapis.com/v1beta/openai/", timeout=timeout_config),
+                # AI Studio auth keys (AQ.…) are documented with x-goog-api-key; send both.
+                "client": AsyncOpenAI(
+                    api_key=settings.GEMINI_API_KEY,
+                    base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+                    default_headers={"x-goog-api-key": settings.GEMINI_API_KEY},
+                    timeout=timeout_config,
+                ),
                 "model": settings.GEMINI_MODEL,
                 "name": "Gemini"
             })
