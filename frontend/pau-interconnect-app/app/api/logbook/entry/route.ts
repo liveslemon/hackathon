@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabase-server";
+import { canEditEntry, isIsoDate, todayInLagos } from "@/lib/logbook-dates";
 
 export async function POST(req: Request) {
   const [supabase, body] = await Promise.all([getSupabaseServer(), req.json()]);
@@ -12,7 +13,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { student_id, employer_id, activities_raw, activities_enhanced } = body;
+  const { student_id, employer_id, activities_raw, activities_enhanced, date: requestedDate } = body;
 
   if (!student_id || !employer_id || !activities_raw) {
     return NextResponse.json(
@@ -25,7 +26,30 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayInLagos();
+  const date = requestedDate ?? today;
+  if (!isIsoDate(date)) {
+    return NextResponse.json({ error: "date must be YYYY-MM-DD" }, { status: 400 });
+  }
+
+  const { data: existing } = await supabase
+    .from("logbook_entries")
+    .select("date, status")
+    .eq("student_id", student_id)
+    .eq("date", date)
+    .maybeSingle();
+
+  if (!canEditEntry(existing, date, today)) {
+    return NextResponse.json(
+      {
+        error:
+          existing?.status === "approved"
+            ? "This entry has been approved by your supervisor and can't be changed."
+            : "You can only log or edit entries from the last 7 days.",
+      },
+      { status: 400 },
+    );
+  }
 
   const { data, error } = await supabase
     .from("logbook_entries")
@@ -33,7 +57,7 @@ export async function POST(req: Request) {
       {
         student_id,
         employer_id,
-        date: today,
+        date,
         activities_raw,
         activities_enhanced: activities_enhanced || null,
         status: "pending",

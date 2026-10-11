@@ -25,6 +25,12 @@ import {
 import DashboardShell from "@/components/DashboardShell";
 import { useAuth } from "@/context/AuthContext";
 import { authenticatedFetch, backendUrl } from "@/lib/api";
+import {
+  BACKFILL_DAYS,
+  canEditEntry,
+  earliestBackfillDate,
+  todayInLagos,
+} from "@/lib/logbook-dates";
 import type { AuthSessionLike } from "@/types/domain";
 
 interface LogbookEntry {
@@ -69,6 +75,9 @@ const LogbookClient = ({
   const [entries, setEntries] = useState<LogbookEntry[]>(initialEntries);
   const [todayEntry, setTodayEntry] = useState<LogbookEntry | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<LogbookEntry | null>(null);
+  const today = todayInLagos();
+  const [newEntryDate, setNewEntryDate] = useState(today);
+  const [saveError, setSaveError] = useState("");
   const [rawText, setRawText] = useState("");
   const [enhancedText, setEnhancedText] = useState("");
   const [isEnhancing, setIsEnhancing] = useState(false);
@@ -130,10 +139,13 @@ const LogbookClient = ({
           );
           const fetchedEntries = data.entries || [];
           setEntries(fetchedEntries);
-          const todayStr = new Date().toISOString().split("T")[0];
-          const todays = fetchedEntries.find((e) => e.date === todayStr);
+          const todays = fetchedEntries.find((e) => e.date === todayInLagos());
           if (todays) {
             setTodayEntry(todays);
+            // Open today's entry so saving updates it instead of starting blank.
+            setSelectedEntry(todays);
+            setRawText(todays.activities_raw || "");
+            setEnhancedText(todays.activities_enhanced || "");
           }
         } catch (err) {
           console.error("History fetch error:", err);
@@ -185,6 +197,7 @@ const LogbookClient = ({
     }
 
     setIsSubmitting(true);
+    setSaveError("");
     try {
       await authenticatedFetch(
         "/api/logbook/entry",
@@ -193,6 +206,7 @@ const LogbookClient = ({
           body: JSON.stringify({
             student_id: studentId,
             employer_id: employerId,
+            date: selectedEntry?.date ?? newEntryDate,
             activities_raw: rawText,
             activities_enhanced: enhancedText || null,
           }),
@@ -204,6 +218,7 @@ const LogbookClient = ({
       setSelectedEntry(null);
       setRawText("");
       setEnhancedText("");
+      setNewEntryDate(today);
 
       const data = await authenticatedFetch<{ entries?: LogbookEntry[] }>(
         `/api/logbook/student?student_id=${studentId}`,
@@ -214,6 +229,7 @@ const LogbookClient = ({
       setEntries(data.entries || []);
     } catch (err) {
       console.error(err);
+      setSaveError(err instanceof Error ? err.message : "Could not save this entry.");
     } finally {
       setIsSubmitting(false);
     }
@@ -289,18 +305,18 @@ const LogbookClient = ({
               }}
             >
               {(() => {
-                const todayStr = new Date().toISOString().split("T")[0];
-                if (!selectedEntry || selectedEntry.date === todayStr) {
-                  return "Today's Entry";
-                }
-                return `Entry for ${new Date(selectedEntry.date).toLocaleDateString("en-US", { month: "long", day: "numeric" })}`;
+                const date = selectedEntry?.date ?? newEntryDate;
+                if (date === today) return "Today's Entry";
+                return `Entry for ${new Date(`${date}T00:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric" })}`;
               })()}
             </Typography>
 
             {(() => {
-              const todayStr = new Date().toISOString().split("T")[0];
-              const isPastEntry = Boolean(
-                selectedEntry && selectedEntry.date !== todayStr,
+              // "isPastEntry" = read-only: approved, or older than the backfill window.
+              const isPastEntry = !canEditEntry(
+                selectedEntry,
+                selectedEntry?.date ?? newEntryDate,
+                today,
               );
               const isApproved =
                 selectedEntry?.status === "approved" ||
@@ -334,8 +350,45 @@ const LogbookClient = ({
                   )}
                   {isPastEntry && (
                     <Alert severity="warning" sx={{ borderRadius: 2 }}>
-                      This is an entry from a previous day. It is now{" "}
-                      <strong>Read Only</strong>.
+                      Entries older than {BACKFILL_DAYS} days are{" "}
+                      <strong>read only</strong>.
+                    </Alert>
+                  )}
+                  {!selectedEntry && (
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                      <label
+                        htmlFor="logbook-date"
+                        style={{ fontSize: 13, color: "#64748b" }}
+                      >
+                        Date
+                      </label>
+                      <input
+                        id="logbook-date"
+                        type="date"
+                        value={newEntryDate}
+                        min={earliestBackfillDate(today)}
+                        max={today}
+                        onChange={(e) => {
+                          const date = e.target.value;
+                          const existing = entries.find((en) => en.date === date);
+                          if (existing) selectEntry(existing);
+                          else setNewEntryDate(date);
+                        }}
+                        style={{
+                          border: "1px solid #e2e8f0",
+                          borderRadius: 8,
+                          padding: "4px 8px",
+                          fontSize: 13,
+                        }}
+                      />
+                      <span style={{ fontSize: 12, color: "#94a3b8" }}>
+                        Missed a day? You can log up to {BACKFILL_DAYS} days back.
+                      </span>
+                    </Stack>
+                  )}
+                  {saveError && (
+                    <Alert severity="error" sx={{ borderRadius: 2 }}>
+                      {saveError}
                     </Alert>
                   )}
 
@@ -404,6 +457,8 @@ const LogbookClient = ({
                             setRawText("");
                             setEnhancedText("");
                             setSelectedEntry(null);
+                            setNewEntryDate(today);
+                            setSaveError("");
                           }}
                           sx={{
                             textTransform: "none",
