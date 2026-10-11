@@ -19,7 +19,7 @@ from fastapi import (
 )
 from schemas.requests import AnalyzeNewInternshipRequest, AnalyzeRequest
 from services.routing_service import compute_match_score
-from services.cv_parser_service import parse_cv_structured
+from services.cv_analysis_service import run_cv_analysis
 from services.supabase_service import (
     extract_text,
     fetch_internships,
@@ -75,11 +75,12 @@ async def process_matches_in_background(user_id: str, cv_text: str, internships:
                 f"Background match processing completed for user {user_id}. "
                 f"Found {matches_found} matches (vector-based top-K)."
             )
-            return  # Success
+            return True
         except Exception as e:
             logger.error(f"Background match attempt {attempt + 1}/{max_retries} failed for user {user_id}: {e}", exc_info=True)
             if attempt < max_retries - 1:
                 await asyncio.sleep(2 ** attempt)
+    return False
 
 
 async def process_new_internship_background(iid: str, job: dict, students: list):
@@ -149,6 +150,7 @@ async def upload_and_analyze(
     background_tasks: BackgroundTasks,
     user_id: str = Form(...),
     file: UploadFile = File(...),
+    job_id: str = Form(""),
     current_user=Depends(rate_limit("cv_analyze", 5, 3600)),
 ):
     if user_id != current_user.id:
@@ -156,7 +158,6 @@ async def upload_and_analyze(
 
     temp_path = None
     try:
-        profile = await asyncio.to_thread(get_user_profile, user_id)
         if not file.filename.lower().endswith(".pdf"):
             raise HTTPException(status_code=400, detail="Only PDFs are supported.")
 
@@ -176,11 +177,14 @@ async def upload_and_analyze(
             tmp.write(content)
             temp_path = tmp.name
 
-        supabase.storage.from_("cvs").upload(
-            storage_filename, content, {"content-type": "application/pdf"}
+        await asyncio.to_thread(
+            supabase.storage.from_("cvs").upload,
+            storage_filename,
+            content,
+            {"content-type": "application/pdf"},
         )
-        url_resp = supabase.storage.from_("cvs").create_signed_url(
-            storage_filename, 604800
+        url_resp = await asyncio.to_thread(
+            supabase.storage.from_("cvs").create_signed_url, storage_filename, 604800
         )
         cv_url = url_resp.get("signedURL") or url_resp.get("signedUrl")
 
@@ -195,27 +199,24 @@ async def upload_and_analyze(
                 "Please ensure your CV is not a scanned image and contains selectable text.",
             )
 
-        # Clean and normalize the extracted text
         cv_text = clean_cv_text(cv_text)
 
-        # Parse CV into structured fields (skills, experience, education, projects)
-        # This is the key refinement: done ONCE at upload, reused for every match
-        cv_structured = await parse_cv_structured(cv_text)
-
-        # Store CV text, URL, and structured data
-        await asyncio.to_thread(save_cv_text_and_url, user_id, cv_url, cv_text, cv_structured=cv_structured)
-
-        internships = await asyncio.to_thread(fetch_internships)
-        if internships:
-            background_tasks.add_task(
-                process_matches_in_background, user_id, cv_text, internships, cv_structured
-            )
+        # Save the raw CV now; parsing, profile auto-fill and matching take a few
+        # minutes and run in the background (see services/cv_analysis_service).
+        await asyncio.to_thread(save_cv_text_and_url, user_id, cv_url, cv_text)
+        await asyncio.to_thread(
+            lambda: supabase.table("profiles")
+            .update({"cv_processing_status": "processing", "cv_processing_error": None})
+            .eq("id", user_id)
+            .execute()
+        )
+        background_tasks.add_task(run_cv_analysis, user_id, cv_text, job_id or None)
 
         return {
-            "message": "CV uploaded. AI matching is processing in the background.",
+            "status": "processing",
+            "message": "CV received. Analysis usually takes a few minutes; you'll be notified when it's done.",
             "cv_url": cv_url,
             "text_length": len(cv_text),
-            "internships_count": len(internships),
         }
     except HTTPException:
         raise

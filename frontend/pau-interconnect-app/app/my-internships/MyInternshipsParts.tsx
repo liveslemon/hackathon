@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { INTERNSHIP_LIST_COLUMNS } from "@/lib/internship-columns";
 import { cookies } from "next/headers";
 import InternshipCard from "@/components/InternshipCard";
 import { Calendar, Briefcase, Heart, ArrowUpRight } from "lucide-react";
@@ -79,10 +80,10 @@ export async function MyInternshipsSections() {
   // Fetch internship details
   const [savedInternshipsRes, appliedInternshipsRes] = await Promise.all([
     savedIds.length > 0
-      ? supabase.from("internships").select("*").in("id", savedIds)
+      ? supabase.from("internships").select(INTERNSHIP_LIST_COLUMNS).in("id", savedIds)
       : Promise.resolve({ data: [] }),
     appliedIds.length > 0
-      ? supabase.from("internships").select("*").in("id", appliedIds)
+      ? supabase.from("internships").select(INTERNSHIP_LIST_COLUMNS).in("id", appliedIds)
       : Promise.resolve({ data: [] }),
   ]);
 

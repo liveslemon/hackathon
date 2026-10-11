@@ -137,6 +137,7 @@ export async function POST(request: Request) {
   const backendForm = new FormData();
   backendForm.set("user_id", user.id);
   backendForm.set("file", file, file.name);
+  if (job?.id) backendForm.set("job_id", job.id);
 
   // Get the user's JWT to authenticate with the backend.
   const cookieStore = await cookies();
@@ -215,26 +216,15 @@ export async function POST(request: Request) {
       );
     }
 
+    // Onboarding is done once the CV is accepted. The backend keeps
+    // cv_processing_status at "processing" until its background analysis
+    // finishes, then marks it complete and notifies the student.
     const completedAt = new Date().toISOString();
-    if (hasJobTracking && job?.id) {
-      await supabase
-        .from("cv_processing_jobs")
-        .update({
-          status: "complete",
-          error_message: null,
-          completed_at: completedAt,
-          updated_at: completedAt,
-        })
-        .eq("id", job.id);
-    }
-
     await supabase
       .from("profiles")
       .update({
         onboarding_stage: "completed",
         onboarding_completed_at: completedAt,
-        cv_processing_status: "complete",
-        cv_processing_error: null,
         updated_at: completedAt,
       })
       .eq("id", user.id);
@@ -242,7 +232,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       status: "ok",
       jobId: job?.id ?? null,
-      message: "CV processed successfully.",
+      message:
+        "CV received. Analysis usually takes a few minutes; we'll notify you when it's done.",
     });
   } catch {
     const fallbackMessage = "CV processing failed due to a network issue.";

@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 import logging
 import re
@@ -130,6 +131,41 @@ def parse_json_from_llm(content: str) -> dict:
         return json.loads(match.group(0))
 
 
+def _skill_gap_cache_get(user_id: str, internship_id: str, cv_hash: str):
+    try:
+        res = (
+            supabase.table("skill_gap_analyses")
+            .select("result, cv_hash")
+            .eq("user_id", user_id)
+            .eq("internship_id", internship_id)
+            .maybe_single()
+            .execute()
+        )
+        if res and res.data and res.data.get("cv_hash") == cv_hash:
+            return res.data["result"]
+    except Exception as e:  # table not migrated yet -> no cache
+        logger.debug(f"[SkillGap] cache read skipped: {e}")
+    return None
+
+
+def _skill_gap_cache_put(user_id: str, internship_id: str, cv_hash: str, result: dict):
+    try:
+        supabase.table("skill_gap_analyses").upsert(
+            {"user_id": user_id, "internship_id": internship_id, "cv_hash": cv_hash, "result": result},
+            on_conflict="user_id,internship_id",
+        ).execute()
+    except Exception as e:
+        logger.debug(f"[SkillGap] cache write skipped: {e}")
+
+
+def _as_list(value) -> list:
+    if isinstance(value, list):
+        return [str(v) for v in value if v]
+    if isinstance(value, str) and value.strip():
+        return [part.strip() for part in re.split(r"[,\n;]", value) if part.strip()]
+    return []
+
+
 @router.get("/api/analysis/skill-gap")
 async def get_skill_gap_analysis(
     internship_id: str,
@@ -140,80 +176,99 @@ async def get_skill_gap_analysis(
     except (ValueError, AttributeError):
         raise HTTPException(status_code=400, detail="Invalid internship ID format.")
     try:
-        # Run blocking Supabase calls in worker threads to keep the event loop responsive.
-        res_profile, res_job = await asyncio.gather(
+        res_profile, res_job, res_match = await asyncio.gather(
             asyncio.to_thread(
                 lambda: supabase.table("profiles")
-                .select("cv_text")
+                .select("cv_text, cv_structured, skills")
                 .eq("id", current_user.id)
                 .single()
                 .execute()
             ),
             asyncio.to_thread(
                 lambda: supabase.table("internships")
-                .select("role, requirements")
+                .select("role, company, description, requirements, required_skills, job_structured")
                 .eq("id", internship_id)
-                .single()
+                .maybe_single()
+                .execute()
+            ),
+            asyncio.to_thread(
+                lambda: supabase.table("match_results")
+                .select("match_score")
+                .eq("user_id", current_user.id)
+                .eq("internship_id", internship_id)
+                .maybe_single()
                 .execute()
             ),
         )
 
-        cv_text = res_profile.data.get("cv_text")
+        profile = res_profile.data or {}
+        cv_text = profile.get("cv_text")
         if not cv_text:
             raise HTTPException(
                 status_code=400, detail="No resume found. Please upload a resume first."
             )
-
-        if not res_job.data:
+        if not res_job or not res_job.data:
             raise HTTPException(status_code=404, detail="Internship not found.")
+        job = res_job.data
 
-        job_role = res_job.data.get("role")
-        job_reqs = res_job.data.get("requirements")
+        # Same CV + same internship -> same answer. Re-analysis happens only
+        # when the student uploads a different CV.
+        cv_hash = hashlib.sha256(cv_text.encode()).hexdigest()[:32]
+        cached = await asyncio.to_thread(_skill_gap_cache_get, current_user.id, internship_id, cv_hash)
+        if cached:
+            return {**cached, "cached": True}
 
-        # Format requirements properly
-        if isinstance(job_reqs, list):
-            job_reqs_str = "\n".join(f"- {r}" for r in job_reqs)
-        else:
-            job_reqs_str = str(job_reqs) if job_reqs else "Not specified"
+        job_structured = job.get("job_structured") if isinstance(job.get("job_structured"), dict) else {}
+        required = _as_list(job.get("required_skills")) or _as_list(job_structured.get("required_skills"))
+        nice_to_have = _as_list(job_structured.get("nice_to_have_skills"))
+        requirements_text = "\n".join(f"- {r}" for r in _as_list(job.get("requirements"))) or "Not specified"
 
-        prompt = f"""You are an expert AI Career Coach performing a skill gap analysis.
+        cv_structured = profile.get("cv_structured") if isinstance(profile.get("cv_structured"), dict) else {}
+        cv_skills = cv_structured.get("skills")
+        if isinstance(cv_skills, dict):
+            cv_skills = [*(cv_skills.get("technical") or []), *(cv_skills.get("tools") or []), *(cv_skills.get("soft") or [])]
+        known_skills = sorted({*_as_list(cv_skills), *_as_list(profile.get("skills"))})
 
-INTERNSHIP DETAILS:
-- Role: {job_role}
+        prompt = f"""You are an expert career coach doing a skill gap analysis for a university student applying to an internship.
+
+INTERNSHIP
+- Role: {job.get("role")}
+- Company: {job.get("company")}
+- Description: {(job.get("description") or "Not provided")[:2000]}
 - Requirements:
-{job_reqs_str}
+{requirements_text}
+- Required skills (parsed): {", ".join(required) or "Not specified"}
+- Nice to have: {", ".join(nice_to_have) or "None listed"}
 
-STUDENT'S RESUME:
+STUDENT
+- Skills listed on their profile/CV: {", ".join(known_skills) or "None listed"}
+- Resume text:
 \"\"\"
 {cv_text[:5000]}
 \"\"\"
 
-TASK: Compare the student's demonstrated skills, experiences, and education against the internship requirements. Be realistic and specific.
-
-Output ONLY valid JSON matching this schema exactly:
+Compare the student against the internship and output ONLY JSON with this exact shape:
 {{
-    "match_percentage": <integer 0-100 based on how well the student fits>,
-    "current_skills": ["skill the student HAS that is relevant", ...],
-    "missing_skills": [
-        {{
-            "skill": "Specific skill or technology they lack",
-            "priority": "High" | "Medium" | "Low",
-            "estimated_learning_time": "e.g., 2 weeks, 1 month"
-        }}
-    ],
-    "recommendations": [
-        "Specific, actionable step the student should take",
-        "Another concrete recommendation"
-    ],
-    "strengths_summary": "One sentence about the student's strongest qualification for this role"
+  "match_percentage": <integer 0-100, realistic fit>,
+  "strengths_summary": "One sentence on the student's strongest qualification for this role",
+  "current_skills": ["relevant skill the student demonstrably has", ...],
+  "missing_skills": [
+    {{
+      "skill": "skill or technology required by the role that the student lacks",
+      "priority": "High" | "Medium" | "Low",
+      "why": "one short clause on why this role needs it",
+      "estimated_learning_time": "e.g. 2 weeks",
+      "resource": "one specific free resource, e.g. 'freeCodeCamp Responsive Web Design'"
+    }}
+  ],
+  "recommendations": ["specific, actionable next step", ...]
 }}
 
-RULES:
-- current_skills must only include skills ACTUALLY mentioned in the resume
-- missing_skills must only include skills required by the job but NOT in the resume
-- recommendations must be specific and actionable (e.g., 'Complete freeCodeCamp JavaScript course' not 'Learn more')
-- match_percentage should reflect realistic fit, not be inflated
-- Return ONLY the JSON object, no other text"""
+RULES
+- current_skills: only skills evidenced in the resume or profile skills AND relevant to this role.
+- missing_skills: only skills the role asks for that the student does not show. High = explicitly required, Medium = strongly implied, Low = nice to have.
+- 3 to 5 recommendations, each concrete (a project to build, a course, a certification), tailored to this role.
+- Do not invent experience the student does not have."""
 
         response_text = await generate_completion(
             prompt,
@@ -221,7 +276,19 @@ RULES:
             json_mode=True,
         )
         analysis = parse_json_from_llm(response_text)
-        return analysis
+
+        # Use the platform's match score so this page agrees with the score
+        # students see on internship cards; fall back to the LLM's estimate.
+        stored = res_match.data.get("match_score") if res_match and res_match.data else None
+        if stored is not None:
+            analysis["match_percentage"] = int(stored)
+            analysis["match_source"] = "platform"
+        else:
+            analysis["match_source"] = "ai_estimate"
+        analysis["internship"] = {"role": job.get("role"), "company": job.get("company")}
+
+        await asyncio.to_thread(_skill_gap_cache_put, current_user.id, internship_id, cv_hash, analysis)
+        return {**analysis, "cached": False}
 
     except json.JSONDecodeError as e:
         logger.error(f"LLM JSON Error: {e}", exc_info=True)
