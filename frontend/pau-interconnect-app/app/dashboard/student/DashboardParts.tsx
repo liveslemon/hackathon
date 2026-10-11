@@ -51,6 +51,7 @@ interface InternshipWithMatch {
   interests: string[];
   matchPercentage: number;
   applicationStatus?: string;
+  applicationStage?: string;
 }
 
 // --- Profile Header ---
@@ -185,7 +186,7 @@ export async function InternshipGridSection() {
       .eq("user_id", user.id),
     supabase
       .from("applied_internships")
-      .select("internship_id, status")
+      .select("internship_id, status, stage")
       .eq("user_id", user.id),
   ]);
 
@@ -197,6 +198,8 @@ export async function InternshipGridSection() {
     applications.map((a) => [a.internship_id, a.status]),
   );
 
+  const stageMap = new Map(applications.map((a) => [a.internship_id, a.stage]));
+
   const internshipsWithMatches: InternshipWithMatch[] = internshipsData.map(
     (internship) => ({
       ...internship,
@@ -204,6 +207,7 @@ export async function InternshipGridSection() {
         matches.find((m: MatchRow) => m.internship_id === internship.id)
           ?.match_score ?? 0,
       applicationStatus: statusMap.get(internship.id),
+      applicationStage: stageMap.get(internship.id),
     }),
   );
 

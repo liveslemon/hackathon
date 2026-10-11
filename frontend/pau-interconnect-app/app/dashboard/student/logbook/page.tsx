@@ -25,7 +25,7 @@ export default async function StudentLogbookPage() {
   // 2. Fetch critical internship info on server (High priority, no spinner needed)
   const { data: apps } = await supabase
     .from("applied_internships")
-    .select("status, internship:internships (poster_id, role, company)")
+    .select("status, internship:internships (poster_id, employer_id, role, company)")
     .eq("user_id", user.id);
 
   console.log(

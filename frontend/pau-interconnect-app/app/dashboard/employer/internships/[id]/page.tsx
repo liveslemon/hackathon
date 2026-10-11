@@ -1,7 +1,6 @@
 import React, { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { Stack, Typography } from "@/components/ui";
-import { authenticatedFetchServer } from "@/lib/api-server";
 import DashboardShellWrapper from "../../DashboardShellWrapper";
 import ApplicantReviewClient from "./ApplicantReviewClient";
 import type { Applicant } from "./ApplicantReviewClient";
@@ -49,10 +48,20 @@ async function getInternship(
 
 async function getApplicants(internshipId: string) {
   try {
-    const data = await authenticatedFetchServer<{ applicants?: Applicant[] }>(
-      `/internships/${internshipId}/applicants`,
-    );
-    return data.applicants || [];
+    const supabase = await getSupabaseServer();
+    const { data, error } = await supabase
+      .from("applied_internships")
+      .select(
+        "id, status, stage, match_score, created_at, cover_letter, profiles:profiles!user_id(id, full_name, email, course, level, cv_url)",
+      )
+      .eq("internship_id", internshipId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching applicants:", error.message);
+      return [];
+    }
+    return (data || []) as Applicant[];
   } catch (err) {
     console.error("Error fetching applicants:", err);
     return [];

@@ -19,6 +19,8 @@ interface InternshipClientPartsProps {
   internship: { id: string; company?: string; role?: string };
   hasApplied: boolean;
   applicationStatus: string | null;
+  applicationStage: string | null;
+  applicationId: string | null;
   matchingSkills: string[];
   missingSkills: string[];
   userId: string;
@@ -29,6 +31,8 @@ export default function InternshipClientParts({
   internship,
   hasApplied: initialHasApplied,
   applicationStatus,
+  applicationStage: initialStage,
+  applicationId,
   matchingSkills,
   missingSkills,
   userId,
@@ -41,6 +45,23 @@ export default function InternshipClientParts({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
   const [isReviewing] = useState(false);
+  const [currentStage, setCurrentStage] = useState(initialStage || "applied");
+  const [isAccepting, setIsAccepting] = useState(false);
+
+  const handleAcceptOffer = async () => {
+    if (!applicationId) return;
+    setIsAccepting(true);
+    try {
+      await authenticatedFetch(`/api/applications/${applicationId}/accept`, {
+        method: "POST",
+      });
+      setCurrentStage("accepted");
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : "Failed to accept offer.");
+    } finally {
+      setIsAccepting(false);
+    }
+  };
 
   const handleApply = async () => {
     if (coverLetter.trim().length < 10) {
@@ -50,13 +71,11 @@ export default function InternshipClientParts({
 
     setIsSubmitting(true);
     try {
-      await authenticatedFetch("/submit-application", {
+      await authenticatedFetch("/api/applications", {
         method: "POST",
         body: JSON.stringify({
-          user_id: userId,
           internship_id: internship.id,
           cover_letter: coverLetter,
-          student_email: studentEmail,
         }),
       });
 
@@ -178,6 +197,18 @@ export default function InternshipClientParts({
     },
   };
 
+  const STAGES = [
+    { key: "applied", label: "Applied" },
+    { key: "reviewed", label: "Reviewed" },
+    { key: "shortlisted", label: "Shortlisted" },
+    { key: "interview", label: "Interview" },
+    { key: "offered", label: "Offered" },
+    { key: "accepted", label: "Accepted" },
+  ];
+
+  const currentStageIndex = STAGES.findIndex((s) => s.key === currentStage);
+  const isRejected = currentStage === "rejected";
+
   const appStatus = applicationStatus?.toLowerCase() || "";
   const statusData = hasApplied
     ? statusConfig[appStatus] || statusConfig.pending
@@ -185,6 +216,86 @@ export default function InternshipClientParts({
 
   return (
     <>
+      {/* Stage Progress Tracker */}
+      {hasApplied && !isRejected && (
+        <div className="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-100 overflow-hidden w-full relative">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
+            Application Progress
+          </p>
+          <div className="w-full overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <style>{`.overflow-x-auto::-webkit-scrollbar { display: none; }`}</style>
+            <div className="flex items-center gap-1 min-w-[340px]">
+              {STAGES.map((stage, idx) => (
+                <div key={stage.key} className="flex items-center flex-1 shrink-0">
+                  <div className="flex flex-col items-center flex-1 w-full">
+                    <div
+                      className={cx(
+                        "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all shrink-0",
+                        idx <= currentStageIndex
+                          ? "bg-indigo-600 text-white"
+                          : "bg-slate-200 text-slate-400",
+                      )}
+                    >
+                      {idx < currentStageIndex ? "✓" : idx + 1}
+                    </div>
+                    <span
+                      className={cx(
+                        "text-[9px] mt-1 font-medium text-center leading-tight truncate px-1",
+                        idx <= currentStageIndex
+                          ? "text-indigo-600"
+                          : "text-slate-400",
+                      )}
+                    >
+                      {stage.label}
+                    </span>
+                  </div>
+                  {idx < STAGES.length - 1 && (
+                    <div
+                      className={cx(
+                        "h-0.5 flex-1 mx-0.5 rounded min-w-[12px]",
+                        idx < currentStageIndex
+                          ? "bg-indigo-600"
+                          : "bg-slate-200",
+                      )}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Accept Offer Button */}
+      {currentStage === "offered" && (
+            <button
+              onClick={handleAcceptOffer}
+              disabled={isAccepting}
+              className="w-full mt-4 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+            >
+              {isAccepting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4" />
+              )}
+              Accept Offer
+            </button>
+          )}
+
+      {hasApplied && isRejected && (
+        <div className="mb-4 p-4 bg-red-50 rounded-xl border border-red-100">
+          <div className="flex items-center gap-2">
+            <X className="w-4 h-4 text-red-500" />
+            <p className="text-sm font-semibold text-red-600">
+              Application not successful
+            </p>
+          </div>
+          <p className="text-xs text-red-400 mt-1">
+            Unfortunately, the employer has decided not to proceed with your
+            application.
+          </p>
+        </div>
+      )}
       <div className="space-y-2.5">
         {/* Apply / Status Button */}
         <button

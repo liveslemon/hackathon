@@ -27,6 +27,7 @@ interface Internship {
   interests: string[];
   matchPercentage?: number;
   applicationStatus?: string;
+  applicationStage?: string;
 }
 
 const InternshipGrid = ({

@@ -76,6 +76,8 @@ export default async function InternshipDetailsPage({
   // Fetch user-specific data if logged in
   let hasApplied = false;
   let applicationStatus: string | null = null;
+  let applicationStage: string | null = null;
+  let applicationId: string | null = null;
   let matchScore: number | null = null;
   let matchingSkills: string[] = [];
   let missingSkills: string[] = [];
@@ -85,7 +87,7 @@ export default async function InternshipDetailsPage({
     const [appliedRes, matchRes, profileRes] = await Promise.all([
       supabase
         .from("applied_internships")
-        .select("id, status")
+        .select("id, status, stage")
         .eq("user_id", user.id)
         .eq("internship_id", internshipId)
         .maybeSingle(),
@@ -101,6 +103,8 @@ export default async function InternshipDetailsPage({
     if (appliedRes.data) {
       hasApplied = true;
       applicationStatus = appliedRes.data.status;
+      applicationStage = appliedRes.data.stage || "applied";
+      applicationId = appliedRes.data.id;
     }
 
     if (matchRes.data) {
@@ -280,6 +284,8 @@ export default async function InternshipDetailsPage({
                       internship={internship}
                       hasApplied={hasApplied}
                       applicationStatus={applicationStatus}
+                      applicationStage={applicationStage}
+                      applicationId={applicationId}
                       matchingSkills={matchingSkills}
                       missingSkills={missingSkills}
                       userId={user.id}

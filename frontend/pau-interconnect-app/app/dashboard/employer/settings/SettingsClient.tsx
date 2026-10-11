@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Typography, Button, Input } from "@/components/ui";
 import { User } from "@supabase/supabase-js";
@@ -39,6 +39,24 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
   });
   const [message, setMessage] = useState("");
 
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string>(
+    profile?.company_logo_url || "",
+  );
+  const [bannerPreview, setBannerPreview] = useState<string>(
+    profile?.company_banner_url || "",
+  );
+
+  useEffect(() => {
+    return () => {
+      if (logoPreview && logoPreview.startsWith("blob:"))
+        URL.revokeObjectURL(logoPreview);
+      if (bannerPreview && bannerPreview.startsWith("blob:"))
+        URL.revokeObjectURL(bannerPreview);
+    };
+  }, [logoPreview, bannerPreview]);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
@@ -46,35 +64,30 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleFileUpload = async (
+  const handleFileSelect = (
     e: React.ChangeEvent<HTMLInputElement>,
     field: "company_logo_url" | "company_banner_url",
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    try {
-      setLoading(true);
-      setMessage(`Uploading ${field.includes("logo") ? "logo" : "banner"}...`);
+    if (file.size > 2 * 1024 * 1024) {
+      setMessage("File must be under 2MB");
+      return;
+    }
 
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${user?.id}-${field}-${Math.random()}.${fileExt}`;
+    if (!file.type.startsWith("image/")) {
+      setMessage("Only image files are allowed");
+      return;
+    }
 
-      const { error: uploadError } = await supabase.storage
-        .from("company_assets")
-        .upload(fileName, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage
-        .from("company_assets")
-        .getPublicUrl(fileName);
-      setFormData((prev) => ({ ...prev, [field]: data.publicUrl }));
-      setMessage(`Successfully uploaded! Don't forget to click Save Changes.`);
-    } catch (err: unknown) {
-      setMessage(`Upload failed: ${getErrorMessage(err)}`);
-    } finally {
-      setLoading(false);
+    const previewUrl = URL.createObjectURL(file);
+    if (field === "company_logo_url") {
+      setLogoFile(file);
+      setLogoPreview(previewUrl);
+    } else {
+      setBannerFile(file);
+      setBannerPreview(previewUrl);
     }
   };
 
@@ -84,17 +97,60 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
     setMessage("");
 
     try {
-      // NOTE: Using authenticated fetch from the frontend api wrapper if available,
-      // or directly calling fetch with JWT if not. Assuming we have `lib/api.ts` or similar.
-      const { authenticatedFetch } = await import("@/lib/api");
-      await authenticatedFetch<{ success?: boolean }>(
-        "http://localhost:8000/api/employer/profile",
-        {
-          method: "PATCH",
-          body: JSON.stringify(formData),
-        },
-      );
+      let logoUrl = formData.company_logo_url;
+      let bannerUrl = formData.company_banner_url;
+      const uploadedPaths: string[] = [];
 
+      if (logoFile) {
+        const fileExt = logoFile.name.split(".").pop();
+        const fileName = `${user?.id}-logo-${Date.now()}.${fileExt}`;
+        const { error } = await supabase.storage
+          .from("company_assets")
+          .upload(fileName, logoFile, { upsert: true });
+        if (error) throw new Error(`Logo upload failed: ${error.message}`);
+
+        uploadedPaths.push(fileName);
+        const { data } = supabase.storage
+          .from("company_assets")
+          .getPublicUrl(fileName);
+        logoUrl = data.publicUrl;
+      }
+
+      if (bannerFile) {
+        const fileExt = bannerFile.name.split(".").pop();
+        const fileName = `${user?.id}-banner-${Date.now()}.${fileExt}`;
+        const { error } = await supabase.storage
+          .from("company_assets")
+          .upload(fileName, bannerFile, { upsert: true });
+        if (error) {
+          for (const path of uploadedPaths) {
+            await supabase.storage.from("company_assets").remove([path]);
+          }
+          throw new Error(`Banner upload failed: ${error.message}`);
+        }
+
+        uploadedPaths.push(fileName);
+        const { data } = supabase.storage
+          .from("company_assets")
+          .getPublicUrl(fileName);
+        bannerUrl = data.publicUrl;
+      }
+
+      const payload = {
+        ...formData,
+        company_logo_url: logoUrl,
+        company_banner_url: bannerUrl,
+      };
+      const { authenticatedFetch } = await import("@/lib/api");
+
+      await authenticatedFetch<{ success?: boolean }>("/api/employer/profile", {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
+
+      setFormData(payload);
+      setLogoFile(null);
+      setBannerFile(null);
       setMessage("Company profile updated successfully!");
     } catch (err: unknown) {
       setMessage(getErrorMessage(err));
@@ -134,10 +190,10 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
                 Company Logo
               </label>
               <div className="flex items-center gap-4">
-                {formData.company_logo_url && (
+                {logoPreview && (
                   <div className="w-12 h-12 rounded-lg bg-slate-100 overflow-hidden border border-slate-200 shrink-0">
                     <Image
-                      src={formData.company_logo_url}
+                      src={logoPreview}
                       alt="Logo preview"
                       width={48}
                       height={48}
@@ -148,7 +204,7 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => handleFileUpload(e, "company_logo_url")}
+                  onChange={(e) => handleFileSelect(e, "company_logo_url")}
                   className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand/10 file:text-brand hover:file:bg-brand/20 transition-all cursor-pointer"
                 />
               </div>
@@ -159,10 +215,10 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
                 Company Banner
               </label>
               <div className="flex items-center gap-4">
-                {formData.company_banner_url && (
+                {bannerPreview && (
                   <div className="w-20 h-12 rounded-lg bg-slate-100 overflow-hidden border border-slate-200 shrink-0">
                     <Image
-                      src={formData.company_banner_url}
+                      src={bannerPreview}
                       alt="Banner preview"
                       width={80}
                       height={48}
@@ -173,7 +229,7 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => handleFileUpload(e, "company_banner_url")}
+                  onChange={(e) => handleFileSelect(e, "company_banner_url")}
                   className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand/10 file:text-brand hover:file:bg-brand/20 transition-all cursor-pointer"
                 />
               </div>

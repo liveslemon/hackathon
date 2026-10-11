@@ -248,7 +248,7 @@ async def find_top_students_for_job(internship_id: str, job: dict, top_k: int = 
     try:
         res = supabase.table("profiles").select(
             "id, cv_text, cv_structured, cv_embedding"
-        ).eq("role", "student").not_.is_("cv_embedding", "null").execute()
+        ).eq("role", "student").not_("cv_embedding", "is", "null").execute()
         students = res.data or []
     except Exception as e:
         logger.error(f"[VectorMatch] Failed to fetch students: {e}")

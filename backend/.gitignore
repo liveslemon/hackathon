@@ -39,3 +39,6 @@ Thumbs.db
 .pytest_cache/
 htmlcov/
 .coverage
+
+# Personal data (CVs, user exports)
+users.json

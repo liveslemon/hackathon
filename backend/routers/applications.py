@@ -1,13 +1,19 @@
 import logging
+
 import resend
+from core.config import settings
+from core.db import supabase
+from core.security import get_current_user
+from core.rate_limit import rate_limit
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse, StreamingResponse
-from core.config import settings
-from core.security import get_current_user
-from core.db import supabase
-from schemas.requests import DraftCoverLetterRequest, SubmitApplicationRequest, ApplicationStatusUpdate
-from services.supabase_service import get_user_profile
+from schemas.requests import (
+    ApplicationStatusUpdate,
+    DraftCoverLetterRequest,
+    SubmitApplicationRequest,
+)
 from services.routing_service import generate_cover_letter
+from services.supabase_service import get_user_profile
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -15,16 +21,27 @@ logger = logging.getLogger(__name__)
 
 @router.post("/draft-cover-letter")
 @router.post("/api/draft-cover-letter")
-async def build_cover_letter(payload: DraftCoverLetterRequest, current_user=Depends(get_current_user)):
+async def build_cover_letter(
+    payload: DraftCoverLetterRequest,
+    current_user=Depends(rate_limit("cover_letter", 10, 3600)),
+):
     if payload.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Forbidden: User ID mismatch.")
     try:
         profile = get_user_profile(payload.user_id)
         cv_text = profile.get("cv_text")
         if not cv_text:
-            raise HTTPException(status_code=400, detail="No CV text found. Please upload a CV first.")
+            raise HTTPException(
+                status_code=400, detail="No CV text found. Please upload a CV first."
+            )
 
-        job_res = supabase.table("internships").select("*").eq("id", payload.internship_id).maybe_single().execute()
+        job_res = (
+            supabase.table("internships")
+            .select("*")
+            .eq("id", payload.internship_id)
+            .maybe_single()
+            .execute()
+        )
         if not job_res or not job_res.data:
             raise HTTPException(status_code=404, detail="Internship not found.")
         job = job_res.data
@@ -35,7 +52,9 @@ async def build_cover_letter(payload: DraftCoverLetterRequest, current_user=Depe
             if auth_user and auth_user.user:
                 user_email = auth_user.user.email or "[email]"
         except Exception as auth_e:
-            logger.warning(f"[Draft] Could not fetch auth email for {payload.user_id}: {auth_e}")
+            logger.warning(
+                f"[Draft] Could not fetch auth email for {payload.user_id}: {auth_e}"
+            )
 
         cover_letter = await generate_cover_letter(
             student_name=profile.get("full_name", "Student"),
@@ -54,7 +73,10 @@ async def build_cover_letter(payload: DraftCoverLetterRequest, current_user=Depe
 
 @router.post("/draft-cover-letter-stream")
 @router.post("/api/draft-cover-letter-stream")
-async def build_cover_letter_stream(payload: DraftCoverLetterRequest, current_user=Depends(get_current_user)):
+async def build_cover_letter_stream(
+    payload: DraftCoverLetterRequest,
+    current_user=Depends(rate_limit("cover_letter", 10, 3600)),
+):
     if payload.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Forbidden: User ID mismatch.")
 
@@ -62,9 +84,17 @@ async def build_cover_letter_stream(payload: DraftCoverLetterRequest, current_us
         profile = get_user_profile(payload.user_id)
         cv_text = profile.get("cv_text")
         if not cv_text:
-            raise HTTPException(status_code=400, detail="No CV text found. Please upload a CV first.")
+            raise HTTPException(
+                status_code=400, detail="No CV text found. Please upload a CV first."
+            )
 
-        job_res = supabase.table("internships").select("*").eq("id", payload.internship_id).maybe_single().execute()
+        job_res = (
+            supabase.table("internships")
+            .select("*")
+            .eq("id", payload.internship_id)
+            .maybe_single()
+            .execute()
+        )
         if not job_res or not job_res.data:
             raise HTTPException(status_code=404, detail="Internship not found.")
         job = job_res.data
@@ -75,10 +105,13 @@ async def build_cover_letter_stream(payload: DraftCoverLetterRequest, current_us
             if auth_user and auth_user.user:
                 user_email = auth_user.user.email or "[email]"
         except Exception as auth_e:
-            logger.warning(f"[Draft Stream] Could not fetch auth email for {payload.user_id}: {auth_e}")
+            logger.warning(
+                f"[Draft Stream] Could not fetch auth email for {payload.user_id}: {auth_e}"
+            )
+
+        import asyncio
 
         from services.routing_service import generate_cover_letter_stream
-        import asyncio
 
         async def stream_with_timeout(timeout: float = 60.0):
             try:
@@ -107,14 +140,23 @@ async def build_cover_letter_stream(payload: DraftCoverLetterRequest, current_us
 
 @router.post("/submit-application")
 @router.post("/api/submit-application")
-def submit_app(payload: SubmitApplicationRequest, current_user=Depends(get_current_user)):
+def submit_app(
+    payload: SubmitApplicationRequest, current_user=Depends(get_current_user)
+):
     if payload.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Forbidden: User ID mismatch.")
     try:
-        logger.info(f"[SubmitApp] {payload.user_id} applying for {payload.internship_id}")
+        logger.info(
+            f"[SubmitApp] {payload.user_id} applying for {payload.internship_id}"
+        )
 
         student = get_user_profile(payload.user_id)
-        job_query = supabase.table("internships").select("*").eq("id", payload.internship_id).execute()
+        job_query = (
+            supabase.table("internships")
+            .select("*")
+            .eq("id", payload.internship_id)
+            .execute()
+        )
         if not job_query.data:
             raise HTTPException(status_code=404, detail="Internship not found.")
         job = job_query.data[0]
@@ -126,7 +168,9 @@ def submit_app(payload: SubmitApplicationRequest, current_user=Depends(get_curre
             .eq("internship_id", payload.internship_id)
             .execute()
         )
-        match_score = score_query.data[0].get("match_score", 0) if score_query.data else 0
+        match_score = (
+            score_query.data[0].get("match_score", 0) if score_query.data else 0
+        )
 
         # Use upsert with on_conflict to prevent race-condition duplicates
         existing = (
@@ -161,7 +205,11 @@ def submit_app(payload: SubmitApplicationRequest, current_user=Depends(get_curre
                 cv_url = student.get("cv_url", "")
                 cv_link_text = f"\n\nView Student CV: {cv_url}" if cv_url else ""
 
-                reply_to = payload.student_email or student.get("email") or "noreply@pau.edu.ng"
+                reply_to = (
+                    payload.student_email
+                    or student.get("email")
+                    or "noreply@pau.edu.ng"
+                )
 
                 params = {
                     "from": settings.RESEND_FROM_EMAIL,
@@ -187,9 +235,46 @@ def submit_app(payload: SubmitApplicationRequest, current_user=Depends(get_curre
         raise HTTPException(status_code=500, detail="Application submission failed.")
 
 
+def _assert_can_manage_internship(internship_id: str, user_id: str, detail: str):
+    """Raise unless the user posted the internship or is an admin. Fails closed."""
+    internship_res = (
+        supabase.table("internships")
+        .select("poster_id")
+        .eq("id", internship_id)
+        .maybe_single()
+        .execute()
+    )
+    if not internship_res or not internship_res.data:
+        raise HTTPException(status_code=404, detail="Internship not found.")
+    if internship_res.data.get("poster_id") == user_id:
+        return
+
+    profile = (
+        supabase.table("profiles")
+        .select("is_admin, role")
+        .eq("id", user_id)
+        .maybe_single()
+        .execute()
+    )
+    is_admin = (
+        profile
+        and profile.data
+        and (
+            profile.data.get("is_admin") is True
+            or profile.data.get("role") == "admin"
+        )
+    )
+    if not is_admin:
+        raise HTTPException(status_code=403, detail=detail)
+
+
 @router.put("/applications/{app_id}/status")
 @router.put("/api/applications/{app_id}/status")
-def update_status(app_id: str, payload: ApplicationStatusUpdate, current_user=Depends(get_current_user)):
+def update_status(
+    app_id: str,
+    payload: ApplicationStatusUpdate,
+    current_user=Depends(get_current_user),
+):
     """Update application status. Only the internship's employer can do this."""
     try:
         # Fetch application and verify employer ownership
@@ -203,29 +288,23 @@ def update_status(app_id: str, payload: ApplicationStatusUpdate, current_user=De
         if not app_res or not app_res.data:
             raise HTTPException(status_code=404, detail="Application not found.")
 
-        # Verify the current user owns the internship
-        internship_res = (
-            supabase.table("internships")
-            .select("poster_id")
-            .eq("id", app_res.data["internship_id"])
-            .maybe_single()
-            .execute()
+        _assert_can_manage_internship(
+            app_res.data["internship_id"],
+            current_user.id,
+            "Not authorized to update this application.",
         )
-        if internship_res and internship_res.data:
-            if internship_res.data.get("poster_id") != current_user.id:
-                # Also allow admin
-                profile = supabase.table("profiles").select("is_admin, role").eq("id", current_user.id).maybe_single().execute()
-                is_admin = profile and profile.data and (profile.data.get("is_admin") is True or profile.data.get("role") == "admin")
-                if not is_admin:
-                    raise HTTPException(status_code=403, detail="Not authorized to update this application.")
 
-        supabase.table("applied_internships").update({"status": payload.status.value}).eq("id", app_id).execute()
+        supabase.table("applied_internships").update(
+            {"status": payload.status.value}
+        ).eq("id", app_id).execute()
         return {"success": True}
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error updating application status: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to update application status.")
+        raise HTTPException(
+            status_code=500, detail="Failed to update application status."
+        )
 
 
 @router.get("/internships/{internship_id}/applicants")
@@ -237,16 +316,23 @@ def get_applicants(
     page_size: int = Query(25, ge=1, le=100),
 ):
     try:
+        _assert_can_manage_internship(
+            internship_id, current_user.id, "Not authorized to view these applicants."
+        )
         offset = (page - 1) * page_size
         res = (
             supabase.table("applied_internships")
-            .select("id, user_id, status, match_score, cover_letter, created_at, profiles(id, full_name, course, level, cv_url)")
+            .select(
+                "id, user_id, status, match_score, cover_letter, created_at, profiles:profiles!user_id(id, full_name, course, level, cv_url)"
+            )
             .eq("internship_id", internship_id)
             .order("match_score", desc=True)
             .range(offset, offset + page_size - 1)
             .execute()
         )
         return {"applicants": res.data or [], "page": page, "page_size": page_size}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error fetching applicants: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch applicants.")
@@ -263,7 +349,9 @@ def get_student_applications(
         offset = (page - 1) * page_size
         res = (
             supabase.table("applied_internships")
-            .select("id, status, match_score, created_at, internships(id, role, company)")
+            .select(
+                "id, status, match_score, created_at, internships(id, role, company)"
+            )
             .eq("user_id", current_user.id)
             .order("created_at", desc=True)
             .range(offset, offset + page_size - 1)

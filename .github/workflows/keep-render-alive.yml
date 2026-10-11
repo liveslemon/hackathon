@@ -1,0 +1,27 @@
+name: Keep Render Backend Alive
+
+on:
+  schedule:
+    # Run every 14 minutes to prevent Render's 15-minute inactivity spin-down on the free tier
+    - cron: "*/14 * * * *"
+  workflow_dispatch: # Allows manual trigger from the GitHub Actions tab
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Backend Health Endpoint
+        run: |
+          echo "Pinging the Render backend to prevent cold start..."
+          
+          # We check the /health endpoint. 
+          # Note: Adjust the URL below if your actual Render URL includes a random suffix (e.g. pau-interconnect-backend-abcd.onrender.com)
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://interconnect-backend-2c5e.onrender.com/health)
+          
+          if [ "$STATUS_CODE" -eq 200 ]; then
+            echo "Success: Backend is awake (Status: $STATUS_CODE)"
+          else
+            echo "Warning: Received non-200 status code (Status: $STATUS_CODE)"
+            # We don't exit with error here so the cron doesn't spam failure emails if it's temporarily down,
+            # but it will still actively wake the server up.
+          fi

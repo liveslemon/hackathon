@@ -72,6 +72,16 @@ const Sidebar = ({
       icon: BookOpen,
       href: "/dashboard/employer/logbook",
     },
+    {
+      label: "Reports",
+      icon: FileText,
+      href: "/dashboard/employer/reports",
+    },
+    {
+      label: "Analytics",
+      icon: BarChart3,
+      href: "/dashboard/employer/analytics",
+    },
   ];
 
   const adminItems = [

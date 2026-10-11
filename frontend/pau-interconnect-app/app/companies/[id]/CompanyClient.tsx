@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Typography } from "@/components/ui";
 import { Globe, Users, Building, MapPin } from "lucide-react";
 import InternshipCard from "@/components/InternshipCard";
+import { getBackendUrl } from "@/lib/env";
 import type { Internship, Profile } from "@/types/domain";
 
 interface CompanyClientProps {
@@ -47,7 +48,7 @@ export default function CompanyClient({ employerId }: CompanyClientProps) {
     async function fetchData() {
       try {
         const res = await fetch(
-          `http://localhost:8000/api/companies/${employerId}`,
+          `${getBackendUrl()}/api/companies/${employerId}`,
         );
         if (!res.ok) throw new Error("Failed to load company");
         const json = (await res.json()) as CompanyResponse;

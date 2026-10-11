@@ -4,18 +4,16 @@ import { Typography } from "@/components/ui";
 import { Button } from "@/components/ui";
 import { FileText, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/context/AuthContext";
 
 export default function CvPromptCard() {
   const [show, setShow] = useState<boolean | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     async function checkCv() {
       try {
-        const { supabase } = await import("@/lib/supabaseClient");
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        const user = session?.user;
         if (!user) {
           setShow(true);
           return;
@@ -38,7 +36,7 @@ export default function CvPromptCard() {
       }
     }
     checkCv();
-  }, []);
+  }, [user]);
 
   // Don't render while loading or if user already has a CV
   if (show === null || show === false) return null;
