@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     TOGETHER_API_KEY: str = ""
     OPENROUTER_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    OPENROUTER_FREE_MODEL: str = "google/gemma-4-31b-it:free"
 
     # --- Email ---
     RESEND_API_KEY: str = ""
@@ -98,6 +101,8 @@ def log_startup_diagnostics() -> None:
         settings.OPENROUTER_API_KEY,
         settings.TOGETHER_API_KEY,
         settings.NVIDIA_API_KEY,
+        settings.GEMINI_API_KEY,
+        settings.COHERE_API_KEY,
     ]
     llm_count = sum(1 for k in llm_keys if k)
     embed_ok = bool(settings.COHERE_API_KEY or settings.NVIDIA_API_KEY)

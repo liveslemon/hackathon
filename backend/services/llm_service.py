@@ -14,7 +14,7 @@ _LLM_SEMAPHORE = asyncio.Semaphore(2)
 class UnifiedLLMClient:
     """
     Provides a fallback mechanism for chat completions:
-    Groq -> NVIDIA -> Together AI -> OpenRouter
+    Groq -> NVIDIA -> Gemini -> Cohere -> OpenRouter (free) -> Together
     """
     
     def __init__(self):
@@ -22,7 +22,8 @@ class UnifiedLLMClient:
         
         timeout_config = settings.LLM_TIMEOUT
         
-        # Order: providers verified working first; paid fallbacks after.
+        # Order: free tiers first. Together/OpenRouter-paid need credits, so the
+        # OpenRouter slot uses a ":free" model and Together is last.
         if settings.GROQ_API_KEY:
             self.providers.append({
                 "client": AsyncOpenAI(api_key=settings.GROQ_API_KEY, base_url="https://api.groq.com/openai/v1", timeout=timeout_config),
@@ -35,17 +36,30 @@ class UnifiedLLMClient:
                 "model": "openai/gpt-oss-20b",
                 "name": "NVIDIA"
             })
+        if settings.GEMINI_API_KEY:
+            self.providers.append({
+                "client": AsyncOpenAI(api_key=settings.GEMINI_API_KEY, base_url="https://generativelanguage.googleapis.com/v1beta/openai/", timeout=timeout_config),
+                "model": settings.GEMINI_MODEL,
+                "name": "Gemini"
+            })
+        if settings.COHERE_API_KEY:
+            # Same key as embeddings; trial keys share one monthly call cap.
+            self.providers.append({
+                "client": AsyncOpenAI(api_key=settings.COHERE_API_KEY, base_url="https://api.cohere.ai/compatibility/v1", timeout=timeout_config),
+                "model": "command-a-03-2025",
+                "name": "Cohere"
+            })
+        if settings.OPENROUTER_API_KEY:
+            self.providers.append({
+                "client": AsyncOpenAI(api_key=settings.OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1", timeout=timeout_config),
+                "model": settings.OPENROUTER_FREE_MODEL,
+                "name": "OpenRouter"
+            })
         if settings.TOGETHER_API_KEY:
             self.providers.append({
                 "client": AsyncOpenAI(api_key=settings.TOGETHER_API_KEY, base_url="https://api.together.xyz/v1", timeout=timeout_config),
                 "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
                 "name": "Together"
-            })
-        if settings.OPENROUTER_API_KEY:
-            self.providers.append({
-                "client": AsyncOpenAI(api_key=settings.OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1", timeout=timeout_config),
-                "model": "meta-llama/llama-3.3-70b-instruct",
-                "name": "OpenRouter"
             })
 
     async def generate_text(self, prompt: str, system_message: str = "You are a helpful assistant.", model: str = "", json_mode: bool = False) -> str:
