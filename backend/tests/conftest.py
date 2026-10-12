@@ -172,7 +172,11 @@ class MockQueryBuilder:
 
         if self.mutation_type == "insert":
             payload = self.mutation_payload
-            inserted = [payload] if isinstance(payload, dict) else payload
+            inserted = [dict(payload)] if isinstance(payload, dict) else [dict(p) for p in payload]
+            import uuid as uuid_lib
+            for row in inserted:
+                if "id" not in row:
+                    row["id"] = str(uuid_lib.uuid4())
             return MockPostgrestResponse(data=inserted)
 
         if self.mutation_type in ("update", "upsert"):
