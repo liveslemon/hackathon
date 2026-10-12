@@ -1,5 +1,6 @@
-
 @import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
 
 /* ========================================
    THEME: CSS Variables
@@ -10,12 +11,21 @@
   --brand-secondary: #7c3aed; /* Tailwind Violet 600 */
   --background: #ffffff;
   --background-subtle: #f9fafb;
-  --foreground: #111827;
-  --foreground-muted: #6b7280;
+  --foreground: #0f172a;
+  --foreground-muted: #64748b;
   
   /* Radii standard: Modern & Structured */
   --radius-xl: 12px;
   --radius-2xl: 16px;
+}
+
+.dark {
+  --brand: #6366f1;
+  --brand-secondary: #8b5cf6;
+  --background: #090d16;
+  --background-subtle: #0f172a;
+  --foreground: #f8fafc;
+  --foreground-muted: #94a3b8;
 }
 
 /* ========================================
@@ -42,4 +52,49 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* Accessibility: Skip to Content */
+.skip-to-content {
+  position: absolute;
+  top: -9999px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--brand);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-xl);
+  z-index: 99999;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.skip-to-content:focus {
+  top: 1rem;
+}
+
+/* Print Styles for SIWES Logbook & Reports */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .no-print,
+  nav,
+  aside,
+  header,
+  footer,
+  button:not(.print-include) {
+    display: none !important;
+  }
+
+  .page-break-before {
+    page-break-before: always;
+  }
+
+  .page-break-after {
+    page-break-after: always;
+  }
 }

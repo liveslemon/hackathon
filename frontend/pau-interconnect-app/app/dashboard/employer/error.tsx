@@ -1,0 +1,37 @@
+"use client";
+
+import React, { useEffect } from "react";
+import { Button, Typography, Stack } from "@/components/ui";
+
+export default function EmployerDashboardError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  useEffect(() => {
+    console.error("Employer dashboard error:", error);
+  }, [error]);
+
+  return (
+    <div
+      role="alert"
+      className="min-h-[50vh] flex items-center justify-center p-6 text-center"
+    >
+      <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-100 dark:border-slate-800">
+        <Typography variant="h4" weight="bold" className="mb-3">
+          Employer Portal Error
+        </Typography>
+        <Typography variant="body2" color="muted" className="mb-6">
+          {error.message || "Failed to load employer dashboard. Please try again."}
+        </Typography>
+        <Stack spacing={3}>
+          <Button onClick={reset} className="w-full">
+            Retry
+          </Button>
+        </Stack>
+      </div>
+    </div>
+  );
+}
