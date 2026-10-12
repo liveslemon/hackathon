@@ -30,9 +30,13 @@ export default async function AnalyticsPage() {
     return null;
   }
 
+  const { count: applicationCount } = await supabase
+    .from("applied_internships")
+    .select("id", { count: "exact", head: true });
+
   const counts: Record<string, number> = {};
-  data.forEach((item) => {
-    const category = item.category || "Unknown";
+  (data || []).forEach((item) => {
+    const category = item.category || "General";
     counts[category] = (counts[category] || 0) + 1;
   });
 
@@ -41,6 +45,18 @@ export default async function AnalyticsPage() {
     value,
   }));
 
-  return <AnalyticsView categories={categoryArray} />;
-}
+  const totalInternships = (data || []).length;
+  const totalApplications = applicationCount || 0;
+  const avgApplications =
+    totalInternships > 0
+      ? (totalApplications / totalInternships).toFixed(1)
+      : "0.0";
 
+  return (
+    <AnalyticsView
+      categories={categoryArray}
+      totalApplications={totalApplications}
+      avgApplications={avgApplications}
+    />
+  );
+}

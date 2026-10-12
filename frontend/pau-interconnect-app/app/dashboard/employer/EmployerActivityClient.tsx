@@ -5,10 +5,12 @@ import { Typography } from "@/components/ui";
 import { User, Clock, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { cx } from "@/utils/cx";
+import { formatDistanceToNow } from "date-fns";
 
 interface EmployerActivityItem {
   id: string;
   internship_id?: string;
+  created_at?: string;
   date?: string;
   match_score?: number;
   profiles?: {
@@ -109,7 +111,11 @@ export function EmployerActivityClient({
                   className="text-slate-500 font-medium"
                 >
                   {type === "applicants"
-                    ? `${item.internships?.role} • ${item.match_score || 0}% Match Score`
+                    ? `${item.internships?.role} • ${item.match_score || 0}% Match Score${
+                        item.created_at
+                          ? ` • ${formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}`
+                          : ""
+                      }`
                     : `Log entry for ${item.date ? new Date(item.date).toLocaleDateString() : "Unknown date"}`}
                 </Typography>
               </div>

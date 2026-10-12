@@ -13,6 +13,7 @@ const eslintConfig = defineConfig([
       "react/no-unescaped-entities": "warn",
       "react-hooks/set-state-in-effect": "warn",
       "react-hooks/immutability": "warn",
+      "react-hooks/purity": "warn",
       "@typescript-eslint/no-empty-object-type": "warn",
     },
   },
@@ -23,6 +24,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "supabase/**",
   ]),
 ]);
 

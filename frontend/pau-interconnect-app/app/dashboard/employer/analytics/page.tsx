@@ -18,7 +18,14 @@ export default async function EmployerAnalyticsPage() {
 
   const internshipIds = internships?.map((i) => i.id) || [];
 
-  let applications: any[] = [];
+  let applications: Array<{
+    id: string;
+    status: string | null;
+    stage: string | null;
+    match_score: number | null;
+    created_at: string;
+    internship_id: string;
+  }> = [];
   if (internshipIds.length > 0) {
     const { data } = await supabase
       .from("applied_internships")
