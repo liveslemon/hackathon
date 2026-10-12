@@ -2,7 +2,7 @@ import logging
 import warnings
 from enum import Enum
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _logger = logging.getLogger(__name__)
@@ -89,6 +89,12 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT == Environment.PRODUCTION
+
+    @model_validator(mode="after")
+    def validate_production_safety(self):
+        if self.is_production and self.FRONTEND_URL == "*":
+            raise ValueError("FRONTEND_URL cannot be '*' when ENVIRONMENT is 'production'")
+        return self
 
 
 settings = Settings()
