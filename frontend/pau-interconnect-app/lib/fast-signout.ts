@@ -8,6 +8,9 @@ export function fastSignOut(redirectTo: string): void {
   try {
     localStorage.clear();
     sessionStorage.clear();
+    // Clear dev auth cookies as well
+    document.cookie = "dev_mode_role=; Path=/; Max-Age=0; SameSite=Lax";
+    document.cookie = "dev_auth_mode=; Path=/; Max-Age=0; SameSite=Lax";
   } catch {
     // Ignore storage cleanup failures and continue sign-out flow.
   }
