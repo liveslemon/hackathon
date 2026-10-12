@@ -209,28 +209,11 @@ def _matching_inputs(profile: dict) -> tuple[str, dict]:
 
 
 async def _rematch(user_id: str) -> int:
-    """Recompute this student's matches from their CV + profile. Returns the match count."""
-    from routers.cv import process_matches_in_background  # avoid circular import
+    """Recompute this student's matches using the canonical full-coverage pipeline."""
+    from services.vector_matching_service import rescore_user
 
-    profile = await asyncio.to_thread(
-        lambda: supabase.table("profiles").select(_MATCH_PROFILE_COLUMNS).eq("id", user_id).single().execute()
-    )
-    text, structured = _matching_inputs(profile.data or {})
-    if not text.strip():
-        return 0
-
-    # Matches from previous inputs would otherwise linger with stale scores.
-    await asyncio.to_thread(
-        lambda: supabase.table("match_results").delete().eq("user_id", user_id).execute()
-    )
-    if not await process_matches_in_background(user_id, text, [], structured):
-        raise RuntimeError("Matching failed after retries")
-
-    # Fixed: match_results has no 'id' column; select 'user_id' with count='exact'
-    count = await asyncio.to_thread(
-        lambda: supabase.table("match_results").select("user_id", count="exact").eq("user_id", user_id).execute()
-    )
-    return count.count or 0
+    count = await rescore_user(user_id)
+    return count
 
 
 async def rematch_from_profile(user_id: str) -> None:

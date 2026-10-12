@@ -328,22 +328,12 @@ async def analyze_new_internship(
                     detail="Forbidden: Only the posting employer or admins can trigger matching for this internship.",
                 )
 
-        res_students = await asyncio.to_thread(
-            lambda: supabase.table("profiles")
-            .select("id, cv_text, cv_structured")
-            .eq("role", "student")
-            .not_.is_("cv_text", "null")
-            .execute()
-        )
-        students = res_students.data or []
-
-        if students:
-            background_tasks.add_task(
-                process_new_internship_background, iid, job, students
-            )
+        from services.job_queue import enqueue_internship_rescore
+        queued_job_id = await asyncio.to_thread(enqueue_internship_rescore, iid, "posting")
 
         return {
-            "message": f"AI matching for new internship started in the background for {len(students)} students."
+            "message": "AI matching for new internship queued in the durable queue.",
+            "job_id": queued_job_id,
         }
     except HTTPException:
         raise

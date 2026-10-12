@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     MATCH_CACHE_SIZE: int = 5000
     MATCH_CACHE_TTL: int = 3600
 
+    # --- Matching & Reasoning ---
+    AI_REASONING_THRESHOLD: int = 80
+    MATCH_REASONING_MAX_PER_MINUTE: int = 30
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @field_validator("SUPABASE_URL")
