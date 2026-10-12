@@ -280,7 +280,7 @@ def test_admin_directory_pagination(mock_supabase, admin_client):
 def test_suspend_user_cannot_target_admin(mock_supabase, admin_client):
     # Return an admin profile as the target
     mock_target = MagicMock()
-    mock_target.eq.return_value.maybeSingle.return_value.execute.return_value = SimpleNamespace(
+    mock_target.eq.return_value.maybe_single.return_value.execute.return_value = SimpleNamespace(
         data={"id": "target-admin-id", "email": "other.admin@pau.edu.ng", "is_admin": True, "role": "admin"}
     )
     mock_supabase.table.return_value.select.return_value = mock_target
@@ -300,7 +300,7 @@ def test_suspend_user_cannot_target_self(mock_supabase, admin_client, mock_admin
 @patch("routers.admin.supabase")
 def test_suspend_regular_user_success_and_audited(mock_supabase, admin_client):
     mock_target = MagicMock()
-    mock_target.eq.return_value.maybeSingle.return_value.execute.return_value = SimpleNamespace(
+    mock_target.eq.return_value.maybe_single.return_value.execute.return_value = SimpleNamespace(
         data={"id": "student-1", "email": "stu@pau.edu.ng", "is_admin": False, "role": "student"}
     )
     mock_update = MagicMock()
@@ -328,7 +328,7 @@ def test_suspend_regular_user_success_and_audited(mock_supabase, admin_client):
 @patch("routers.admin.supabase")
 def test_verify_employer_success_and_audited(mock_supabase, admin_client):
     mock_target = MagicMock()
-    mock_target.eq.return_value.maybeSingle.return_value.execute.return_value = SimpleNamespace(
+    mock_target.eq.return_value.maybe_single.return_value.execute.return_value = SimpleNamespace(
         data={"id": "emp-1", "role": "employer"}
     )
     mock_update = MagicMock()

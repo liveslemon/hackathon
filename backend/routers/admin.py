@@ -433,9 +433,9 @@ async def suspend_user(
 
     # Check target user
     res = await asyncio.to_thread(
-        lambda: supabase.table("profiles").select("id, email, role, is_admin").eq("id", user_id).maybeSingle().execute()
+        lambda: supabase.table("profiles").select("id, email, role, is_admin").eq("id", user_id).maybe_single().execute()
     )
-    target = res.data
+    target = res.data if res else None
     if not target:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
 
@@ -477,9 +477,9 @@ async def reinstate_user(
 ):
     """Reinstate a suspended user account. Audited in decision_audit_log."""
     res = await asyncio.to_thread(
-        lambda: supabase.table("profiles").select("id").eq("id", user_id).maybeSingle().execute()
+        lambda: supabase.table("profiles").select("id").eq("id", user_id).maybe_single().execute()
     )
-    if not res.data:
+    if not res or not res.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
 
     await asyncio.to_thread(
@@ -509,9 +509,9 @@ async def verify_employer(
 ):
     """Mark an employer as verified. Audited in decision_audit_log."""
     res = await asyncio.to_thread(
-        lambda: supabase.table("profiles").select("id, role").eq("id", employer_id).maybeSingle().execute()
+        lambda: supabase.table("profiles").select("id, role").eq("id", employer_id).maybe_single().execute()
     )
-    if not res.data:
+    if not res or not res.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employer not found.")
 
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -541,9 +541,9 @@ async def unverify_employer(
 ):
     """Remove employer verification. Audited in decision_audit_log."""
     res = await asyncio.to_thread(
-        lambda: supabase.table("profiles").select("id").eq("id", employer_id).maybeSingle().execute()
+        lambda: supabase.table("profiles").select("id").eq("id", employer_id).maybe_single().execute()
     )
-    if not res.data:
+    if not res or not res.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employer not found.")
 
     await asyncio.to_thread(
@@ -573,9 +573,9 @@ async def update_internship_status(
 ):
     """Update internship status (e.g., active, closed). Audited in decision_audit_log."""
     res = await asyncio.to_thread(
-        lambda: supabase.table("internships").select("id, status").eq("id", internship_id).maybeSingle().execute()
+        lambda: supabase.table("internships").select("id, status").eq("id", internship_id).maybe_single().execute()
     )
-    if not res.data:
+    if not res or not res.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Internship not found.")
 
     await asyncio.to_thread(
