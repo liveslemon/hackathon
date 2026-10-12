@@ -1,5 +1,7 @@
 import React, { Suspense } from "react";
-import { Stack, Typography } from "@/components/ui";
+import { Stack, PageHeader, Button, Skeleton } from "@/components/ui";
+import { Plus } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSupabaseServer } from "@/lib/supabase-server";
 import DashboardShellWrapper from "../DashboardShellWrapper";
@@ -31,26 +33,26 @@ export default async function EmployerInternshipsPage() {
 
   return (
     <DashboardShellWrapper userProfile={profile}>
-      <main className="max-w-5xl mx-auto py-8 lg:py-12">
-        <header className="mb-10">
-          <Typography
-            variant="h2"
-            weight="bold"
-            className="mb-2 text-slate-800"
-          >
-            My Postings
-          </Typography>
-          <Typography color="muted">
-            Manage and track your active internship opportunities.
-          </Typography>
-        </header>
+      <main className="max-w-5xl mx-auto py-8 lg:py-12 px-4 sm:px-6">
+        <PageHeader
+          title="My Postings"
+          description="Manage and track your active internship opportunities."
+          actions={
+            <Link href="/dashboard/post">
+              <Button leftIcon={<Plus className="w-4 h-4" />}>
+                Post Internship
+              </Button>
+            </Link>
+          }
+          className="mb-8"
+        />
 
         <Suspense
           fallback={
             <Stack spacing={4}>
-              <div className="h-48 w-full bg-slate-100 rounded-[32px] animate-pulse" />
-              <div className="h-48 w-full bg-slate-100 rounded-[32px] animate-pulse" />
-              <div className="h-48 w-full bg-slate-100 rounded-[32px] animate-pulse" />
+              <Skeleton className="h-40 w-full rounded-2xl" />
+              <Skeleton className="h-40 w-full rounded-2xl" />
+              <Skeleton className="h-40 w-full rounded-2xl" />
             </Stack>
           }
         >
