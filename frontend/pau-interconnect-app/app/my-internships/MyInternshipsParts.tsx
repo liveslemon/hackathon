@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { INTERNSHIP_LIST_COLUMNS } from "@/lib/internship-columns";
+import { getDaysUntilDeadline } from "@/lib/deadlines";
 import { cookies } from "next/headers";
 import InternshipCard from "@/components/InternshipCard";
 import { Calendar, Briefcase, Heart, ArrowUpRight } from "lucide-react";
@@ -91,6 +92,8 @@ export async function MyInternshipsSections() {
     ...i,
     matchPercentage: matchMap.get(i.id),
     applicationStatus: statusMap.get(i.id),
+    applicationStage: stageMap.get(i.id),
+    applicationId: applicationIdMap.get(i.id),
   }));
 
   const appliedInternships = (appliedInternshipsRes.data ?? []).map((i) => ({
@@ -102,12 +105,8 @@ export async function MyInternshipsSections() {
   }));
 
   const expiringInternships = appliedInternships.filter((internship) => {
-    if (!internship.deadline) return false;
-    const daysLeft = Math.ceil(
-      (new Date(internship.deadline).getTime() - new Date().getTime()) /
-        (1000 * 60 * 60 * 24),
-    );
-    return daysLeft > 0 && daysLeft <= 7;
+    const daysLeft = getDaysUntilDeadline(internship.deadline);
+    return daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
   });
 
   return (
@@ -130,11 +129,9 @@ export async function MyInternshipsSections() {
           </div>
           <div className="space-y-3">
             {expiringInternships.map((internship) => {
-              const daysLeft = Math.ceil(
-                (new Date(internship.deadline).getTime() -
-                  new Date().getTime()) /
-                  (1000 * 60 * 60 * 24),
-              );
+              const daysLeft = getDaysUntilDeadline(internship.deadline);
+              const badgeText =
+                daysLeft === 0 ? "Ends today" : `${daysLeft} days left`;
               return (
                 <Link
                   href={`/internships/${internship.id}`}
@@ -151,7 +148,7 @@ export async function MyInternshipsSections() {
                       </p>
                     </div>
                     <span className="px-3 py-1 bg-rose-50 text-rose-600 rounded-lg text-xs font-bold border border-rose-100">
-                      {daysLeft} days left
+                      {badgeText}
                     </span>
                   </div>
                 </Link>

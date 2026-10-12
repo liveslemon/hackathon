@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { FiSearch, FiX, FiBriefcase, FiArrowRight } from "react-icons/fi";
 import { Typography, Stack, Badge } from "@/components/ui";
 import { authenticatedFetch } from "@/lib/api";
+import { supabase } from "@/lib/supabaseClient";
 
 type SearchStudent = {
   id: string;
@@ -33,20 +35,21 @@ interface SearchOverlayProps {
   onClose: () => void;
 }
 
+interface FlattenedItem {
+  id: string;
+  type: "student" | "employer" | "internship";
+  title: string;
+  subtitle: string;
+  url: string;
+}
+
 export default function SearchOverlay({ onClose }: SearchOverlayProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults | null>(null);
   const [loading, setLoading] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
+  const router = useRouter();
 
   const performSearch = useCallback(async () => {
     try {
@@ -55,8 +58,31 @@ export default function SearchOverlay({ onClose }: SearchOverlayProps) {
         `/admin/search?q=${encodeURIComponent(query)}`,
       );
       setResults(data);
-    } catch (err) {
-      console.error("Search failed:", err);
+    } catch {
+      // Fallback for non-admin students: search public internships and employers via Supabase
+      try {
+        const [{ data: jobs }, { data: employers }] = await Promise.all([
+          supabase
+            .from("internships")
+            .select("id, role, company")
+            .or(`role.ilike.%${query}%,company.ilike.%${query}%`)
+            .limit(8),
+          supabase
+            .from("profiles")
+            .select("id, full_name, company_name")
+            .eq("role", "employer")
+            .or(`company_name.ilike.%${query}%,full_name.ilike.%${query}%`)
+            .limit(8),
+        ]);
+
+        setResults({
+          internships: jobs || [],
+          employers: employers || [],
+          students: [],
+        });
+      } catch {
+        setResults({ internships: [], employers: [], students: [] });
+      }
     } finally {
       setLoading(false);
     }
@@ -74,11 +100,86 @@ export default function SearchOverlay({ onClose }: SearchOverlayProps) {
     return () => clearTimeout(delayDebounceFn);
   }, [query, performSearch]);
 
-  const hasResults =
-    !!results &&
-    ((results.students?.length || 0) > 0 ||
-      (results.employers?.length || 0) > 0 ||
-      (results.internships?.length || 0) > 0);
+  const flattenedItems = useMemo<FlattenedItem[]>(() => {
+    if (!results) return [];
+    const items: FlattenedItem[] = [];
+
+    (results.students || []).forEach((s) => {
+      items.push({
+        id: s.id,
+        type: "student",
+        title: s.full_name || "Unnamed Student",
+        subtitle: s.course || "Student",
+        url: `/dashboard/admin/users/${s.id}`,
+      });
+    });
+
+    (results.employers || []).forEach((e) => {
+      items.push({
+        id: e.id,
+        type: "employer",
+        title: e.company_name || e.full_name || "Company",
+        subtitle: e.full_name || "Employer",
+        url: `/companies/${e.id}`,
+      });
+    });
+
+    (results.internships || []).forEach((j) => {
+      items.push({
+        id: j.id,
+        type: "internship",
+        title: j.role || "Internship",
+        subtitle: j.company || "Company",
+        url: `/internships/${j.id}`,
+      });
+    });
+
+    return items;
+  }, [results]);
+
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [flattenedItems]);
+
+  const handleNavigate = useCallback(
+    (url: string) => {
+      onClose();
+      router.push(url);
+    },
+    [onClose, router],
+  );
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (flattenedItems.length === 0) return;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev + 1) % flattenedItems.length);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIndex((prev) =>
+          prev === 0 ? flattenedItems.length - 1 : prev - 1,
+        );
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        const selected = flattenedItems[selectedIndex];
+        if (selected) {
+          handleNavigate(selected.url);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose, flattenedItems, selectedIndex, handleNavigate]);
+
+  const hasResults = flattenedItems.length > 0;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[10vh] px-4 backdrop-blur-md bg-slate-900/40 animate-in fade-in duration-200">
@@ -153,30 +254,47 @@ export default function SearchOverlay({ onClose }: SearchOverlayProps) {
                       Students
                     </Typography>
                     <Badge variant="emerald" size="sm">
-                      {(results.students || []).length}
+                      {(results?.students || []).length}
                     </Badge>
                   </div>
-                  {(results.students || []).map((stu) => (
-                    <div
-                      key={stu.id}
-                      className="p-4 hover:bg-slate-50 rounded-2xl transition-colors cursor-pointer group flex items-center justify-between"
-                    >
-                      <Stack direction="row" spacing={4} align="center">
-                        <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
-                          {stu.full_name?.[0] || "S"}
-                        </div>
-                        <div>
-                          <Typography weight="bold">
-                            {stu.full_name || "Unnamed Student"}
-                          </Typography>
-                          <Typography variant="caption" color="muted">
-                            {stu.course || "General Studies"}
-                          </Typography>
-                        </div>
-                      </Stack>
-                      <FiArrowRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
-                    </div>
-                  ))}
+                  {(results?.students || []).map((stu) => {
+                    const itemIndex = flattenedItems.findIndex(
+                      (item) => item.id === stu.id && item.type === "student",
+                    );
+                    const isSelected = itemIndex === selectedIndex;
+                    return (
+                      <div
+                        key={stu.id}
+                        onClick={() =>
+                          handleNavigate(`/dashboard/admin/users/${stu.id}`)
+                        }
+                        className={`p-4 rounded-2xl transition-colors cursor-pointer group flex items-center justify-between ${
+                          isSelected ? "bg-indigo-50/70" : "hover:bg-slate-50"
+                        }`}
+                      >
+                        <Stack direction="row" spacing={4} align="center">
+                          <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
+                            {stu.full_name?.[0] || "S"}
+                          </div>
+                          <div>
+                            <Typography weight="bold">
+                              {stu.full_name || "Unnamed Student"}
+                            </Typography>
+                            <Typography variant="caption" color="muted">
+                              {stu.course || "General Studies"}
+                            </Typography>
+                          </div>
+                        </Stack>
+                        <FiArrowRight
+                          className={`w-4 h-4 transition-all ${
+                            isSelected
+                              ? "text-indigo-600 translate-x-1"
+                              : "text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1"
+                          }`}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
@@ -193,30 +311,45 @@ export default function SearchOverlay({ onClose }: SearchOverlayProps) {
                       Companies
                     </Typography>
                     <Badge variant="indigo" size="sm">
-                      {(results.employers || []).length}
+                      {(results?.employers || []).length}
                     </Badge>
                   </div>
-                  {(results.employers || []).map((emp) => (
-                    <div
-                      key={emp.id}
-                      className="p-4 hover:bg-slate-50 rounded-2xl transition-colors cursor-pointer group flex items-center justify-between"
-                    >
-                      <Stack direction="row" spacing={4} align="center">
-                        <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
-                          {emp.company_name?.[0] || "C"}
-                        </div>
-                        <div>
-                          <Typography weight="bold">
-                            {emp.company_name || "Unnamed Company"}
-                          </Typography>
-                          <Typography variant="caption" color="muted">
-                            {emp.full_name || "Contact Rep"}
-                          </Typography>
-                        </div>
-                      </Stack>
-                      <FiArrowRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
-                    </div>
-                  ))}
+                  {(results?.employers || []).map((emp) => {
+                    const itemIndex = flattenedItems.findIndex(
+                      (item) => item.id === emp.id && item.type === "employer",
+                    );
+                    const isSelected = itemIndex === selectedIndex;
+                    return (
+                      <div
+                        key={emp.id}
+                        onClick={() => handleNavigate(`/companies/${emp.id}`)}
+                        className={`p-4 rounded-2xl transition-colors cursor-pointer group flex items-center justify-between ${
+                          isSelected ? "bg-indigo-50/70" : "hover:bg-slate-50"
+                        }`}
+                      >
+                        <Stack direction="row" spacing={4} align="center">
+                          <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
+                            {emp.company_name?.[0] || emp.full_name?.[0] || "C"}
+                          </div>
+                          <div>
+                            <Typography weight="bold">
+                              {emp.company_name || emp.full_name || "Unnamed Company"}
+                            </Typography>
+                            <Typography variant="caption" color="muted">
+                              {emp.full_name || "Contact Rep"}
+                            </Typography>
+                          </div>
+                        </Stack>
+                        <FiArrowRight
+                          className={`w-4 h-4 transition-all ${
+                            isSelected
+                              ? "text-indigo-600 translate-x-1"
+                              : "text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1"
+                          }`}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
@@ -233,30 +366,45 @@ export default function SearchOverlay({ onClose }: SearchOverlayProps) {
                       Internships
                     </Typography>
                     <Badge variant="pink" size="sm">
-                      {(results.internships || []).length}
+                      {(results?.internships || []).length}
                     </Badge>
                   </div>
-                  {(results.internships || []).map((job) => (
-                    <div
-                      key={job.id}
-                      className="p-4 hover:bg-slate-50 rounded-2xl transition-colors cursor-pointer group flex items-center justify-between"
-                    >
-                      <Stack direction="row" spacing={4} align="center">
-                        <div className="w-10 h-10 rounded-lg bg-pink-50 text-pink-500 flex items-center justify-center">
-                          <FiBriefcase className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <Typography weight="bold">
-                            {job.role || "Untitled Role"}
-                          </Typography>
-                          <Typography variant="caption" color="muted">
-                            {job.company || "Unknown Company"}
-                          </Typography>
-                        </div>
-                      </Stack>
-                      <FiArrowRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
-                    </div>
-                  ))}
+                  {(results?.internships || []).map((job) => {
+                    const itemIndex = flattenedItems.findIndex(
+                      (item) => item.id === job.id && item.type === "internship",
+                    );
+                    const isSelected = itemIndex === selectedIndex;
+                    return (
+                      <div
+                        key={job.id}
+                        onClick={() => handleNavigate(`/internships/${job.id}`)}
+                        className={`p-4 rounded-2xl transition-colors cursor-pointer group flex items-center justify-between ${
+                          isSelected ? "bg-indigo-50/70" : "hover:bg-slate-50"
+                        }`}
+                      >
+                        <Stack direction="row" spacing={4} align="center">
+                          <div className="w-10 h-10 rounded-lg bg-pink-50 text-pink-500 flex items-center justify-center">
+                            <FiBriefcase className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <Typography weight="bold">
+                              {job.role || "Untitled Role"}
+                            </Typography>
+                            <Typography variant="caption" color="muted">
+                              {job.company || "Unknown Company"}
+                            </Typography>
+                          </div>
+                        </Stack>
+                        <FiArrowRight
+                          className={`w-4 h-4 transition-all ${
+                            isSelected
+                              ? "text-indigo-600 translate-x-1"
+                              : "text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1"
+                          }`}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
