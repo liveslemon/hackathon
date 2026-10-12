@@ -6,7 +6,6 @@ import { logger } from "./logger";
 import { ApiError, isApiErrorPayload, toApiErrorMessage } from "@/types/api";
 import type { AuthSessionLike } from "@/types/domain";
 
-const BACKEND_URL = getBackendUrl();
 
 /**
  * Server-only version of auth header retrieval.
@@ -71,9 +70,12 @@ export async function authenticatedFetchServer<TResponse = unknown>(
     headers["Content-Type"] = "application/json";
   }
 
+  const base = getBackendUrl();
+  const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+
   const url = endpoint.startsWith("http")
     ? endpoint
-    : `${BACKEND_URL}${endpoint}`;
+    : `${base}${normalizedEndpoint}`;
 
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
