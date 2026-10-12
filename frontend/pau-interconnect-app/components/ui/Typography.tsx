@@ -1,8 +1,19 @@
 import React from "react";
 import { cx } from "@/utils/cx";
 
-interface TypographyProps {
-  variant?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "subtitle1" | "subtitle2" | "body1" | "body2" | "caption";
+export interface TypographyProps extends React.HTMLAttributes<HTMLElement> {
+  variant?:
+    | "h1"
+    | "h2"
+    | "h3"
+    | "h4"
+    | "h5"
+    | "h6"
+    | "subtitle1"
+    | "subtitle2"
+    | "body1"
+    | "body2"
+    | "caption";
   children: React.ReactNode;
   className?: string;
   as?: React.ElementType;
@@ -33,33 +44,49 @@ const weights = {
 };
 
 const colors = {
-  primary: "text-slate-900",
-  secondary: "text-brand",
+  primary: "text-slate-900 dark:text-slate-100",
+  secondary: "text-brand dark:text-brand-light",
   white: "text-white",
-  muted: "text-slate-500",
-  error: "text-red-500",
+  muted: "text-slate-500 dark:text-slate-400",
+  error: "text-red-600 dark:text-red-400",
 };
 
-export const Typography: React.FC<TypographyProps> = ({
-  variant = "body1",
-  children,
-  className,
-  as,
-  weight,
-  color = "primary",
-}) => {
-  const Component = as || (variant.startsWith("h") ? (variant as React.ElementType) : "p");
+export const Typography = React.forwardRef<HTMLElement, TypographyProps>(
+  (
+    {
+      variant = "body1",
+      children,
+      className,
+      as,
+      weight,
+      color = "primary",
+      ...props
+    },
+    ref,
+  ) => {
+    const Component =
+      as ||
+      (variant.startsWith("h")
+        ? (variant as React.ElementType)
+        : variant === "caption"
+          ? "span"
+          : "p");
 
-  return (
-    <Component
-      className={cx(
-        variants[variant],
-        weight && weights[weight],
-        colors[color],
-        className
-      )}
-    >
-      {children}
-    </Component>
-  );
-};
+    return (
+      <Component
+        ref={ref}
+        className={cx(
+          variants[variant],
+          weight && weights[weight],
+          colors[color],
+          className,
+        )}
+        {...props}
+      >
+        {children}
+      </Component>
+    );
+  },
+);
+
+Typography.displayName = "Typography";
