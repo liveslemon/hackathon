@@ -1,8 +1,9 @@
 import React, { Suspense } from "react";
 import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { Stack } from "@/components/ui";
+import { Stack, Skeleton } from "@/components/ui";
 import { authenticatedFetchServer } from "@/lib/api-server";
+
 import DashboardShellWrapper from "../DashboardShellWrapper";
 import LogbookReviewClient from "./LogbookReviewClient";
 

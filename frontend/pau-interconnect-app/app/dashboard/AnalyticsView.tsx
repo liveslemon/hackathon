@@ -2,16 +2,14 @@
 
 import React from "react";
 import {
-  Typography,
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-  CardDescription,
   PageHeader,
   StatCard,
   EmptyState,
 } from "@/components/ui";
+
 import { Briefcase, Users, TrendingUp, PieChart, Layers } from "lucide-react";
 
 export default function AnalyticsView({
@@ -64,11 +62,12 @@ export default function AnalyticsView({
             <Layers className="w-4 h-4" />
             <span>DISTRIBUTION</span>
           </div>
-          <CardTitle className="text-base">Internships by Category</CardTitle>
-          <CardDescription>
+          <h3 className="text-base font-semibold text-fg">Internships by Category</h3>
+          <p className="text-xs text-muted-fg">
             Relative proportion of work models and placement disciplines.
-          </CardDescription>
+          </p>
         </CardHeader>
+
         <CardContent className="space-y-6">
           {!categories || categories.length === 0 ? (
             <EmptyState

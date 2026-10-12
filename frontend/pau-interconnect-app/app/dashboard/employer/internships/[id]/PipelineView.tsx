@@ -4,7 +4,7 @@ import React from "react";
 import { Typography, Badge, Button } from "@/components/ui";
 import { MatchScore } from "@/components/match/MatchScore";
 import { GripVertical, ArrowRight, X } from "lucide-react";
-import { cx } from "@/utils/cx";
+
 
 const STAGES = [
   { key: "applied", label: "Applied" },

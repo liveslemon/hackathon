@@ -2,34 +2,24 @@
 
 import React, { useState } from "react";
 import {
-  Typography,
   Button,
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-  CardDescription,
   PageHeader,
   Select,
   Input,
   EmptyState,
   StatusPill,
 } from "@/components/ui";
-import { Download, FileText, Calendar, Users, Briefcase, FileSpreadsheet } from "lucide-react";
+import { Download, FileText, Users, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 
 interface InternRecord {
   student_id: string;
   status: string;
-  internships?: {
-    employer_id?: string;
-    role?: string;
-  } | null;
-  profiles?: {
-    full_name?: string;
-    course?: string;
-    level?: string;
-  } | null;
+  internships?: any;
+  profiles?: any;
 }
 
 export default function ReportsClient({ interns }: { interns: InternRecord[] }) {
@@ -90,10 +80,10 @@ export default function ReportsClient({ interns }: { interns: InternRecord[] }) 
             <FileSpreadsheet className="w-4 h-4" />
             <span>EXPORT CONTROLS</span>
           </div>
-          <CardTitle className="text-base">Report Scope & Date Filter</CardTitle>
-          <CardDescription>
+          <h3 className="text-base font-semibold text-fg">Report Scope & Date Filter</h3>
+          <p className="text-xs text-muted-fg">
             Filter by individual student intern or export combined compliance archives.
-          </CardDescription>
+          </p>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -148,10 +138,10 @@ export default function ReportsClient({ interns }: { interns: InternRecord[] }) 
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base">Active Intern Summary</CardTitle>
-              <CardDescription>
+              <h3 className="text-base font-semibold text-fg">Active Intern Summary</h3>
+              <p className="text-xs text-muted-fg">
                 Overview of current student placements enrolled under your organization.
-              </CardDescription>
+              </p>
             </div>
             <span className="text-xs text-muted-fg font-medium">
               {interns.length} Active Placement{interns.length === 1 ? "" : "s"}
@@ -159,6 +149,7 @@ export default function ReportsClient({ interns }: { interns: InternRecord[] }) 
           </div>
         </CardHeader>
         <CardContent>
+
           {interns.length === 0 ? (
             <EmptyState
               icon={<Users className="w-8 h-8" />}

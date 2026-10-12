@@ -4,12 +4,8 @@ import React, { useState } from "react";
 import { toast } from "sonner";
 import {
   Button,
-  Typography,
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
   PageHeader,
   StatusPill,
   EmptyState,
@@ -22,11 +18,9 @@ import {
   Clock,
   CheckSquare,
   Square,
-  MessageSquare,
-  User,
   Calendar,
-  Sparkles,
 } from "lucide-react";
+
 import { authenticatedFetch } from "@/lib/api";
 
 interface LogbookEntry {
@@ -400,9 +394,12 @@ export default function LogbookReviewClient({
         isOpen={flagModalOpen}
         onClose={() => setFlagModalOpen(false)}
         title="Request Entry Revision"
-        description="Provide feedback explain why this logbook entry requires student correction."
       >
+        <p className="text-xs text-muted-fg mb-4">
+          Provide feedback explaining why this logbook entry requires student correction.
+        </p>
         <form onSubmit={handleConfirmFlag} className="space-y-4">
+
           <Textarea
             label="Revision Guidance & Notes"
             placeholder="Explain specifically what needs additional detail, documentation, or technical elaboration..."

@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Typography,
   Button,
   Input,
   Textarea,
@@ -11,12 +10,11 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-  CardDescription,
   PageHeader,
   Badge,
   Modal,
 } from "@/components/ui";
+
 import {
   Briefcase,
   Plus,
@@ -26,13 +24,13 @@ import {
   MapPin,
   DollarSign,
   Sparkles,
-  ExternalLink,
   CheckCircle2,
   FolderOpen,
   Eye,
   FileText,
 } from "lucide-react";
 import { toast } from "sonner";
+
 import { postInternshipSchema } from "@/lib/validations/employer";
 
 const categories = [
@@ -283,10 +281,10 @@ export default function PostInternshipView() {
                 <Briefcase className="w-4 h-4" />
                 <span>SECTION 1</span>
               </div>
-              <CardTitle className="text-base">Role Identity & Track</CardTitle>
-              <CardDescription>
+              <h3 className="text-base font-semibold text-fg">Role Identity & Track</h3>
+              <p className="text-xs text-muted-fg">
                 Define the primary position title and disciplinary discipline.
-              </CardDescription>
+              </p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -348,10 +346,10 @@ export default function PostInternshipView() {
                 <MapPin className="w-4 h-4" />
                 <span>SECTION 2</span>
               </div>
-              <CardTitle className="text-base">Location & Compensation</CardTitle>
-              <CardDescription>
+              <h3 className="text-base font-semibold text-fg">Location & Compensation</h3>
+              <p className="text-xs text-muted-fg">
                 Specify physical premises, duration, and monthly remuneration.
-              </CardDescription>
+              </p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -425,10 +423,10 @@ export default function PostInternshipView() {
                 <FileText className="w-4 h-4" />
                 <span>SECTION 3</span>
               </div>
-              <CardTitle className="text-base">Role Description & Requirements</CardTitle>
-              <CardDescription>
+              <h3 className="text-base font-semibold text-fg">Role Description & Requirements</h3>
+              <p className="text-xs text-muted-fg">
                 Detailed overview of expectations and student qualifications.
-              </CardDescription>
+              </p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -474,10 +472,10 @@ export default function PostInternshipView() {
                 <Sparkles className="w-4 h-4" />
                 <span>SECTION 4</span>
               </div>
-              <CardTitle className="text-base">Matching Keywords & Interests</CardTitle>
-              <CardDescription>
+              <h3 className="text-base font-semibold text-fg">Matching Keywords & Interests</h3>
+              <p className="text-xs text-muted-fg">
                 Tags power PAU InterConnect AI matching algorithms to surface relevant student profiles.
-              </CardDescription>
+              </p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-2">
@@ -509,10 +507,10 @@ export default function PostInternshipView() {
                 <Calendar className="w-4 h-4" />
                 <span>SECTION 5</span>
               </div>
-              <CardTitle className="text-base">Application Timeline & Routing</CardTitle>
-              <CardDescription>
+              <h3 className="text-base font-semibold text-fg">Application Timeline & Routing</h3>
+              <p className="text-xs text-muted-fg">
                 Application closure deadline and direct or external application routing.
-              </CardDescription>
+              </p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -592,7 +590,7 @@ export default function PostInternshipView() {
                 </h3>
                 <p className="text-xs text-muted-fg font-medium">Your Company</p>
               </div>
-              <Badge variant="outline" className="shrink-0 text-xs">
+              <Badge variant="neutral" className="shrink-0 text-xs">
                 {formData.category}
               </Badge>
             </div>
@@ -670,8 +668,8 @@ export default function PostInternshipView() {
         isOpen={templateModalOpen}
         onClose={() => setTemplateModalOpen(false)}
         title="Saved Templates"
-        description="Select a template to quickly prefill role details."
       >
+        <p className="text-xs text-muted-fg mb-4">Select a template to quickly prefill role details.</p>
         <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
           {templates.map((t) => (
             <div
@@ -701,8 +699,8 @@ export default function PostInternshipView() {
         isOpen={saveTemplateModalOpen}
         onClose={() => setSaveTemplateModalOpen(false)}
         title="Save Current Form as Template"
-        description="Templates allow you to rapidly reuse role titles, requirements, and keywords for recurring recruiting cycles."
       >
+        <p className="text-xs text-muted-fg mb-4">Templates allow you to rapidly reuse role titles, requirements, and keywords for recurring recruiting cycles.</p>
         <form onSubmit={handleSaveAsTemplate} className="space-y-4">
           <Input
             label="Template Name"

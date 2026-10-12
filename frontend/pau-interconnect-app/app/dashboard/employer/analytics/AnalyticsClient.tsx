@@ -3,21 +3,17 @@
 import React, { useMemo } from "react";
 import Link from "next/link";
 import {
-  Typography,
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-  CardDescription,
   Button,
   PageHeader,
   StatCard,
   EmptyState,
 } from "@/components/ui";
+
 import {
   ResponsiveContainer,
-  BarChart,
-  Bar,
   AreaChart,
   Area,
   XAxis,
@@ -28,15 +24,13 @@ import {
 import {
   TrendingUp,
   Users,
-  Clock,
   Target,
   Eye,
-  CheckCircle,
   Briefcase,
   Plus,
   ArrowUpRight,
-  Filter,
 } from "lucide-react";
+
 
 interface AnalyticsProps {
   internships: Array<{
@@ -271,10 +265,10 @@ export function EmployerAnalyticsClient({
         {/* Application Velocity Chart */}
         <Card className="lg:col-span-7">
           <CardHeader>
-            <CardTitle className="text-base">Applicant Velocity (Last 14 Days)</CardTitle>
-            <CardDescription>
+            <h3 className="font-semibold text-base text-fg">Applicant Velocity (Last 14 Days)</h3>
+            <p className="text-xs text-muted-fg">
               Volume of student applications submitted across your active postings.
-            </CardDescription>
+            </p>
           </CardHeader>
           <CardContent>
             <div className="h-64 w-full pt-4">
@@ -335,10 +329,10 @@ export function EmployerAnalyticsClient({
         {/* Recruitment Funnel */}
         <Card className="lg:col-span-5">
           <CardHeader>
-            <CardTitle className="text-base">Recruitment Pipeline Funnel</CardTitle>
-            <CardDescription>
+            <h3 className="font-semibold text-base text-fg">Recruitment Pipeline Funnel</h3>
+            <p className="text-xs text-muted-fg">
               Conversion rates across the candidate consideration stages.
-            </CardDescription>
+            </p>
           </CardHeader>
           <CardContent>
             <div className="space-y-4 pt-2">
@@ -371,11 +365,12 @@ export function EmployerAnalyticsClient({
       {/* Role-by-Role Breakdown */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Role Performance Breakdown</CardTitle>
-          <CardDescription>
+          <h3 className="font-semibold text-base text-fg">Role Performance Breakdown</h3>
+          <p className="text-xs text-muted-fg">
             Comparison of view volumes, applicant yield, and candidate match quality per role.
-          </CardDescription>
+          </p>
         </CardHeader>
+
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

@@ -12,7 +12,6 @@ import {
   Stack,
   Typography,
 } from "@/components/ui";
-import { supabase } from "@/lib/supabaseClient";
 import { postInternshipSchema } from "@/lib/validations/employer";
 
 interface EmployerProfile {
@@ -21,7 +20,7 @@ interface EmployerProfile {
 }
 
 export function PostInternshipButton({
-  employerProfile,
+  employerProfile: _employerProfile,
   trigger,
 }: {
   employerProfile: EmployerProfile;

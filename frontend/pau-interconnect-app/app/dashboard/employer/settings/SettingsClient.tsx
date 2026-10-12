@@ -4,17 +4,15 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  Typography,
   Button,
   Input,
   Textarea,
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-  CardDescription,
   PageHeader,
 } from "@/components/ui";
+
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
 import type { Profile } from "@/types/domain";
@@ -28,10 +26,8 @@ import {
   Bell,
   Save,
   Upload,
-  Globe,
-  Sparkles,
-  ShieldCheck,
 } from "lucide-react";
+
 import { toast } from "sonner";
 
 interface EmployerSettingsProfile extends Partial<Profile> {
@@ -324,11 +320,12 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
               <Building2 className="w-4 h-4" />
               <span>BRANDING & ASSETS</span>
             </div>
-            <CardTitle className="text-base">Organization Identity</CardTitle>
-            <CardDescription>
+            <h3 className="text-base font-semibold text-fg">Organization Identity</h3>
+            <p className="text-xs text-muted-fg">
               Upload high-resolution company emblems and banner artwork shown to students.
-            </CardDescription>
+            </p>
           </CardHeader>
+
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -523,11 +520,12 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
               <Bell className="w-4 h-4" />
               <span>NOTIFICATIONS</span>
             </div>
-            <CardTitle className="text-base">Email Notification Preferences</CardTitle>
-            <CardDescription>
+            <h3 className="text-base font-semibold text-fg">Email Notification Preferences</h3>
+            <p className="text-xs text-muted-fg">
               Configure automated notifications dispatched to your verified employer address.
-            </CardDescription>
+            </p>
           </CardHeader>
+
           <CardContent className="space-y-4">
             <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border border-border hover:bg-canvas/50 transition-colors">
               <input

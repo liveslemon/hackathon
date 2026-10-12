@@ -10,12 +10,12 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-  CardDescription,
   PageHeader,
 } from "@/components/ui";
 import { toast } from "sonner";
-import { ArrowLeft, Save, Briefcase, MapPin, Calendar, Clock, DollarSign } from "lucide-react";
+import { ArrowLeft, Save, Briefcase } from "lucide-react";
+
+
 
 interface InternshipRecord {
   id: string;
@@ -141,10 +141,10 @@ export default function EditInternshipClient({
               <Briefcase className="w-4 h-4" />
               <span>Core Role Details</span>
             </div>
-            <CardTitle className="text-lg">Role Identity & Track</CardTitle>
-            <CardDescription>
+            <h3 className="text-base font-semibold text-fg">Role Identity & Track</h3>
+            <p className="text-xs text-muted-fg">
               Define the role title, primary academic/professional track, and work arrangement.
-            </CardDescription>
+            </p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -187,10 +187,10 @@ export default function EditInternshipClient({
         {/* Narrative & Requirements */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Description & Expectations</CardTitle>
-            <CardDescription>
+            <h3 className="text-base font-semibold text-fg">Description & Expectations</h3>
+            <p className="text-xs text-muted-fg">
               Detail key responsibilities, daily work, and prerequisites for student candidates.
-            </CardDescription>
+            </p>
           </CardHeader>
           <CardContent className="space-y-4">
             <Textarea
@@ -224,11 +224,12 @@ export default function EditInternshipClient({
         {/* Logistics & Compensation */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Logistics & Compensation</CardTitle>
-            <CardDescription>
+            <h3 className="text-base font-semibold text-fg">Logistics & Compensation</h3>
+            <p className="text-xs text-muted-fg">
               Timeline, duration, stipend arrangement, and external application routing.
-            </CardDescription>
+            </p>
           </CardHeader>
+
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input

@@ -29,9 +29,10 @@ export default async function EditInternshipPage({
   if (!internship) redirect("/dashboard/employer/internships");
 
   return (
-    <DashboardShellWrapper profile={profileRes.data}>
+    <DashboardShellWrapper userProfile={profileRes.data}>
       <EditInternshipClient internship={internship} />
     </DashboardShellWrapper>
   );
+
 }
 

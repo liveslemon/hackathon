@@ -19,10 +19,9 @@ import {
   User,
   MessageSquare,
   Download,
-  ExternalLink,
   ChevronRight,
-  Sparkles,
 } from "lucide-react";
+
 import { authenticatedFetch, ensureFreshCvUrl } from "@/lib/api";
 import { PipelineView } from "./PipelineView";
 import { downloadCSV } from "@/lib/csv";
