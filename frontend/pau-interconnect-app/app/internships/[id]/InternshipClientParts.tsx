@@ -15,9 +15,11 @@ import {
   FileText,
   User,
   AlertCircle,
+  ArrowRight,
+  RotateCcw,
   type LucideIcon,
 } from "lucide-react";
-import { Modal, Textarea } from "@/components/ui";
+import { Modal, Textarea, Button, StatusPill, Badge } from "@/components/ui";
 import { cx } from "@/utils/cx";
 import { authenticatedFetch, authenticatedFetchStream } from "@/lib/api";
 
@@ -56,14 +58,15 @@ export default function InternshipClientParts({
   const [hasApplied, setHasApplied] = useState(initialHasApplied);
   const [isApplyModalOpen, setApplyModalOpen] = useState(false);
   const [isCvReviewModalOpen, setCvReviewModalOpen] = useState(false);
+  const [applyStep, setApplyStep] = useState<1 | 2>(1); // 1: Write/AI, 2: Review & Confirm
   const [coverLetter, setCoverLetter] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
-  const [isReviewing] = useState(false);
   const [currentStage, setCurrentStage] = useState(initialStage || "applied");
   const [isAccepting, setIsAccepting] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     return () => {
@@ -93,7 +96,7 @@ export default function InternshipClientParts({
     if (!applicationId || isWithdrawing) return;
     if (
       !window.confirm(
-        "Are you sure you want to withdraw this application? This cannot be undone.",
+        "Are you sure you want to withdraw this application? This action cannot be undone.",
       )
     ) {
       return;
@@ -117,6 +120,7 @@ export default function InternshipClientParts({
   const handleApply = async () => {
     if (coverLetter.trim().length < 10) {
       toast.error("Please provide a cover letter of at least 10 characters.");
+      setApplyStep(1);
       return;
     }
 
@@ -132,6 +136,7 @@ export default function InternshipClientParts({
 
       setHasApplied(true);
       setApplyModalOpen(false);
+      setApplyStep(1);
       toast.success(
         "Application submitted successfully! The employer has been notified.",
       );
@@ -174,7 +179,7 @@ export default function InternshipClientParts({
       const decoder = new TextDecoder();
       let streamFinished = false;
 
-      // Clear letter before stream starts appending if we are replacing it
+      // Reset text before stream starts
       setCoverLetter("");
 
       while (!streamFinished) {
@@ -224,57 +229,6 @@ export default function InternshipClientParts({
     }
   };
 
-  const statusConfig: Record<
-    string,
-    { label: string; icon: LucideIcon; className: string }
-  > = {
-    accepted: {
-      label: "Application Approved",
-      icon: CheckCircle2,
-      className: "bg-emerald-600 hover:bg-emerald-600",
-    },
-    rejected: {
-      label: "Application Denied",
-      icon: X,
-      className: "bg-red-500 hover:bg-red-500",
-    },
-    withdrawn: {
-      label: "Application Withdrawn",
-      icon: X,
-      className: "bg-slate-500 hover:bg-slate-500",
-    },
-    pending: {
-      label: "Application Pending",
-      icon: Clock,
-      className: "bg-indigo-600 hover:bg-indigo-600",
-    },
-    applied: {
-      label: "Application Pending",
-      icon: Clock,
-      className: "bg-indigo-600 hover:bg-indigo-600",
-    },
-    reviewed: {
-      label: "Under Review",
-      icon: Clock,
-      className: "bg-indigo-600 hover:bg-indigo-600",
-    },
-    shortlisted: {
-      label: "Shortlisted",
-      icon: CheckCircle2,
-      className: "bg-purple-600 hover:bg-purple-600",
-    },
-    interview: {
-      label: "Interview Scheduled",
-      icon: Sparkles,
-      className: "bg-blue-600 hover:bg-blue-600",
-    },
-    offered: {
-      label: "Offer Received",
-      icon: CheckCircle2,
-      className: "bg-emerald-600 hover:bg-emerald-600",
-    },
-  };
-
   const STAGES = [
     { key: "applied", label: "Applied" },
     { key: "reviewed", label: "Reviewed" },
@@ -287,24 +241,20 @@ export default function InternshipClientParts({
   const currentStageIndex = STAGES.findIndex((s) => s.key === currentStage);
   const isRejected = currentStage === "rejected";
   const isWithdrawn = currentStage === "withdrawn";
-
-  const appStatus = applicationStatus?.toLowerCase() || "";
   const isClosed = !hasApplied && !isOpenInternship(internship);
-  const currentKey = currentStage?.toLowerCase() || appStatus;
-  const statusData = hasApplied
-    ? statusConfig[currentKey] || statusConfig[appStatus] || statusConfig.pending
-    : null;
 
   return (
     <>
       {/* Stage Progress Tracker */}
       {hasApplied && !isRejected && !isWithdrawn && (
-        <div className="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-100 overflow-hidden w-full relative">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
-            Application Progress
-          </p>
-          <div className="w-full overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            <style>{`.overflow-x-auto::-webkit-scrollbar { display: none; }`}</style>
+        <div className="mb-4 p-4 bg-surface-sunken rounded-2xl border border-border overflow-hidden w-full relative">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[10px] font-bold text-fg-subtle uppercase tracking-widest">
+              Application Progress
+            </p>
+            <StatusPill status={currentStage} size="sm" />
+          </div>
+          <div className="w-full overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
             <div className="flex items-center gap-1 min-w-[340px]">
               {STAGES.map((stage, idx) => (
                 <div key={stage.key} className="flex items-center flex-1 shrink-0">
@@ -313,8 +263,8 @@ export default function InternshipClientParts({
                       className={cx(
                         "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all shrink-0",
                         idx <= currentStageIndex
-                          ? "bg-indigo-600 text-white"
-                          : "bg-slate-200 text-slate-400",
+                          ? "bg-brand text-fg-inverse shadow-xs"
+                          : "bg-surface text-fg-subtle border border-border",
                       )}
                     >
                       {idx < currentStageIndex ? "✓" : idx + 1}
@@ -323,8 +273,8 @@ export default function InternshipClientParts({
                       className={cx(
                         "text-[9px] mt-1 font-medium text-center leading-tight truncate px-1",
                         idx <= currentStageIndex
-                          ? "text-indigo-600"
-                          : "text-slate-400",
+                          ? "text-brand font-semibold"
+                          : "text-fg-subtle",
                       )}
                     >
                       {stage.label}
@@ -335,8 +285,8 @@ export default function InternshipClientParts({
                       className={cx(
                         "h-0.5 flex-1 mx-0.5 rounded min-w-[12px]",
                         idx < currentStageIndex
-                          ? "bg-indigo-600"
-                          : "bg-slate-200",
+                          ? "bg-brand"
+                          : "bg-border",
                       )}
                     />
                   )}
@@ -350,211 +300,319 @@ export default function InternshipClientParts({
       {/* Accept Offer Button */}
       {currentStage === "offered" && (
         <button
+          type="button"
           onClick={handleAcceptOffer}
           disabled={isAccepting}
-          className="w-full mb-3 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+          className="w-full mb-3 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-fg-inverse bg-success hover:opacity-90 disabled:opacity-50 transition-colors cursor-pointer shadow-xs"
         >
           {isAccepting ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
             <CheckCircle2 className="w-4 h-4" />
           )}
-          Accept Offer
+          <span>Accept Offer</span>
         </button>
       )}
 
       {hasApplied && isRejected && (
-        <div className="mb-4 p-4 bg-red-50 rounded-xl border border-red-100">
+        <div className="mb-4 p-4 bg-danger-subtle rounded-2xl border border-danger/20">
           <div className="flex items-center gap-2">
-            <X className="w-4 h-4 text-red-500" />
-            <p className="text-sm font-semibold text-red-600">
-              Application not successful
+            <X className="w-4 h-4 text-danger-fg" />
+            <p className="text-sm font-semibold text-danger-fg">
+              Application Not Successful
             </p>
           </div>
-          <p className="text-xs text-red-400 mt-1">
-            Unfortunately, the employer has decided not to proceed with your
-            application.
+          <p className="text-xs text-danger-fg/80 mt-1">
+            The employer has decided not to move forward with this position.
           </p>
         </div>
       )}
 
       {hasApplied && isWithdrawn && (
-        <div className="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+        <div className="mb-4 p-4 bg-surface-sunken rounded-2xl border border-border">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-slate-500" />
-            <p className="text-sm font-semibold text-slate-700">
+            <AlertCircle className="w-4 h-4 text-fg-muted" />
+            <p className="text-sm font-semibold text-fg">
               Application Withdrawn
             </p>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-fg-muted mt-1">
             You have withdrawn your application for this internship.
           </p>
         </div>
       )}
 
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         {/* Action Button: Apply / Status / Complete profile / Upload CV */}
         {!hasApplied ? (
           !hasCv ? (
             <Link
               href="/dashboard/student/cv"
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-fg-inverse bg-brand hover:bg-brand-hover transition-colors shadow-xs"
             >
               <FileText className="w-4 h-4" />
-              Upload CV to Apply
+              <span>Upload CV to Apply</span>
             </Link>
           ) : !isProfileComplete ? (
             <Link
               href="/profile"
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-fg-inverse bg-brand hover:bg-brand-hover transition-colors shadow-xs"
             >
               <User className="w-4 h-4" />
-              Complete Profile to Apply
+              <span>Complete Profile to Apply</span>
             </Link>
           ) : isClosed ? (
             <button
+              type="button"
               disabled
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white bg-slate-400 cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-fg-muted bg-surface-sunken border border-border cursor-not-allowed"
             >
               <Clock className="w-4 h-4" />
-              Applications closed
+              <span>Applications Closed</span>
             </button>
           ) : (
             <button
-              onClick={() => setApplyModalOpen(true)}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white bg-slate-800 hover:bg-slate-700 transition-colors"
+              type="button"
+              onClick={() => {
+                setApplyStep(1);
+                setApplyModalOpen(true);
+              }}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-fg-inverse bg-brand hover:bg-brand-hover transition-colors shadow-xs cursor-pointer"
             >
               <Send className="w-4 h-4" />
-              Apply Now
+              <span>Apply Now</span>
             </button>
           )
         ) : (
-          <button
-            disabled
-            className={cx(
-              "w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white cursor-default opacity-90",
-              statusData?.className || "bg-indigo-600",
-            )}
-          >
-            {statusData ? (
-              <>
-                <statusData.icon className="w-4 h-4" />
-                {statusData.label}
-              </>
-            ) : (
-              <>
-                <CheckCircle2 className="w-4 h-4" />
-                Applied
-              </>
-            )}
-          </button>
+          <div className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-surface-sunken border border-border text-fg">
+            <CheckCircle2 className="w-4 h-4 text-success-fg" />
+            <span>Applied on Portal</span>
+          </div>
         )}
 
         {/* Withdraw Button if application in progress */}
         {hasApplied &&
           !["accepted", "rejected", "withdrawn"].includes(currentStage) && (
             <button
+              type="button"
               onClick={handleWithdraw}
               disabled={isWithdrawing}
-              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 disabled:opacity-50 transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold text-danger-fg bg-danger-subtle hover:opacity-90 border border-danger/20 disabled:opacity-50 transition-colors cursor-pointer"
             >
               {isWithdrawing ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <X className="w-3.5 h-3.5" />
               )}
-              Withdraw Application
+              <span>Withdraw Application</span>
             </button>
           )}
 
-        {/* AI Review Button */}
+        {/* AI CV Review Button */}
         <button
+          type="button"
           onClick={() => setCvReviewModalOpen(true)}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium text-slate-600 bg-slate-50 border border-slate-150 hover:border-slate-300 hover:bg-slate-100 transition-all"
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-fg bg-surface border border-border hover:border-border-strong hover:bg-surface-sunken transition-all cursor-pointer"
         >
-          <Sparkles className="w-4 h-4 text-amber-500" />
-          AI CV Review
+          <Sparkles className="w-4 h-4 text-brand" />
+          <span>Keyword Match Analysis</span>
         </button>
       </div>
 
-      {/* Apply Modal */}
+      {/* Apply Modal with Multi-Step Flow */}
       <Modal
         isOpen={isApplyModalOpen}
         onClose={() => {
           if (isSubmitting) return;
           abortControllerRef.current?.abort();
           setApplyModalOpen(false);
+          setApplyStep(1);
         }}
-        title="Apply"
+        title={`Apply: ${internship.role || "Internship"}`}
         size="md"
         footer={
           <div className="flex gap-2 w-full">
-            <button
-              onClick={handleDraftCoverLetter}
-              disabled={isDrafting || isSubmitting}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 hover:border-slate-300 disabled:opacity-50 transition-all"
-            >
-              {isDrafting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4 text-amber-500" />
-              )}
-              {isDrafting
-                ? coverLetter.trim()
-                  ? "Enhancing..."
-                  : "Drafting..."
-                : coverLetter.trim()
-                  ? "Enhance with AI"
-                  : "Draft with AI"}
-            </button>
-            <button
-              onClick={handleApply}
-              disabled={isSubmitting || isDrafting}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold text-white bg-slate-800 hover:bg-slate-700 disabled:opacity-50 transition-colors"
-            >
-              {isSubmitting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
-              Submit
-            </button>
+            {applyStep === 1 ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleDraftCoverLetter}
+                  disabled={isDrafting || isSubmitting}
+                  className="flex-1 gap-1.5"
+                >
+                  {isDrafting ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-brand" />
+                  ) : (
+                    <Sparkles className="w-4 h-4 text-brand" />
+                  )}
+                  <span>
+                    {isDrafting
+                      ? coverLetter.trim()
+                        ? "Enhancing..."
+                        : "Drafting..."
+                      : coverLetter.trim()
+                        ? "Enhance with AI"
+                        : "Draft with AI"}
+                  </span>
+                </Button>
+                <Button
+                  colorType="primary"
+                  onClick={() => {
+                    if (coverLetter.trim().length < 10) {
+                      toast.error("Please enter at least 10 characters for your cover letter.");
+                      return;
+                    }
+                    setApplyStep(2);
+                  }}
+                  disabled={isDrafting || coverLetter.trim().length < 10}
+                  className="flex-1 gap-1.5"
+                >
+                  <span>Review Application</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setApplyStep(1)}
+                  disabled={isSubmitting}
+                  className="flex-1 gap-1.5"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>Edit Letter</span>
+                </Button>
+                <Button
+                  colorType="primary"
+                  onClick={handleApply}
+                  isLoading={isSubmitting}
+                  className="flex-1 gap-1.5"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>Confirm & Submit</span>
+                </Button>
+              </>
+            )}
           </div>
         }
       >
         <div className="space-y-4">
-          <div className="bg-indigo-50/70 p-4 rounded-lg border border-indigo-100">
-            <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wider mb-1">
-              Why you?
-            </p>
-            <p className="text-sm text-slate-600">
-              Share a brief statement about why you&apos;re interested in this
-              role at {internship.company}.
-            </p>
+          {/* Step indicator */}
+          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border">
+            <span
+              className={cx(
+                "px-2.5 py-0.5 rounded-full text-xs font-bold",
+                applyStep === 1
+                  ? "bg-brand text-fg-inverse"
+                  : "bg-surface-sunken text-fg-muted",
+              )}
+            >
+              1. Statement
+            </span>
+            <span className="text-fg-subtle text-xs">→</span>
+            <span
+              className={cx(
+                "px-2.5 py-0.5 rounded-full text-xs font-bold",
+                applyStep === 2
+                  ? "bg-brand text-fg-inverse"
+                  : "bg-surface-sunken text-fg-muted",
+              )}
+            >
+              2. Review & Confirm
+            </span>
           </div>
 
-          <Textarea
-            label="Cover Letter"
-            placeholder="Tell us about yourself and why you're a good fit..."
-            value={coverLetter}
-            onChange={(e) => setCoverLetter(e.target.value)}
-            disabled={isSubmitting}
-            rows={6}
-          />
+          {applyStep === 1 ? (
+            <>
+              <div className="bg-brand-subtle/50 p-4 rounded-xl border border-brand/20">
+                <p className="text-xs font-bold text-brand uppercase tracking-wider mb-1">
+                  Why you?
+                </p>
+                <p className="text-xs text-fg-muted leading-relaxed">
+                  Highlight why you are enthusiastic about joining{" "}
+                  <strong>{internship.company}</strong> and which relevant coursework
+                  or projects prepare you for this role.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-fg">
+                  Cover Letter / Personal Statement
+                </label>
+                <div className="min-h-[160px] relative">
+                  <textarea
+                    ref={textareaRef}
+                    rows={7}
+                    placeholder="Describe your background and motivation for this role..."
+                    value={coverLetter}
+                    onChange={(e) => setCoverLetter(e.target.value)}
+                    disabled={isSubmitting || isDrafting}
+                    className="w-full p-3 rounded-xl border border-border bg-surface text-fg text-sm placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-focus-ring resize-y"
+                  />
+                  {isDrafting && (
+                    <div className="absolute bottom-3 right-3 flex items-center gap-1.5 text-xs text-brand font-medium bg-surface/90 px-2 py-1 rounded-md border border-border shadow-xs">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Streaming AI draft…</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex justify-between items-center text-[11px] text-fg-subtle">
+                  <span>Minimum 10 characters</span>
+                  <span
+                    className={
+                      coverLetter.trim().length >= 10
+                        ? "text-success-fg font-medium"
+                        : "text-fg-subtle"
+                    }
+                  >
+                    {coverLetter.trim().length} chars
+                  </span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-surface-sunken p-4 rounded-xl border border-border space-y-2">
+                <p className="text-xs font-bold text-fg-muted uppercase tracking-wider">
+                  Target Opportunity
+                </p>
+                <p className="text-base font-bold text-fg">
+                  {internship.role}
+                </p>
+                <p className="text-xs text-brand font-medium">
+                  {internship.company}
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <p className="text-xs font-bold text-fg-muted uppercase tracking-wider">
+                  Your Cover Letter
+                </p>
+                <div className="p-3.5 rounded-xl border border-border bg-surface text-xs text-fg leading-relaxed max-h-48 overflow-y-auto whitespace-pre-line">
+                  {coverLetter}
+                </div>
+              </div>
+
+              <p className="text-xs text-fg-muted">
+                Your primary profile information and attached CV will be shared
+                with the hiring supervisor upon submission.
+              </p>
+            </div>
+          )}
         </div>
       </Modal>
 
-      {/* AI Review Modal */}
+      {/* AI Keyword Analysis Modal */}
       <Modal
         isOpen={isCvReviewModalOpen}
-        onClose={() => !isReviewing && setCvReviewModalOpen(false)}
-        title="Keyword Analysis"
+        onClose={() => setCvReviewModalOpen(false)}
+        title="Keyword Match Diagnostics"
         size="md"
       >
         <div className="space-y-5">
-          <p className="text-sm text-slate-400">
-            Your profile compared against the requirements for{" "}
-            <span className="font-medium text-slate-600">
+          <p className="text-xs text-fg-muted leading-relaxed">
+            Comparison between your CV skills and the posted requirements for{" "}
+            <span className="font-semibold text-fg">
               {internship.role || "this position"}
             </span>
             .
@@ -562,16 +620,16 @@ export default function InternshipClientParts({
 
           <div className="space-y-4">
             {matchingSkills.length > 0 && (
-              <div className="bg-emerald-50/60 border border-emerald-100 p-4 rounded-xl space-y-3">
-                <div className="flex items-center gap-2 text-emerald-600">
+              <div className="bg-success-subtle border border-success/20 p-4 rounded-xl space-y-2.5">
+                <div className="flex items-center gap-2 text-success-fg font-semibold text-xs">
                   <CheckCircle2 className="w-4 h-4" />
-                  <span className="text-sm font-semibold">Matched skills</span>
+                  <span>Matched Skills ({matchingSkills.length})</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {matchingSkills.map((skill, index) => (
                     <span
                       key={index}
-                      className="px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-medium"
+                      className="px-2.5 py-1 bg-surface text-success-fg border border-success/30 rounded-lg text-xs font-medium"
                     >
                       {skill}
                     </span>
@@ -581,36 +639,34 @@ export default function InternshipClientParts({
             )}
 
             {missingSkills.length > 0 && (
-              <div className="bg-amber-50/60 border border-amber-100 p-4 rounded-xl space-y-3">
-                <div className="flex items-center gap-2 text-amber-600">
+              <div className="bg-warning-subtle border border-warning/20 p-4 rounded-xl space-y-2.5">
+                <div className="flex items-center gap-2 text-warning-fg font-semibold text-xs">
                   <AlertTriangle className="w-4 h-4" />
-                  <span className="text-sm font-semibold">
-                    Missing keywords
-                  </span>
+                  <span>Missing Keywords ({missingSkills.length})</span>
                 </div>
-                <p className="text-sm text-amber-800/70 leading-relaxed">
-                  Recruiters look for{" "}
-                  <strong>{missingSkills.join(", ")}</strong>. Consider adding
-                  these to your profile if applicable.
+                <p className="text-xs text-fg-muted leading-relaxed">
+                  Employers specifically highlight:{" "}
+                  <strong className="text-fg">{missingSkills.join(", ")}</strong>.
+                  Consider adding related projects or coursework to your profile.
                 </p>
               </div>
             )}
 
             {matchingSkills.length === 0 && missingSkills.length === 0 && (
-              <div className="bg-slate-50 border border-slate-100 p-6 rounded-xl text-center">
-                <p className="text-sm text-slate-400">
-                  Resume analysis is still processing or unavailable for this
-                  listing.
+              <div className="bg-surface-sunken border border-border p-6 rounded-xl text-center">
+                <p className="text-xs text-fg-muted">
+                  No automated keyword overlap available for this listing yet.
                 </p>
               </div>
             )}
 
-            <button
+            <Button
               onClick={() => setCvReviewModalOpen(false)}
-              className="w-full py-2.5 bg-slate-800 text-white rounded-lg text-sm font-semibold hover:bg-slate-700 transition-colors mt-2"
+              colorType="primary"
+              className="w-full mt-2"
             >
-              Got it
-            </button>
+              Done
+            </Button>
           </div>
         </div>
       </Modal>

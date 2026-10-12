@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FiBriefcase, FiSearch, FiFilter, FiChevronDown } from "react-icons/fi";
 import { supabase } from "@/lib/supabaseClient";
 import { cx } from "@/utils/cx";
-import { Button, Typography, Stack, Card, Select } from "@/components/ui";
+import { Button, Typography, Stack, Select, EmptyState } from "@/components/ui";
 import DashboardShell from "@/components/DashboardShell";
 import LogbookWidget from "@/components/LogbookWidget";
 import InternshipCard from "@/components/InternshipCard";
@@ -57,6 +57,7 @@ const Dashboard = ({
     window.addEventListener("resize", updateItemsPerPage);
     return () => window.removeEventListener("resize", updateItemsPerPage);
   }, []);
+
   const getInternshipInterests = (internship: Internship) =>
     toStringArray(internship.interests);
 
@@ -213,33 +214,33 @@ const Dashboard = ({
             (matchFilter !== "All" ? 1 : 0);
 
           return (
-            <div className="bg-white rounded-3xl p-6 md:p-8 shadow-[0_1px_3px_rgba(0,0,0,0.02)] border border-slate-100/80 mb-10 overflow-hidden">
-              <Stack spacing={isFiltersExpanded ? 8 : 4}>
+            <div className="bg-surface rounded-2xl p-6 md:p-8 shadow-xs border border-border mb-10 overflow-hidden">
+              <Stack spacing={isFiltersExpanded ? 6 : 4}>
                 {/* Top row: Section Headers and Quick Filters */}
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                  <div className="flex items-center gap-6">
-                    <div className="bg-brand/5 p-3 rounded-2xl border border-brand/10">
-                      <FiBriefcase className="w-5 h-5 text-brand" />
+                  <div className="flex items-center gap-4">
+                    <div className="bg-brand-subtle p-3 rounded-xl border border-brand/10 text-brand">
+                      <FiBriefcase className="w-5 h-5" />
                     </div>
                     <div>
                       <Typography
                         variant="h4"
                         weight="bold"
-                        className="text-slate-900 leading-tight"
+                        className="text-fg leading-tight"
                       >
                         Internship Portal
                       </Typography>
                       <Typography
                         variant="caption"
-                        className="text-slate-400 font-medium"
+                        className="text-fg-muted font-normal mt-0.5"
                       >
-                        Find your next technical career step at PAU
+                        Find your next verified technical career placement at PAU
                       </Typography>
                     </div>
                   </div>
 
                   <div className="flex flex-wrap gap-2 items-center">
-                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em] mr-2">
+                    <span className="text-[10px] font-bold text-fg-subtle uppercase tracking-widest mr-1">
                       Quick Filters
                     </span>
                     {[
@@ -250,34 +251,36 @@ const Dashboard = ({
                     ].map((tag) => (
                       <button
                         key={tag}
+                        type="button"
                         onClick={() => handleSearchChange(tag)}
-                        className="text-[11px] px-4 py-2 bg-[#f4f7fa] text-slate-500 hover:bg-brand hover:text-white transition-all rounded-xl font-bold border border-slate-100/50"
+                        className="text-xs px-3.5 py-1.5 bg-surface-sunken text-fg-muted hover:bg-brand-subtle hover:text-brand transition-colors rounded-xl font-medium border border-border cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                       >
                         #{tag}
                       </button>
                     ))}
 
-                    <div className="w-px h-5 bg-slate-200 mx-2 hidden sm:block" />
+                    <div className="w-px h-5 bg-border mx-1 hidden sm:block" />
 
                     <button
+                      type="button"
                       onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
                       className={cx(
-                        "flex items-center gap-2 text-[11px] px-4 py-2 rounded-xl font-bold transition-all border relative",
+                        "flex items-center gap-2 text-xs px-3.5 py-1.5 rounded-xl font-semibold transition-all border cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring",
                         isFiltersExpanded
-                          ? "bg-slate-900 border-slate-900 text-white shadow-md shadow-slate-900/10"
-                          : "bg-[#f4f7fa] text-slate-500 border-slate-100/50 hover:bg-slate-100 hover:text-slate-800",
+                          ? "bg-brand text-fg-inverse border-brand shadow-xs"
+                          : "bg-surface-sunken text-fg-muted border-border hover:bg-surface-raised hover:text-fg",
                       )}
                     >
                       <FiFilter className="w-3.5 h-3.5" />
                       <span>Filters</span>
                       {activeFiltersCount > 0 && (
-                        <span className="flex items-center justify-center bg-brand text-white w-4 h-4 rounded-full text-[9px] font-extrabold shadow-sm">
+                        <span className="flex items-center justify-center bg-brand-subtle text-brand w-4 h-4 rounded-full text-[10px] font-bold">
                           {activeFiltersCount}
                         </span>
                       )}
                       <FiChevronDown
                         className={cx(
-                          "w-3.5 h-3.5 transition-transform duration-300",
+                          "w-3.5 h-3.5 transition-transform duration-200",
                           isFiltersExpanded && "rotate-180",
                         )}
                       />
@@ -287,7 +290,7 @@ const Dashboard = ({
 
                 {/* Bottom row: Active Filters */}
                 {isFiltersExpanded && (
-                  <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8 pt-6 border-t border-slate-50 animate-in fade-in slide-in-from-top-4 duration-300 ease-out">
+                  <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6 pt-5 border-t border-border animate-in fade-in slide-in-from-top-2 duration-200 ease-out">
                     <Stack direction="row" spacing={2} className="flex-wrap">
                       {availableFilters.map((filter) => (
                         <Button
@@ -302,10 +305,10 @@ const Dashboard = ({
                             })
                           }
                           className={cx(
-                            "px-6 rounded-xl font-bold text-xs transition-all",
+                            "px-4 rounded-xl font-medium text-xs transition-all",
                             selectedInterest === filter
-                              ? "bg-brand text-white shadow-lg shadow-brand/20"
-                              : "text-slate-400 hover:text-slate-900",
+                              ? "bg-brand text-fg-inverse shadow-xs"
+                              : "text-fg-muted hover:text-fg",
                           )}
                         >
                           {filter}
@@ -314,7 +317,7 @@ const Dashboard = ({
                     </Stack>
 
                     <div className="flex flex-wrap items-center gap-3 lg:ml-auto">
-                      <div className="w-full sm:w-[160px]">
+                      <div className="w-full sm:w-[150px]">
                         <Select
                           value={statusFilter}
                           onChange={(e) =>
@@ -328,10 +331,10 @@ const Dashboard = ({
                             { value: "Accepted", label: "Approved" },
                             { value: "Rejected", label: "Denied" },
                           ]}
-                          className="bg-[#f4f7fa] border-none rounded-xl text-xs font-bold text-slate-600 h-10"
+                          className="text-xs"
                         />
                       </div>
-                      <div className="w-full sm:w-[160px]">
+                      <div className="w-full sm:w-[150px]">
                         <Select
                           value={matchFilter}
                           onChange={(e) =>
@@ -344,10 +347,10 @@ const Dashboard = ({
                             { value: "70", label: "70%+ Match" },
                             { value: "40", label: "40%+ Match" },
                           ]}
-                          className="bg-[#f4f7fa] border-none rounded-xl text-xs font-bold text-slate-600 h-10"
+                          className="text-xs"
                         />
                       </div>
-                      <div className="w-full sm:w-[160px]">
+                      <div className="w-full sm:w-[150px]">
                         <Select
                           value={sortBy}
                           onChange={(e) =>
@@ -358,8 +361,9 @@ const Dashboard = ({
                           options={[
                             { value: "match", label: "Best Match" },
                             { value: "deadline", label: "Deadline" },
+                            { value: "company", label: "Company A-Z" },
                           ]}
-                          className="bg-[#f4f7fa] border-none rounded-xl text-xs font-bold text-slate-600 h-10"
+                          className="text-xs"
                         />
                       </div>
                     </div>
@@ -381,38 +385,47 @@ const Dashboard = ({
 
           return (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {paginatedItems.length > 0 ? (
                   paginatedItems.map((internship, index) => (
                     <div
                       key={internship.id}
-                      className="animate-in fade-in slide-in-from-bottom-8 duration-500 ease-out"
-                      style={{ animationDelay: `${index * 50}ms` }}
+                      className="animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out"
+                      style={{ animationDelay: `${index * 40}ms` }}
                     >
                       <InternshipCard internship={internship} />
                     </div>
                   ))
                 ) : (
-                  <Card className="p-12 text-center bg-white rounded-3xl border border-slate-100 shadow-sm">
-                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <FiSearch className="w-10 h-10 text-slate-300" />
-                    </div>
-                    <Typography variant="h5" color="muted">
-                      No internships found. Try adjusting your filters.
-                    </Typography>
-                  </Card>
+                  <div className="col-span-full">
+                    <EmptyState
+                      icon={<FiSearch className="w-8 h-8" />}
+                      title="No internships found"
+                      description="Try adjusting your filter options or clearing search keywords."
+                      action={{
+                        label: "Clear filters",
+                        onClick: () => {
+                          setSelectedInterest("All");
+                          setStatusFilter("All");
+                          setMatchFilter("All");
+                          setSearchQuery("");
+                        },
+                      }}
+                    />
+                  </div>
                 )}
               </div>
 
               {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-3 mt-12 pb-4">
                   <button
+                    type="button"
                     onClick={() => {
                       setCurrentPage((p) => Math.max(1, p - 1));
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
                     disabled={currentPage === 1}
-                    className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 border border-slate-200 bg-white text-slate-600 hover:border-brand hover:text-brand disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-slate-200 disabled:hover:text-slate-600"
+                    className="px-4 py-2 rounded-xl text-xs font-semibold transition-all border border-border bg-surface text-fg-muted hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-border disabled:hover:text-fg-muted cursor-pointer"
                   >
                     ← Previous
                   </button>
@@ -422,15 +435,17 @@ const Dashboard = ({
                       (page) => (
                         <button
                           key={page}
+                          type="button"
                           onClick={() => {
                             setCurrentPage(page);
                             window.scrollTo({ top: 0, behavior: "smooth" });
                           }}
-                          className={`w-10 h-10 rounded-xl text-sm font-bold transition-all duration-200 ${
+                          className={cx(
+                            "w-9 h-9 rounded-xl text-xs font-bold transition-all cursor-pointer",
                             currentPage === page
-                              ? "bg-gradient-to-br from-brand to-brand-secondary text-white shadow-lg shadow-indigo-200"
-                              : "bg-white text-slate-500 border border-slate-200 hover:border-brand hover:text-brand"
-                          }`}
+                              ? "bg-brand text-fg-inverse shadow-xs"
+                              : "bg-surface text-fg-muted border border-border hover:border-brand hover:text-brand",
+                          )}
                         >
                           {page}
                         </button>
@@ -439,12 +454,13 @@ const Dashboard = ({
                   </div>
 
                   <button
+                    type="button"
                     onClick={() => {
                       setCurrentPage((p) => Math.min(totalPages, p + 1));
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
                     disabled={currentPage === totalPages}
-                    className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 border border-slate-200 bg-white text-slate-600 hover:border-brand hover:text-brand disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-slate-200 disabled:hover:text-slate-600"
+                    className="px-4 py-2 rounded-xl text-xs font-semibold transition-all border border-border bg-surface text-fg-muted hover:border-brand hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-border disabled:hover:text-fg-muted cursor-pointer"
                   >
                     Next →
                   </button>
@@ -453,7 +469,7 @@ const Dashboard = ({
 
               {totalItems > 0 && (
                 <div className="text-center mt-4">
-                  <Typography variant="caption" color="muted">
+                  <Typography variant="caption" className="text-fg-subtle">
                     Showing {startIndex + 1}–
                     {Math.min(startIndex + itemsPerPage, totalItems)} of{" "}
                     {totalItems} internships

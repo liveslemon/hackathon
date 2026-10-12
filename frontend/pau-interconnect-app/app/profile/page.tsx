@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import ProfileClient from "./ProfileClient";
 import DashboardShell from "@/components/DashboardShell";
+import { PageHeader } from "@/components/ui";
 import { supabaseFetch } from "@/lib/supabase-fetch";
 
 export default async function ProfilePage() {
@@ -13,13 +14,17 @@ export default async function ProfilePage() {
     {
       global: { fetch: supabaseFetch },
       cookies: {
-        getAll() { return cookieStore.getAll(); },
-        setAll() {}
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll() {},
       },
-    }
+    },
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login/student");
 
   const { data: profile } = await supabase
@@ -37,19 +42,17 @@ export default async function ProfilePage() {
 
   return (
     <DashboardShell userProfile={profile}>
-      <div className="max-w-4xl mx-auto pb-12">
-        <header className="mb-8 px-4 sm:px-0">
-          <h2 className="text-2xl font-bold text-slate-800 leading-tight">
-            Profile Settings
-          </h2>
-          <p className="text-sm text-slate-400 mt-1">
-            Manage your personal information, interests, and CV
-          </p>
-        </header>
+      <div className="max-w-4xl mx-auto pb-12 px-4 sm:px-0">
+        <PageHeader
+          title="Profile & Skills"
+          description="Manage your personal background, academic records, verified skills, and experience."
+          className="mb-8"
+        />
 
-        <div className="px-4 sm:px-0">
-          <ProfileClient initialProfile={profile} userEmail={user.email ?? null} />
-        </div>
+        <ProfileClient
+          initialProfile={profile}
+          userEmail={user.email ?? null}
+        />
       </div>
     </DashboardShell>
   );

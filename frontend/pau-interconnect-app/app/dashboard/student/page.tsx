@@ -50,7 +50,7 @@ export default async function StudentDashboardPage() {
           <CvPromptCard />
           <Suspense
             fallback={
-              <div className="h-40 bg-white rounded-3xl animate-pulse mb-8" />
+              <div className="h-40 bg-surface-sunken rounded-2xl border border-border animate-pulse mb-8" />
             }
           >
             <StudentLogbookSection />
@@ -98,7 +98,7 @@ export default async function StudentDashboardPage() {
         {/* 3. Logbook Section (Independent loading) */}
         <Suspense
           fallback={
-            <div className="h-40 bg-white rounded-3xl animate-pulse mb-8" />
+            <div className="h-40 bg-surface-sunken rounded-2xl border border-border animate-pulse mb-8" />
           }
         >
           <StudentLogbookSection />

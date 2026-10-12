@@ -1,35 +1,44 @@
-import { Skeleton, Card, CardContent } from "@/components/ui";
+import { Skeleton, Card } from "@/components/ui";
+import DashboardShell from "@/components/DashboardShell";
 
 export default function LogbookLoading() {
   return (
-    <div className="p-6 md:p-8 space-y-6 animate-pulse">
-      <div className="flex justify-between items-center">
-        <div>
-          <Skeleton className="h-8 w-48 mb-2" />
-          <Skeleton className="h-4 w-64" />
+    <DashboardShell userProfile={{ role: "student" }}>
+      <div className="max-w-6xl mx-auto px-4 sm:px-0 py-6 md:py-8 space-y-6">
+        <div className="flex justify-between items-center pb-6 border-b border-border">
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-48 rounded-lg" />
+            <Skeleton className="h-4 w-64 rounded-md" />
+          </div>
+          <Skeleton className="h-10 w-32 rounded-xl" />
         </div>
-        <Skeleton className="h-10 w-36 rounded-xl" />
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-24 rounded-2xl" />
-        ))}
-      </div>
-
-      <Card>
-        <CardContent className="space-y-4">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="flex justify-between items-center py-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="space-y-2">
-                <Skeleton className="h-5 w-40" />
-                <Skeleton className="h-4 w-72" />
-              </div>
-              <Skeleton className="h-8 w-24 rounded-lg" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-4 space-y-3">
+            <Skeleton className="h-5 w-32 rounded-md" />
+            <Skeleton className="h-16 w-full rounded-2xl" />
+            <div className="space-y-2 pt-2">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-16 rounded-2xl" />
+              ))}
             </div>
-          ))}
-        </CardContent>
-      </Card>
-    </div>
+          </div>
+
+          <div className="lg:col-span-8">
+            <div className="bg-surface rounded-2xl border border-border p-6 md:p-8 space-y-6">
+              <div className="flex justify-between items-center">
+                <Skeleton className="h-6 w-40 rounded-md" />
+                <Skeleton className="h-6 w-20 rounded-full" />
+              </div>
+              <Skeleton className="h-44 w-full rounded-xl" />
+              <div className="flex justify-between items-center pt-4 border-t border-border">
+                <Skeleton className="h-9 w-28 rounded-xl" />
+                <Skeleton className="h-9 w-32 rounded-xl" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </DashboardShell>
   );
 }

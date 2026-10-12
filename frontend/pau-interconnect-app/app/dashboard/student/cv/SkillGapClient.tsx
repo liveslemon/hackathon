@@ -29,8 +29,6 @@ type SkillGapAnalysis = {
   }>;
 };
 
-// PostgREST .or() filters are comma/paren-delimited; strip characters that
-// would break (or inject into) the filter expression.
 function sanitizeSearch(q: string): string {
   return q.replace(/[,()%*\\]/g, " ").trim();
 }
@@ -49,8 +47,6 @@ export default function SkillGapClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Suggest the student's best-matching open internships so they don't have
-  // to search for a target role.
   useEffect(() => {
     (async () => {
       const { supabase } = await import("@/lib/supabaseClient");
@@ -86,7 +82,6 @@ export default function SkillGapClient() {
     })();
   }, []);
 
-  // Debounced search: query Supabase with text filter
   useEffect(() => {
     const q = sanitizeSearch(searchQuery);
     if (q.length < 2) {
@@ -144,7 +139,7 @@ export default function SkillGapClient() {
       const data = await authenticatedFetch<SkillGapAnalysis>(
         backendUrl(`/api/analysis/skill-gap?internship_id=${selectedId}`),
         {},
-        45000, // LLM call with provider fallback
+        45000,
       );
       setAnalysis(data);
     } catch (e: unknown) {
@@ -156,26 +151,25 @@ export default function SkillGapClient() {
 
   return (
     <div className="space-y-6">
-      <div className="border-t border-slate-200 pt-8">
-        <Typography variant="h4" weight="bold" className="text-slate-800">
+      <div className="border-t border-border pt-8">
+        <Typography variant="h4" weight="bold" className="text-fg leading-tight">
           Skill Gap Analysis
         </Typography>
-        <Typography variant="body2" className="text-slate-500 mt-1">
-          Compare your resume against your target roles to see what you&apos;re
-          missing.
+        <Typography variant="body2" className="text-fg-muted mt-1">
+          Evaluate your resume against target postings to identify high-impact missing skills.
         </Typography>
       </div>
 
-      <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
+      <div className="bg-surface rounded-2xl p-6 md:p-8 border border-border shadow-xs">
         <div className="flex flex-col sm:flex-row gap-4 items-end">
           <div className="flex-1 w-full relative">
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Search for a role
+            <label className="block text-xs font-semibold text-fg mb-2">
+              Select or Search Target Role
             </label>
             <input
               type="text"
-              className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all bg-slate-50 text-slate-700"
-              placeholder="Type a role or company name..."
+              className="w-full h-11 px-4 rounded-xl border border-border focus:ring-2 focus:ring-focus-ring focus:border-brand transition-all bg-surface-sunken text-fg text-sm placeholder:text-fg-subtle"
+              placeholder="Search by role or company name..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -191,30 +185,30 @@ export default function SkillGapClient() {
               }}
             />
             {searching && (
-              <div className="absolute right-4 top-[42px]">
-                <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+              <div className="absolute right-4 top-[38px]">
+                <Loader2 className="w-4 h-4 animate-spin text-brand" />
               </div>
             )}
             {showDropdown && (
-              <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+              <div className="absolute z-20 left-0 right-0 top-full mt-1.5 bg-surface-raised border border-border rounded-xl shadow-lg max-h-60 overflow-y-auto">
                 {internships.length > 0 ? (
                   internships.map((job) => (
                     <button
                       key={job.id}
                       type="button"
-                      className="w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0"
+                      className="w-full text-left px-4 py-3 hover:bg-surface-sunken transition-colors border-b border-border last:border-0 cursor-pointer"
                       onClick={() => handleSelect(job)}
                     >
-                      <span className="font-medium text-slate-800 text-sm">
+                      <span className="font-semibold text-fg text-sm">
                         {job.role}
                       </span>
-                      <span className="text-slate-400 text-sm ml-2">
+                      <span className="text-fg-muted text-xs ml-2">
                         at {job.company}
                       </span>
                     </button>
                   ))
                 ) : (
-                  <div className="px-4 py-3 text-sm text-slate-400 text-center">
+                  <div className="px-4 py-3 text-xs text-fg-muted text-center">
                     No active internships found
                   </div>
                 )}
@@ -224,21 +218,23 @@ export default function SkillGapClient() {
           <Button
             onClick={analyzeGap}
             disabled={!selectedId || loading}
-            className="h-12 px-8 bg-brand hover:bg-brand/90 text-white rounded-xl shadow-sm w-full sm:w-auto"
+            colorType="primary"
+            className="h-11 px-6 rounded-xl shadow-xs w-full sm:w-auto"
           >
             {loading ? (
               <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Analyzing...
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyzing...
               </>
             ) : (
-              "Run Analysis"
+              "Run Diagnostics"
             )}
           </Button>
         </div>
+
         {suggestions.length > 0 && (
-          <div className="mt-4">
-            <p className="text-xs font-medium text-slate-500 mb-2">
-              Or pick one of your top matches
+          <div className="mt-5">
+            <p className="text-xs font-semibold text-fg-subtle mb-2 uppercase tracking-wider">
+              Quick Select From Your Top Matches
             </p>
             <div className="flex flex-wrap gap-2">
               {suggestions.map((job) => (
@@ -247,28 +243,29 @@ export default function SkillGapClient() {
                   type="button"
                   onClick={() => handleSelect(job)}
                   className={cx(
-                    "px-3 py-1.5 rounded-full border text-xs font-medium transition-colors",
+                    "px-3 py-1.5 rounded-xl border text-xs font-medium transition-all cursor-pointer",
                     selectedId === job.id
-                      ? "bg-brand text-white border-brand"
-                      : "bg-white text-slate-600 border-slate-200 hover:border-brand/40",
+                      ? "bg-brand text-fg-inverse border-brand shadow-xs"
+                      : "bg-surface-sunken text-fg-muted border-border hover:border-brand/40 hover:text-fg",
                   )}
                 >
-                  {job.role} · {job.company}{" "}
-                  <span className="opacity-70">{job.match_score}%</span>
+                  <span>{job.role} · {job.company}</span>
+                  <span className="opacity-80 ml-1.5 font-bold">{job.match_score}%</span>
                 </button>
               ))}
             </div>
           </div>
         )}
+
         {error && (
-          <div className="mt-4 p-4 bg-red-50 text-red-600 rounded-xl text-sm">
+          <div className="mt-4 p-4 bg-danger-subtle border border-danger/20 text-danger-fg rounded-xl text-xs">
             {error}
           </div>
         )}
       </div>
 
       {analysis && (
-        <div className="space-y-6 animate-in fade-in duration-700">
+        <div className="space-y-6 animate-in fade-in duration-500">
           {(() => {
             const matchPercentage =
               typeof analysis.match_percentage === "number"
@@ -276,58 +273,57 @@ export default function SkillGapClient() {
                 : null;
             return (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white rounded-[32px] p-8 border border-slate-100/60 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col items-center justify-center text-center">
+                <div className="bg-surface rounded-2xl p-6 md:p-8 border border-border shadow-xs flex flex-col items-center justify-center text-center">
                   <div
-                    className="w-32 h-32 rounded-full border-8 flex items-center justify-center mb-4"
-                    style={{
-                      borderColor:
-                        matchPercentage !== null && matchPercentage > 70
-                          ? "#10b981"
-                          : matchPercentage !== null && matchPercentage > 40
-                            ? "#f59e0b"
-                            : "#94a3b8",
-                    }}
+                    className={cx(
+                      "w-28 h-28 rounded-full border-4 flex items-center justify-center mb-4 transition-all",
+                      matchPercentage !== null && matchPercentage >= 70
+                        ? "border-success text-success-fg bg-success-subtle/30"
+                        : matchPercentage !== null && matchPercentage >= 40
+                          ? "border-warning text-warning-fg bg-warning-subtle/30"
+                          : "border-border text-fg-muted bg-surface-sunken",
+                    )}
                   >
-                    <Typography variant="h1" className="text-slate-800">
+                    <Typography variant="h2" weight="bold">
                       {matchPercentage !== null ? `${matchPercentage}%` : "--%"}
                     </Typography>
                   </div>
                   <Typography
                     variant="h5"
                     weight="bold"
-                    className="text-slate-700"
+                    className="text-fg"
                   >
-                    Match Score
+                    Compatibility Score
                   </Typography>
-                  <Typography variant="body2" className="text-slate-400 mt-1">
+                  <Typography variant="caption" className="text-fg-muted mt-1">
                     {matchPercentage !== null
-                      ? "Canonical score matching your internship listing"
-                      : "No score available yet"}
+                      ? "Calculated against target requirements"
+                      : "Score pending"}
                   </Typography>
                   {analysis.strengths_summary && (
-                    <Typography variant="body2" className="text-slate-600 mt-4">
+                    <Typography variant="body2" className="text-fg-muted mt-3 text-xs leading-relaxed">
                       {analysis.strengths_summary}
                     </Typography>
                   )}
                 </div>
 
-                <div className="md:col-span-2 bg-white rounded-[32px] p-8 border border-slate-100/60 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+                <div className="md:col-span-2 bg-surface rounded-2xl p-6 md:p-8 border border-border shadow-xs">
                   <Typography
-                    variant="h4"
+                    variant="h5"
                     weight="bold"
-                    className="text-slate-800 mb-6 flex items-center gap-2"
+                    className="text-fg mb-4 flex items-center gap-2"
                   >
-                    <Target className="w-6 h-6 text-brand" /> Action Plan
+                    <Target className="w-5 h-5 text-brand" /> Action Recommendations
                   </Typography>
-                  <ul className="space-y-4">
+                  <ul className="space-y-3">
                     {analysis.recommendations?.map(
                       (rec: string, idx: number) => (
                         <li
                           key={idx}
-                          className="flex items-start gap-3 bg-brand/5 p-4 rounded-2xl"
+                          className="flex items-start gap-3 bg-surface-sunken p-3.5 rounded-xl border border-border"
                         >
-                          <Zap className="w-5 h-5 text-brand shrink-0 mt-0.5" />
-                          <span className="text-slate-700 text-sm leading-relaxed">
+                          <Zap className="w-4 h-4 text-brand shrink-0 mt-0.5" />
+                          <span className="text-fg text-xs leading-relaxed">
                             {rec}
                           </span>
                         </li>
@@ -339,37 +335,37 @@ export default function SkillGapClient() {
             );
           })()}
 
-          <div className="bg-white rounded-[32px] p-8 border border-slate-100/60 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+          <div className="bg-surface rounded-2xl p-6 md:p-8 border border-border shadow-xs">
             <Typography
-              variant="h4"
+              variant="h5"
               weight="bold"
-              className="text-slate-800 mb-6"
+              className="text-fg mb-6"
             >
-              Skill Breakdown
+              Skill Diagnostic Breakdown
             </Typography>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
                 <Typography
                   variant="h6"
                   weight="bold"
-                  className="text-slate-700 mb-4 flex items-center gap-2"
+                  className="text-fg mb-3 flex items-center gap-2 text-sm"
                 >
-                  <CheckCircle2 className="w-5 h-5 text-emerald-500" /> You Have
+                  <CheckCircle2 className="w-4 h-4 text-success-fg" /> Verified Profile Skills
                 </Typography>
                 <div className="flex flex-wrap gap-2">
                   {analysis.current_skills?.map((s: string, i: number) => (
                     <span
                       key={i}
-                      className="px-3 py-1.5 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-full text-sm font-medium"
+                      className="px-3 py-1 bg-success-subtle border border-success/20 text-success-fg rounded-full text-xs font-semibold"
                     >
                       {s}
                     </span>
                   ))}
                   {(!analysis.current_skills ||
                     analysis.current_skills.length === 0) && (
-                    <span className="text-slate-400 text-sm italic">
-                      No matching skills found in resume.
+                    <span className="text-fg-subtle text-xs italic">
+                      No matching verified skills detected in profile.
                     </span>
                   )}
                 </div>
@@ -379,57 +375,53 @@ export default function SkillGapClient() {
                 <Typography
                   variant="h6"
                   weight="bold"
-                  className="text-slate-700 mb-4 flex items-center gap-2"
+                  className="text-fg mb-3 flex items-center gap-2 text-sm"
                 >
-                  <XCircle className="w-5 h-5 text-red-500" /> You&apos;re
-                  Missing
+                  <XCircle className="w-4 h-4 text-danger-fg" /> Missing Role Keywords
                 </Typography>
                 <div className="space-y-3">
                   {analysis.missing_skills?.map((ms, i: number) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl"
+                      className="p-3.5 bg-surface-sunken border border-border rounded-xl"
                     >
-                      <div>
-                        <div className="font-semibold text-slate-800 text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-fg text-xs">
                           {ms.skill}
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
-                          <span
-                            className={cx(
-                              "px-2 py-0.5 rounded flex items-center gap-1 font-bold",
-                              ms.priority === "High"
-                                ? "bg-red-100 text-red-700"
-                                : ms.priority === "Medium"
-                                  ? "bg-amber-100 text-amber-700"
-                                  : "bg-slate-200 text-slate-700",
-                            )}
-                          >
-                            <AlertCircle className="w-3 h-3" /> {ms.priority}{" "}
-                            Priority
-                          </span>
-                          {ms.estimated_learning_time && (
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />{" "}
-                              {ms.estimated_learning_time}
-                            </span>
+                        </span>
+                        <span
+                          className={cx(
+                            "px-2 py-0.5 rounded-md text-[10px] font-bold border",
+                            ms.priority === "High"
+                              ? "bg-danger-subtle text-danger-fg border-danger/20"
+                              : ms.priority === "Medium"
+                                ? "bg-warning-subtle text-warning-fg border-warning/20"
+                                : "bg-surface text-fg-muted border-border",
                           )}
-                        </div>
-                        {ms.why && (
-                          <p className="text-xs text-slate-500 mt-2">{ms.why}</p>
-                        )}
-                        {ms.resource && (
-                          <p className="text-xs text-brand mt-1">
-                            Learn: {ms.resource}
-                          </p>
-                        )}
+                        >
+                          {ms.priority} Priority
+                        </span>
                       </div>
+                      {ms.estimated_learning_time && (
+                        <div className="flex items-center gap-1.5 text-[11px] text-fg-subtle mt-1.5">
+                          <Clock className="w-3 h-3" />
+                          <span>Est. learning time: {ms.estimated_learning_time}</span>
+                        </div>
+                      )}
+                      {ms.why && (
+                        <p className="text-xs text-fg-muted mt-1 leading-relaxed">{ms.why}</p>
+                      )}
+                      {ms.resource && (
+                        <p className="text-xs text-brand mt-1 font-medium">
+                          Suggested resource: {ms.resource}
+                        </p>
+                      )}
                     </div>
                   ))}
                   {(!analysis.missing_skills ||
                     analysis.missing_skills.length === 0) && (
-                    <span className="text-slate-400 text-sm italic">
-                      You have all the required skills!
+                    <span className="text-success-fg text-xs font-medium">
+                      Congratulations! You have all the primary required keywords.
                     </span>
                   )}
                 </div>
