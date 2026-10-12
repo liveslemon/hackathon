@@ -7,9 +7,8 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 
 export default function Providers({ children }: { children: ReactNode }) {
   return (
-    // Light by default: keeps defaultTheme="light" for now as requested.
-    // enableSystem is enabled so users who pick system theme get live OS following.
-    <ThemeProvider defaultTheme="light" enableSystem={true}>
+    // Default to system theme with live OS matching
+    <ThemeProvider defaultTheme="system" enableSystem={true}>
       <AuthProvider>
         {children}
         <Toaster
