@@ -73,16 +73,16 @@ export default async function EmployerLogbookPage() {
 
   return (
     <DashboardShellWrapper userProfile={profile}>
-      <main className="max-w-5xl mx-auto py-8 lg:py-12">
+      <main className="max-w-6xl mx-auto py-8">
         <Suspense
           fallback={
-            <Stack spacing={8}>
-              <div className="space-y-2 mb-8">
-                <div className="h-10 w-64 bg-slate-100 rounded-xl animate-pulse" />
-                <div className="h-4 w-96 bg-slate-100 rounded-lg animate-pulse" />
+            <Stack spacing={6}>
+              <div className="space-y-2 mb-6">
+                <Skeleton className="h-8 w-64 rounded-lg" />
+                <Skeleton className="h-4 w-96 rounded-md" />
               </div>
-              <div className="h-48 w-full bg-slate-100 rounded-[32px] animate-pulse" />
-              <div className="h-48 w-full bg-slate-100 rounded-[32px] animate-pulse" />
+              <Skeleton className="h-40 w-full rounded-2xl" />
+              <Skeleton className="h-40 w-full rounded-2xl" />
             </Stack>
           }
         >
@@ -90,6 +90,7 @@ export default async function EmployerLogbookPage() {
         </Suspense>
       </main>
     </DashboardShellWrapper>
+
   );
 }
 
