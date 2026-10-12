@@ -53,7 +53,7 @@ async function getApplicants(internshipId: string) {
     const { data, error } = await supabase
       .from("applied_internships")
       .select(
-        "id, status, stage, match_score, created_at, cover_letter, profiles:profiles!user_id(id, full_name, email, course, level, cv_url, settings)",
+        "id, user_id, status, stage, match_score, created_at, cover_letter, profiles:profiles!user_id(id, full_name, email, course, level, cv_url, settings)",
       )
       .eq("internship_id", internshipId)
       .order("created_at", { ascending: false });
@@ -62,10 +62,33 @@ async function getApplicants(internshipId: string) {
       console.error("Error fetching applicants:", error.message);
       return [];
     }
+
+    const userIds = (data || []).map((app) => app.user_id).filter(Boolean);
+    const liveScoreMap = new Map<string, number>();
+
+    if (userIds.length > 0) {
+      const { data: matchRows } = await supabase
+        .from("match_results")
+        .select("user_id, match_score")
+        .eq("internship_id", internshipId)
+        .in("user_id", userIds);
+
+      if (matchRows) {
+        for (const row of matchRows) {
+          if (typeof row.match_score === "number") {
+            liveScoreMap.set(row.user_id, Math.round(row.match_score));
+          }
+        }
+      }
+    }
+
     return (data || []).map((app) => {
       const profile = Array.isArray(app.profiles) ? app.profiles[0] : app.profiles;
+      const liveScore = app.user_id ? liveScoreMap.get(app.user_id) : undefined;
       return {
         ...app,
+        match_score: liveScore !== undefined ? liveScore : app.match_score,
+        applied_match_score: app.match_score,
         profiles: profile ? maskStudentForEmployer(profile) : profile,
       };
     }) as Applicant[];

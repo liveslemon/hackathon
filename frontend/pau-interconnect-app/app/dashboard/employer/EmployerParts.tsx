@@ -223,6 +223,32 @@ export async function EmployerRecentApplicantsSection() {
     .order("created_at", { ascending: false })
     .limit(5);
 
+  let enrichedApps = recentApps || [];
+  if (recentApps && recentApps.length > 0) {
+    const userIds = recentApps.map((a) => a.user_id).filter(Boolean);
+    const { data: liveMatches } = await supabase
+      .from("match_results")
+      .select("user_id, internship_id, match_score")
+      .in("user_id", userIds)
+      .in("internship_id", ids);
+
+    const liveMatchMap = new Map(
+      (liveMatches || []).map((m) => [
+        `${m.user_id}:${m.internship_id}`,
+        m.match_score,
+      ]),
+    );
+
+    enrichedApps = recentApps.map((a) => {
+      const live = liveMatchMap.get(`${a.user_id}:${a.internship_id}`);
+      return {
+        ...a,
+        match_score:
+          typeof live === "number" ? Math.round(live) : a.match_score,
+      };
+    });
+  }
+
   return (
     <div className="mb-12">
       <Stack
@@ -247,7 +273,7 @@ export async function EmployerRecentApplicantsSection() {
 
       <div className="bg-white rounded-[40px] border border-slate-100/60 overflow-hidden shadow-sm">
         <EmployerActivityClient
-          initialItems={recentApps || []}
+          initialItems={enrichedApps}
           type="applicants"
         />
       </div>

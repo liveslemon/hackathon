@@ -21,6 +21,8 @@ import type { Profile } from "@/types/domain";
 
 import { notFound } from "next/navigation";
 import { getDaysUntilDeadline } from "@/lib/deadlines";
+import { getMatchScores, type MatchScoreData } from "@/lib/matching";
+import { MatchScore } from "@/components/match/MatchScore";
 
 export default async function InternshipDetailsPage({
   params,
@@ -64,26 +66,21 @@ export default async function InternshipDetailsPage({
   let applicationStatus: string | null = null;
   let applicationStage: string | null = null;
   let applicationId: string | null = null;
-  let matchScore: number | null = null;
+  let matchScoreData: MatchScoreData | null = null;
   let matchingSkills: string[] = [];
   let missingSkills: string[] = [];
   let userProfile: Profile | null = null;
   let hasCvFromTable = false;
 
   if (user) {
-    const [appliedRes, matchRes, profileRes, cvRes] = await Promise.all([
+    const [appliedRes, matchScoresMap, profileRes, cvRes] = await Promise.all([
       supabase
         .from("applied_internships")
         .select("id, status, stage")
         .eq("user_id", user.id)
         .eq("internship_id", internshipId)
         .maybeSingle(),
-      supabase
-        .from("match_results")
-        .select("match_score, matching_skills, missing_skills")
-        .eq("user_id", user.id)
-        .eq("internship_id", internshipId)
-        .maybeSingle(),
+      getMatchScores(supabase, user.id, [internshipId]),
       supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
       supabase
         .from("student_cvs")
@@ -99,11 +96,9 @@ export default async function InternshipDetailsPage({
       applicationId = appliedRes.data.id;
     }
 
-    if (matchRes.data) {
-      matchScore = matchRes.data.match_score;
-      matchingSkills = matchRes.data.matching_skills || [];
-      missingSkills = matchRes.data.missing_skills || [];
-    }
+    matchScoreData = matchScoresMap[internshipId] || null;
+    matchingSkills = matchScoreData?.matchingSkills || [];
+    missingSkills = matchScoreData?.missingSkills || [];
 
     userProfile = profileRes.data;
     if (cvRes.data?.id) {
@@ -154,17 +149,7 @@ export default async function InternshipDetailsPage({
     ? internship.responsibilities
     : internship.responsibilities?.split("\n").filter(Boolean) || [];
 
-  const displayScore =
-    matchScore !== null ? matchScore : internship.matchPercentage || 0;
-
   const daysUntilDeadline = getDaysUntilDeadline(internship.deadline);
-
-  const matchColor =
-    displayScore >= 70
-      ? "text-emerald-600"
-      : displayScore >= 40
-        ? "text-amber-600"
-        : "text-slate-500";
 
   return (
     <DashboardShell userProfile={userProfile}>
@@ -284,42 +269,23 @@ export default async function InternshipDetailsPage({
             <div className="sticky top-20 space-y-4">
               {/* Match Score Card */}
               <div className="bg-white rounded-xl border border-slate-100 overflow-hidden">
-                <div className="p-5 text-center border-b border-slate-50">
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">
+                <div className="p-5 border-b border-slate-50">
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-3">
                     Profile match
                   </p>
-                  {user && !hasCv ? (
-                    <div className="py-1">
-                      <div className="text-3xl font-bold text-slate-300">--%</div>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Upload your CV to calculate match score
-                      </p>
-                    </div>
-                  ) : !user ? (
-                    <div className="py-1">
+                  {!user ? (
+                    <div className="py-1 text-center">
                       <div className="text-3xl font-bold text-slate-300">--%</div>
                       <p className="text-xs text-slate-400 mt-1">
                         Sign in to view personalized match
                       </p>
                     </div>
                   ) : (
-                    <>
-                      <div className={`text-4xl font-bold ${matchColor}`}>
-                        {displayScore}%
-                      </div>
-                      <div className="w-full h-1.5 bg-slate-100 rounded-full mt-3 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-1000 ${
-                            displayScore >= 70
-                              ? "bg-emerald-500"
-                              : displayScore >= 40
-                                ? "bg-amber-500"
-                                : "bg-slate-300"
-                          }`}
-                          style={{ width: `${displayScore}%` }}
-                        />
-                      </div>
-                    </>
+                    <MatchScore
+                      scoreData={matchScoreData}
+                      showExplanation={true}
+                      className="w-full"
+                    />
                   )}
                 </div>
 

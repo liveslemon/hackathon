@@ -25,7 +25,7 @@ interface Internship {
   description: string;
   deadline: string;
   interests: string[];
-  matchPercentage?: number;
+  matchPercentage?: number | null;
   applicationStatus?: string;
   applicationStage?: string;
 }

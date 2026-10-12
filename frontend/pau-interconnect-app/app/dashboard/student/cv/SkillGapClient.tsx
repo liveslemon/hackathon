@@ -71,7 +71,9 @@ export default function SkillGapClient() {
             : row.internships) as
             | (TargetJob & { status?: string; deadline?: string | null })
             | null;
-          return job ? { ...job, match_score: row.match_score ?? 0 } : null;
+          return job && typeof row.match_score === "number"
+            ? { ...job, match_score: Math.round(row.match_score) }
+            : null;
         })
         .filter(
           (j): j is TargetJob & { match_score: number; status?: string; deadline?: string | null } =>
@@ -268,7 +270,10 @@ export default function SkillGapClient() {
       {analysis && (
         <div className="space-y-6 animate-in fade-in duration-700">
           {(() => {
-            const matchPercentage = analysis.match_percentage ?? 0;
+            const matchPercentage =
+              typeof analysis.match_percentage === "number"
+                ? Math.round(analysis.match_percentage)
+                : null;
             return (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white rounded-[32px] p-8 border border-slate-100/60 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col items-center justify-center text-center">
@@ -276,15 +281,15 @@ export default function SkillGapClient() {
                     className="w-32 h-32 rounded-full border-8 flex items-center justify-center mb-4"
                     style={{
                       borderColor:
-                        matchPercentage > 70
+                        matchPercentage !== null && matchPercentage > 70
                           ? "#10b981"
-                          : matchPercentage > 40
+                          : matchPercentage !== null && matchPercentage > 40
                             ? "#f59e0b"
-                            : "#ef4444",
+                            : "#94a3b8",
                     }}
                   >
                     <Typography variant="h1" className="text-slate-800">
-                      {matchPercentage}%
+                      {matchPercentage !== null ? `${matchPercentage}%` : "--%"}
                     </Typography>
                   </div>
                   <Typography
@@ -295,9 +300,9 @@ export default function SkillGapClient() {
                     Match Score
                   </Typography>
                   <Typography variant="body2" className="text-slate-400 mt-1">
-                    {analysis.match_source === "platform"
-                      ? "Same score as on your internship matches"
-                      : "AI estimate (no platform match yet)"}
+                    {matchPercentage !== null
+                      ? "Canonical score matching your internship listing"
+                      : "No score available yet"}
                   </Typography>
                   {analysis.strengths_summary && (
                     <Typography variant="body2" className="text-slate-600 mt-4">

@@ -322,14 +322,34 @@ RULES
         # Normalize required keys
         if "match_percentage" not in analysis or not isinstance(analysis["match_percentage"], (int, float)):
             analysis["match_percentage"] = 50
-        analysis["match_percentage"] = max(0, min(100, int(analysis["match_percentage"])))
-
         stored = res_match.data.get("match_score") if res_match and res_match.data else None
         if stored is not None:
-            analysis["match_percentage"] = int(stored)
-            analysis["match_source"] = "platform"
+            canonical_score = int(stored)
         else:
-            analysis["match_source"] = "ai_estimate"
+            from services.match_scoring import score_pair
+            scored = score_pair(
+                {
+                    "skills": known_skills,
+                    "text": cv_text,
+                    "structured": cv_structured,
+                    "course": profile.get("course"),
+                    "experience": profile.get("experience"),
+                    "projects": profile.get("projects"),
+                },
+                {
+                    "role": job.get("role"),
+                    "company": job.get("company"),
+                    "requirements": job.get("requirements"),
+                    "required_skills": required,
+                    "description": job.get("description"),
+                    "category": job.get("category"),
+                },
+            )
+            canonical_score = scored["match_score"]
+
+        analysis["match_score"] = canonical_score
+        analysis["match_percentage"] = canonical_score
+        analysis["match_source"] = "platform"
 
         analysis["internship"] = {"role": job.get("role"), "company": job.get("company")}
 
