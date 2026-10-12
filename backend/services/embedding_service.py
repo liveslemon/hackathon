@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import httpx
 from core.config import settings
@@ -10,19 +11,20 @@ logger = logging.getLogger(__name__)
 EMBEDDING_DIM = 1024  # Cohere embed-english-v3.0 output dimension
 
 _EMBEDDING_CLIENT = httpx.AsyncClient(
-    timeout=httpx.Timeout(settings.EMBEDDING_TIMEOUT, connect=10.0),
+    timeout=httpx.Timeout(getattr(settings, "EMBEDDING_TIMEOUT", 30.0), connect=10.0),
     limits=httpx.Limits(max_keepalive_connections=20, max_connections=100),
 )
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-async def get_embedding(text: str) -> list[float]:
+async def get_embedding(text: str) -> Optional[list[float]]:
     """
     Fetches embeddings from Cohere API.
+    Returns None if text is empty/whitespace to avoid storing zero vectors in pgvector.
     Strictly forbids local fallback to protect server resources.
     """
     if not text or not text.strip():
-        return [0.0] * EMBEDDING_DIM
+        return None
 
     if not settings.COHERE_API_KEY:
         logger.error(
@@ -39,7 +41,7 @@ async def get_embedding(text: str) -> list[float]:
                 "Accept": "application/json",
             },
             json={
-                "texts": [text],
+                "texts": [text[:6000]],
                 "model": "embed-english-v3.0",
                 "input_type": "search_document",
             },
@@ -51,7 +53,13 @@ async def get_embedding(text: str) -> list[float]:
         if "embeddings" not in data or not data["embeddings"]:
             raise ValueError("Cohere API returned empty embeddings.")
 
-        return data["embeddings"][0]
+        embedding = data["embeddings"][0]
+        if not isinstance(embedding, list) or len(embedding) != EMBEDDING_DIM:
+            raise ValueError(
+                f"Expected {EMBEDDING_DIM}-dimension embedding, got {len(embedding) if isinstance(embedding, list) else type(embedding)}"
+            )
+
+        return [float(x) for x in embedding]
 
     except httpx.HTTPStatusError as e:
         logger.error(
@@ -63,9 +71,7 @@ async def get_embedding(text: str) -> list[float]:
         raise
 
 
-# Keep local model code for administrative/fallback scripts only (not used in main flow)
 async def get_local_embedding(text: str):
     """Utility function for manual debugging, not used by the main application."""
     logger.warning("[AI/Embed] Manual call to get_local_embedding requested.")
-    # We leave the implementation out to keep the environment light
     raise NotImplementedError("Local embedding is disabled to save server resources.")

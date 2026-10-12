@@ -1,12 +1,14 @@
 import asyncio
 import logging
 import os
+import re
 import tempfile
 import uuid
+from urllib.parse import unquote, urlparse
 
 from core.db import supabase
-from core.security import get_current_user, verify_admin
 from core.rate_limit import rate_limit
+from core.security import get_current_user, verify_admin
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -18,9 +20,9 @@ from fastapi import (
     UploadFile,
 )
 from schemas.requests import AnalyzeNewInternshipRequest, AnalyzeRequest
-from services.routing_service import compute_match_score
-from services.job_queue import CV_ANALYSIS, enqueue
 from services.cv_ocr_service import ocr_pdf
+from services.job_queue import CV_ANALYSIS, enqueue
+from services.routing_service import compute_match_score
 from services.supabase_service import (
     extract_text,
     fetch_internships,
@@ -33,43 +35,58 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 MAX_CV_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+MIN_CV_FILE_SIZE = 100  # 100 bytes minimum
 MIN_CV_TEXT_LENGTH = 50  # Minimum chars for a valid CV extraction
+SIGNED_URL_EXPIRY_SECONDS = 604800  # 7 days
 
 
 def clean_cv_text(text: str) -> str:
     """Normalize extracted CV text: collapse whitespace, remove control chars."""
-    import re
+    if not text:
+        return ""
     # Remove null bytes and control characters (except newlines/tabs)
-    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
     # Collapse multiple blank lines into one
-    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
     # Collapse multiple spaces into one
-    text = re.sub(r'[ \t]+', ' ', text)
+    text = re.sub(r"[ \t]+", " ", text)
     return text.strip()
 
 
-async def process_matches_in_background(user_id: str, cv_text: str, internships: list, cv_structured: dict = None):
+def sanitize_filename(filename: str) -> str:
+    """Sanitize original filename to prevent path traversal or special chars."""
+    normalized = (filename or "cv.pdf").replace("\\", "/")
+    base = os.path.basename(normalized)
+    clean = re.sub(r"[^a-zA-Z0-9._-]", "_", base)
+    return clean[:100]
+
+
+async def process_matches_in_background(
+    user_id: str, cv_text: str, internships: list, cv_structured: dict = None
+):
     """
     Efficient matching: uses vector similarity to find top-K matches,
     then only runs detailed analysis on those. Reduces API calls from O(n) to O(k).
     """
-    from services.vector_matching_service import find_top_matches_for_user, store_cv_embedding
+    from services.vector_matching_service import (
+        find_top_matches_for_user,
+        store_cv_embedding,
+    )
 
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            # Step 1: Ensure CV embedding is stored (1 API call)
             await store_cv_embedding(user_id, cv_text)
 
-            # Step 2: Find top matches using vector similarity (minimal API calls)
             results = await find_top_matches_for_user(
                 user_id, cv_text, cv_structured=cv_structured
             )
 
-            # Step 3: Store results
             matches_found = 0
             for res in results:
-                await asyncio.to_thread(upsert_match_result, user_id, res.get("internship_id"), res)
+                await asyncio.to_thread(
+                    upsert_match_result, user_id, res.get("internship_id"), res
+                )
                 matches_found += 1
 
             logger.info(
@@ -78,9 +95,12 @@ async def process_matches_in_background(user_id: str, cv_text: str, internships:
             )
             return True
         except Exception as e:
-            logger.error(f"Background match attempt {attempt + 1}/{max_retries} failed for user {user_id}: {e}", exc_info=True)
+            logger.error(
+                f"Background match attempt {attempt + 1}/{max_retries} failed for user {user_id}: {e}",
+                exc_info=True,
+            )
             if attempt < max_retries - 1:
-                await asyncio.sleep(2 ** attempt)
+                await asyncio.sleep(2**attempt)
     return False
 
 
@@ -89,16 +109,16 @@ async def process_new_internship_background(iid: str, job: dict, students: list)
     When a new internship is posted, compute its embedding once,
     then find top matching students via vector similarity.
     """
-    from services.vector_matching_service import store_job_embedding, find_top_students_for_job
+    from services.vector_matching_service import (
+        find_top_students_for_job,
+        store_job_embedding,
+    )
 
     try:
-        # Step 1: Compute and store job embedding + structure (1 embed + 1 LLM call)
         await store_job_embedding(iid, job)
 
-        # Step 2: Find top students by vector similarity (no API calls)
         top_students = await find_top_students_for_job(iid, job)
 
-        # Step 3: Run detailed matching only for top students
         success = 0
         semaphore = asyncio.Semaphore(2)
 
@@ -106,10 +126,13 @@ async def process_new_internship_background(iid: str, job: dict, students: list)
             async with semaphore:
                 try:
                     uid = student_match["user_id"]
-                    # Fetch full student data
-                    res = (await asyncio.to_thread(supabase.table("profiles").select(
-                        "id, cv_text, cv_structured"
-                    ).eq("id", uid).single().execute))
+                    res = await asyncio.to_thread(
+                        lambda: supabase.table("profiles")
+                        .select("id, cv_text, cv_structured")
+                        .eq("id", uid)
+                        .single()
+                        .execute()
+                    )
                     student = res.data
                     if not student or not student.get("cv_text"):
                         return 0
@@ -117,14 +140,19 @@ async def process_new_internship_background(iid: str, job: dict, students: list)
                     cv_structured = student.get("cv_structured")
                     if isinstance(cv_structured, str):
                         import json
+
                         try:
                             cv_structured = json.loads(cv_structured)
                         except (json.JSONDecodeError, TypeError):
                             cv_structured = None
 
-                    result = await compute_match_score(student["cv_text"], job, cv_structured=cv_structured)
+                    result = await compute_match_score(
+                        student["cv_text"], job, cv_structured=cv_structured
+                    )
                     if result:
-                        await asyncio.to_thread(upsert_match_result, uid, iid, result)
+                        await asyncio.to_thread(
+                            upsert_match_result, uid, iid, result
+                        )
                         return 1
                 except Exception as e:
                     logger.error(f"AI Skip for {student_match.get('user_id')}: {e}")
@@ -159,7 +187,8 @@ async def upload_and_analyze(
 
     temp_path = None
     try:
-        if not file.filename.lower().endswith(".pdf"):
+        filename = file.filename or ""
+        if not filename.lower().endswith(".pdf"):
             raise HTTPException(status_code=400, detail="Only PDFs are supported.")
 
         content = await file.read()
@@ -170,14 +199,26 @@ async def upload_and_analyze(
                 detail=f"File too large. Maximum size is {MAX_CV_FILE_SIZE // (1024*1024)}MB.",
             )
 
-        if len(content) < 100:
-            raise HTTPException(status_code=400, detail="File appears to be empty or corrupted.")
+        if len(content) < MIN_CV_FILE_SIZE:
+            raise HTTPException(
+                status_code=400, detail="File appears to be empty or corrupted."
+            )
 
-        storage_filename = f"{uuid.uuid4()}.pdf"
+        # Magic number check for PDF: first 4 bytes must be %PDF
+        if not content.startswith(b"%PDF"):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid file format. The file is not a valid PDF document.",
+            )
+
+        # Scoped storage path: {user_id}/{uuid}.pdf ensures isolation per user
+        storage_filename = f"{user_id}/{uuid.uuid4()}.pdf"
+
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
             tmp.write(content)
             temp_path = tmp.name
 
+        # Upload to Supabase Storage inside user-scoped path
         await asyncio.to_thread(
             supabase.storage.from_("cvs").upload,
             storage_filename,
@@ -185,29 +226,38 @@ async def upload_and_analyze(
             {"content-type": "application/pdf"},
         )
         url_resp = await asyncio.to_thread(
-            supabase.storage.from_("cvs").create_signed_url, storage_filename, 604800
+            supabase.storage.from_("cvs").create_signed_url,
+            storage_filename,
+            SIGNED_URL_EXPIRY_SECONDS,
         )
         cv_url = url_resp.get("signedURL") or url_resp.get("signedUrl")
 
-        # Run PDF text extraction off the event loop (blocking I/O)
-        cv_text = await asyncio.to_thread(extract_text, temp_path)
+        # Run PDF text extraction off the event loop
+        cv_text = ""
+        try:
+            cv_text = await asyncio.to_thread(extract_text, temp_path)
+        except Exception as extract_err:
+            logger.warning(
+                f"[extract_text] Standard extraction failed for user {user_id} ({extract_err}), attempting OCR fallback"
+            )
 
         if not cv_text or len(cv_text.strip()) < MIN_CV_TEXT_LENGTH:
-            # Scanned / image-only PDF: fall back to OCR.
+            # Scanned / image-only or problematic PDF: fall back to OCR
             cv_text = await ocr_pdf(content)
 
         if not cv_text or len(cv_text.strip()) < MIN_CV_TEXT_LENGTH:
-            logger.warning(f"CV text extraction yielded insufficient text for user {user_id} ({len(cv_text.strip())} chars)")
+            logger.warning(
+                f"CV text extraction yielded insufficient text for user {user_id} ({len(cv_text.strip())} chars)"
+            )
             raise HTTPException(
                 status_code=400,
                 detail="Could not read enough text from your PDF, even with OCR. "
-                "Please upload a clearer scan or a PDF exported from Word/Google Docs.",
+                "If your PDF is password-protected or an unreadable scan, please upload a clearer PDF exported from Word or Google Docs.",
             )
 
         cv_text = clean_cv_text(cv_text)
 
-        # Save the raw CV now; parsing, profile auto-fill and matching take a few
-        # minutes and run in the background (see services/cv_analysis_service).
+        # Save the raw CV now; parsing, profile auto-fill and matching run in the background
         await asyncio.to_thread(save_cv_text_and_url, user_id, cv_url, cv_text)
         await asyncio.to_thread(
             lambda: supabase.table("profiles")
@@ -215,7 +265,7 @@ async def upload_and_analyze(
             .eq("id", user_id)
             .execute()
         )
-        # Durable queue (survives restarts) instead of an in-process task.
+        # Durable queue survives process restarts
         await asyncio.to_thread(enqueue, user_id, CV_ANALYSIS, job_id or None)
 
         return {
@@ -228,10 +278,15 @@ async def upload_and_analyze(
         raise
     except Exception as e:
         logger.error(f"[/upload-and-analyze] Fatal: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="CV upload failed. Please try again.")
+        raise HTTPException(
+            status_code=500, detail="CV upload failed. Please try again."
+        )
     finally:
         if temp_path and os.path.exists(temp_path):
-            os.remove(temp_path)
+            try:
+                os.remove(temp_path)
+            except Exception:
+                pass
 
 
 @router.post("/analyze-new-internship")
@@ -239,20 +294,46 @@ async def upload_and_analyze(
 async def analyze_new_internship(
     payload: AnalyzeNewInternshipRequest,
     background_tasks: BackgroundTasks,
-    current_user=Depends(get_current_user),
+    current_user=Depends(rate_limit("analyze_new_internship", 10, 3600)),
 ):
     try:
         iid = payload.internship_id
-        res_job = await asyncio.to_thread(supabase.table("internships").select("*").eq("id", iid).execute)
+        res_job = await asyncio.to_thread(
+            lambda: supabase.table("internships").select("*").eq("id", iid).execute()
+        )
         if not res_job.data:
             raise HTTPException(status_code=404, detail="Internship not found.")
 
         job = res_job.data[0]
-        res_students = (
-            (await asyncio.to_thread(supabase.table("profiles")
+
+        # Authorization: caller must be the poster/employer of this internship, or an admin
+        is_owner = (
+            job.get("poster_id") == current_user.id
+            or job.get("employer_id") == current_user.id
+        )
+        if not is_owner:
+            # Check if admin
+            prof = await asyncio.to_thread(
+                lambda: supabase.table("profiles")
+                .select("role, is_admin")
+                .eq("id", current_user.id)
+                .maybe_single()
+                .execute()
+            )
+            pdata = prof.data if prof else {}
+            is_admin = pdata.get("is_admin") is True or pdata.get("role") == "admin"
+            if not is_admin:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Forbidden: Only the posting employer or admins can trigger matching for this internship.",
+                )
+
+        res_students = await asyncio.to_thread(
+            lambda: supabase.table("profiles")
             .select("id, cv_text, cv_structured")
             .eq("role", "student")
-            .neq("cv_text", None).execute))
+            .not_.is_("cv_text", "null")
+            .execute()
         )
         students = res_students.data or []
 
@@ -283,22 +364,32 @@ async def analyze_existing(
     try:
         p = await asyncio.to_thread(get_user_profile, payload.user_id)
         if not p.get("cv_text"):
-            raise HTTPException(status_code=400, detail="No CV found. Please upload a CV first.")
+            raise HTTPException(
+                status_code=400, detail="No CV found. Please upload a CV first."
+            )
 
-        # Load stored structured data if available
         cv_structured = None
         raw_structured = p.get("cv_structured")
         if raw_structured:
             import json as _json
+
             try:
-                cv_structured = _json.loads(raw_structured) if isinstance(raw_structured, str) else raw_structured
+                cv_structured = (
+                    _json.loads(raw_structured)
+                    if isinstance(raw_structured, str)
+                    else raw_structured
+                )
             except (ValueError, TypeError):
                 pass
 
         jobs = await asyncio.to_thread(fetch_internships)
         if jobs:
             background_tasks.add_task(
-                process_matches_in_background, payload.user_id, p["cv_text"], jobs, cv_structured
+                process_matches_in_background,
+                payload.user_id,
+                p["cv_text"],
+                jobs,
+                cv_structured,
             )
 
         return {"message": "Re-analysis started in the background."}
@@ -309,14 +400,17 @@ async def analyze_existing(
         raise HTTPException(status_code=500, detail="Re-analysis failed.")
 
 
-@router.post("/refresh-cv-url")
-@router.post("/api/refresh-cv-url")
 def _can_view_student_cv(viewer_id: str, student_id: str) -> bool:
-    """Self, admins, or an employer the student applied to / logs hours with.
-    Roles come from the database; user_metadata is user-editable."""
+    """Self, admins, or an employer the student applied to / logs hours with."""
     if viewer_id == student_id:
         return True
-    viewer = supabase.table("profiles").select("role, is_admin").eq("id", viewer_id).maybe_single().execute()
+    viewer = (
+        supabase.table("profiles")
+        .select("role, is_admin")
+        .eq("id", viewer_id)
+        .maybe_single()
+        .execute()
+    )
     v = viewer.data if viewer else None
     if not v:
         return False
@@ -324,16 +418,20 @@ def _can_view_student_cv(viewer_id: str, student_id: str) -> bool:
         return True
     if v.get("role") != "employer":
         return False
+
+    # Check if student applied to any internship posted by this employer
     apps = (
         supabase.table("applied_internships")
-        .select("id, internships!inner(employer_id, poster_id)")
+        .select("id, internships!inner(poster_id)")
         .eq("user_id", student_id)
-        .or_(f"employer_id.eq.{viewer_id},poster_id.eq.{viewer_id}", reference_table="internships")
+        .eq("internships.poster_id", viewer_id)
         .limit(1)
         .execute()
     )
     if apps.data:
         return True
+
+    # Check logbook entries
     logs = (
         supabase.table("logbook_entries")
         .select("id")
@@ -345,40 +443,54 @@ def _can_view_student_cv(viewer_id: str, student_id: str) -> bool:
     return bool(logs.data)
 
 
-def refresh_url(payload: AnalyzeRequest, current_user=Depends(get_current_user)):
-    if not _can_view_student_cv(current_user.id, payload.user_id):
+@router.post("/refresh-cv-url")
+@router.post("/api/refresh-cv-url")
+async def refresh_url(payload: AnalyzeRequest, current_user=Depends(get_current_user)):
+    """Refresh signed CV URL. Properly authorized for owner, employer, or admin."""
+    if not await asyncio.to_thread(_can_view_student_cv, current_user.id, payload.user_id):
         raise HTTPException(
             status_code=403,
             detail="Forbidden: You do not have permission to view this CV.",
         )
 
     try:
-        p = get_user_profile(payload.user_id)
+        p = await asyncio.to_thread(get_user_profile, payload.user_id)
         url = p.get("cv_url", "")
         if not url:
             raise HTTPException(status_code=404, detail="No CV URL found.")
 
         filename = ""
-        # Improved URL parsing: extract storage path safely
-        from urllib.parse import urlparse, unquote
+        bucket_name = "cvs"
         parsed = urlparse(url)
         path = unquote(parsed.path)
         if "cvs/" in path:
             parts = path.split("cvs/")
             if len(parts) > 1:
-                filename = parts[1].split("?")[0]
+                filename = parts[1].split("?")[0].strip("/")
+                bucket_name = "cvs"
+        elif "cv_uploads/" in path:
+            parts = path.split("cv_uploads/")
+            if len(parts) > 1:
+                filename = parts[1].split("?")[0].strip("/")
+                bucket_name = "cv_uploads"
 
-        if not filename:
-            raise ValueError(f"Could not parse filename from URL: {url}")
+        # Prevent directory traversal
+        if not filename or ".." in filename:
+            raise ValueError(f"Could not parse valid filename from URL: {url}")
 
-        # Refresh for another 7 days
-        signed = supabase.storage.from_("cvs").create_signed_url(filename, 604800)
+        signed = await asyncio.to_thread(
+            supabase.storage.from_(bucket_name).create_signed_url,
+            filename,
+            SIGNED_URL_EXPIRY_SECONDS,
+        )
         new_url = signed.get("signedURL") or signed.get("signedUrl")
 
         if not new_url:
             raise ValueError("Supabase failed to generate a new signed URL")
 
-        save_cv_text_and_url(payload.user_id, new_url, p.get("cv_text", ""))
+        await asyncio.to_thread(
+            save_cv_text_and_url, payload.user_id, new_url, p.get("cv_text", "")
+        )
         return {"cv_url": new_url}
     except HTTPException:
         raise
@@ -389,12 +501,32 @@ def refresh_url(payload: AnalyzeRequest, current_user=Depends(get_current_user))
 
 @router.get("/my-matches")
 @router.get("/api/my-matches")
-def get_my_matches(user_id: str, current_user=Depends(get_current_user)):
-    if user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Forbidden: User ID mismatch.")
+async def get_my_matches(
+    user_id: str | None = None, current_user=Depends(get_current_user)
+):
+    target_id = user_id or current_user.id
+    if target_id != current_user.id:
+        # Check if admin
+        prof = await asyncio.to_thread(
+            lambda: supabase.table("profiles")
+            .select("role, is_admin")
+            .eq("id", current_user.id)
+            .maybe_single()
+            .execute()
+        )
+        pdata = prof.data if prof else {}
+        if not (pdata.get("is_admin") is True or pdata.get("role") == "admin"):
+            raise HTTPException(
+                status_code=403, detail="Forbidden: User ID mismatch."
+            )
+
     try:
-        res = (
-            supabase.table("match_results").select("*").eq("user_id", user_id).execute()
+        res = await asyncio.to_thread(
+            lambda: supabase.table("match_results")
+            .select("*")
+            .eq("user_id", target_id)
+            .order("match_score", desc=True)
+            .execute()
         )
         return {"matches": res.data or []}
     except Exception as e:
@@ -404,77 +536,82 @@ def get_my_matches(user_id: str, current_user=Depends(get_current_user)):
 
 @router.get("/recommendations")
 @router.get("/api/recommendations")
-def get_recommendations(
+async def get_recommendations(
     current_user=Depends(get_current_user),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=50),
     min_score: int = Query(25, ge=0, le=100),
-    category: str = Query(None),
+    category: str | None = Query(None),
 ):
     """
-    Returns precomputed internship recommendations for the current user,
-    ranked by match score. Excludes internships already applied to.
+    Returns precomputed active internship recommendations for the current user,
+    ranked by match score. Excludes applied, closed, or expired internships.
     """
     try:
         user_id = current_user.id
         offset = (page - 1) * page_size
 
-        # Get internships the user already applied to
-        applied_res = (
-            supabase.table("applied_internships")
+        applied_res = await asyncio.to_thread(
+            lambda: supabase.table("applied_internships")
             .select("internship_id")
             .eq("user_id", user_id)
             .execute()
         )
         applied_ids = {a["internship_id"] for a in (applied_res.data or [])}
 
-        # Get match results with internship details, ordered by score
-        query = (
-            supabase.table("match_results")
-            .select("internship_id, match_score, matching_skills, missing_skills, reasoning, updated_at, internships(id, role, company, category, description, created_at)")
+        query_res = await asyncio.to_thread(
+            lambda: supabase.table("match_results")
+            .select(
+                "internship_id, match_score, matching_skills, missing_skills, reasoning, updated_at, internships(id, role, company, category, description, status, created_at)"
+            )
             .eq("user_id", user_id)
             .gte("match_score", min_score)
             .order("match_score", desc=True)
+            .execute()
         )
 
-        res = query.execute()
-        rows = res.data or []
+        rows = query_res.data or []
 
-        # Post-filter: remove applied internships and optionally filter by category
         recommendations = []
+        company_counts: dict[str, int] = {}
+
         for row in rows:
             if row["internship_id"] in applied_ids:
                 continue
             internship = row.get("internships")
             if not internship:
                 continue
-            if category and internship.get("category", "").lower() != category.lower():
+
+            # Exclude non-active internships
+            if (internship.get("status") or "active") != "active":
                 continue
 
-            # Enforce diversity: max 3 per company
+            if category and (internship.get("category") or "").lower() != category.lower():
+                continue
+
             company = internship.get("company", "")
-            company_count = sum(
-                1 for r in recommendations
-                if r.get("company", "").lower() == company.lower()
-            )
-            if company_count >= 3:
+            company_key = company.lower().strip()
+            if company_counts.get(company_key, 0) >= 3:
                 continue
 
-            recommendations.append({
-                "internship_id": row["internship_id"],
-                "role": internship.get("role"),
-                "company": company,
-                "category": internship.get("category"),
-                "description": internship.get("description", "")[:300],
-                "match_score": row["match_score"],
-                "matching_skills": row.get("matching_skills", []),
-                "missing_skills": row.get("missing_skills", []),
-                "reasoning": row.get("reasoning", ""),
-                "matched_at": row.get("updated_at"),
-                "posted_at": internship.get("created_at"),
-            })
+            company_counts[company_key] = company_counts.get(company_key, 0) + 1
 
-        # Paginate the filtered results
+            recommendations.append(
+                {
+                    "internship_id": row["internship_id"],
+                    "role": internship.get("role"),
+                    "company": company,
+                    "category": internship.get("category"),
+                    "description": (internship.get("description") or "")[:300],
+                    "match_score": row["match_score"],
+                    "matching_skills": row.get("matching_skills", []),
+                    "missing_skills": row.get("missing_skills", []),
+                    "reasoning": row.get("reasoning", ""),
+                    "matched_at": row.get("updated_at"),
+                    "posted_at": internship.get("created_at"),
+                }
+            )
+
         total = len(recommendations)
         paginated = recommendations[offset : offset + page_size]
 
@@ -489,17 +626,28 @@ def get_recommendations(
         }
     except Exception as e:
         logger.error(f"Error fetching recommendations: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to fetch recommendations.")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch recommendations."
+        )
 
 
 @router.get("/debug/match-results/{user_id}")
-def debug_results(user_id: str, current_user=Depends(verify_admin)):
+@router.get("/api/debug/match-results/{user_id}")
+async def debug_results(user_id: str, current_user=Depends(verify_admin)):
     """Admin-only debug endpoint for inspecting match results."""
     try:
-        res = (
-            supabase.table("match_results").select("*").eq("user_id", user_id).execute()
+        uuid.UUID(user_id)
+    except (ValueError, AttributeError):
+        raise HTTPException(status_code=400, detail="Invalid user ID format.")
+
+    try:
+        res = await asyncio.to_thread(
+            lambda: supabase.table("match_results")
+            .select("*")
+            .eq("user_id", user_id)
+            .execute()
         )
-        return {"user_id": user_id, "count": len(res.data), "data": res.data}
+        return {"user_id": user_id, "count": len(res.data or []), "data": res.data or []}
     except Exception as e:
         logger.error(f"Debug match-results error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch debug data.")

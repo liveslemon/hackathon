@@ -24,9 +24,15 @@ export default function CareerMetrics() {
         setMetrics(data);
       } catch (e) {
         console.error("Failed to load career metrics", e);
+        setMetrics({
+          career_score: 0,
+          ats_score: 0,
+          weekly_progress: 0,
+          streak_days: 0,
+        });
       }
     }
-    loadMetrics();
+    void loadMetrics();
   }, []);
 
   if (!metrics) {

@@ -6,23 +6,38 @@ import { Typography } from "@/components/ui";
 
 function CVViewerContent() {
   const searchParams = useSearchParams();
-  const url = searchParams ? searchParams.get("url") : null;
+  const rawUrl = searchParams ? searchParams.get("url") : null;
   const name = searchParams
     ? searchParams.get("name") || "Student CV"
     : "Student CV";
 
+  const urlValidation = (() => {
+    if (!rawUrl) return { valid: false, error: "Invalid CV Link Provided" };
+    try {
+      const parsed = new URL(rawUrl);
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+        return { valid: false, error: "Invalid CV URL protocol." };
+      }
+      return { valid: true, error: null };
+    } catch {
+      return { valid: false, error: "Malformed CV link provided." };
+    }
+  })();
+
   const [isLoading, setIsLoading] = useState(true);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = name;
 
-    if (!url) return;
+    if (!urlValidation.valid || !rawUrl) {
+      return;
+    }
 
     // Fetch PDF as blob to bypass Content-Disposition: attachment headers
     let objectUrl: string | null = null;
-    fetch(url)
+    fetch(rawUrl)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch CV");
         return res.blob();
@@ -35,30 +50,30 @@ function CVViewerContent() {
         setIsLoading(false);
       })
       .catch(() => {
-        setError("Failed to load CV. The link may have expired.");
+        setFetchError("Failed to load CV. The link may have expired.");
         setIsLoading(false);
       });
 
     return () => {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [name, url]);
+  }, [name, rawUrl, urlValidation.valid]);
 
-  if (!url) {
+  if (!urlValidation.valid) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50">
-        <Typography variant="h6" color="muted">
-          Invalid CV Link Provided
+        <Typography variant="h6" className="text-red-600 font-bold">
+          {urlValidation.error}
         </Typography>
       </div>
     );
   }
 
-  if (error) {
+  if (fetchError) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50">
         <Typography variant="h6" className="text-red-600 font-bold">
-          {error}
+          {fetchError}
         </Typography>
       </div>
     );
