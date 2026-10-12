@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Typography,
   Stack,
@@ -15,15 +16,12 @@ import {
   FiCheckCircle,
   FiAlertCircle,
 } from "react-icons/fi";
-import { supabase } from "@/lib/supabaseClient";
+import { postInternshipSchema } from "@/lib/validations/employer";
 
 const categories = [
-  { value: "Technology", label: "Technology" },
-  { value: "Finance", label: "Finance" },
-  { value: "Consulting", label: "Consulting" },
-  { value: "Healthcare", label: "Healthcare" },
-  { value: "Design", label: "Design" },
-  { value: "Marketing", label: "Marketing" },
+  { value: "Remote", label: "Remote" },
+  { value: "Hybrid", label: "Hybrid" },
+  { value: "On-site", label: "On-site" },
 ];
 
 const interestsOptions = [
@@ -44,18 +42,23 @@ const interestsOptions = [
 ];
 
 export default function PostInternshipView() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
-    company: "",
     role: "",
     field: "",
-    category: "",
+    category: "Hybrid",
     description: "",
     requirements: "",
-    linkedin_url: "",
+    location: "",
+    duration: "",
+    stipend: "",
+    slots: "1",
+    link: "",
   });
   const [interests, setInterests] = useState<string[]>([]);
   const [deadline, setDeadline] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<{
     type: "success" | "error";
     message: string;
@@ -67,38 +70,78 @@ export default function PostInternshipView() {
     );
   };
 
-  const handlePost = async () => {
+  const handlePost = async (publishStatus: "active" | "draft" = "active") => {
     setLoading(true);
     setStatus(null);
+    setErrors({});
+
+    const payload = {
+      ...formData,
+      tags: interests.join(", "),
+      deadline: deadline || null,
+      status: publishStatus,
+    };
+
+    if (publishStatus === "active") {
+      const clientValidation = postInternshipSchema.safeParse(payload);
+      if (!clientValidation.success) {
+        const fieldErrors: Record<string, string> = {};
+        for (const [key, msgs] of Object.entries(
+          clientValidation.error.flatten().fieldErrors,
+        )) {
+          fieldErrors[key] = (msgs as string[])[0];
+        }
+        setErrors(fieldErrors);
+        setLoading(false);
+        return;
+      }
+    }
 
     try {
-      const { error } = await supabase.from("internships").insert([
-        {
-          ...formData,
-          interests,
-          deadline,
-          created_at: new Error().stack, // Just as a placeholder for current time if needed
-        },
-      ]);
+      const res = await fetch("/api/internships/post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-      if (error) throw error;
+      const result = await res.json();
+      if (!res.ok) {
+        if (result.details) {
+          const fieldErrors: Record<string, string> = {};
+          for (const [key, msgs] of Object.entries(result.details)) {
+            fieldErrors[key] = (msgs as string[])[0];
+          }
+          setErrors(fieldErrors);
+          throw new Error("Validation failed. Please check form fields.");
+        }
+        throw new Error(result.error || "Failed to post internship");
+      }
 
       setStatus({
         type: "success",
-        message: "Internship posted successfully!",
+        message:
+          publishStatus === "draft"
+            ? "Internship saved as draft!"
+            : "Internship posted successfully!",
       });
+
       // Clear form
       setFormData({
-        company: "",
         role: "",
         field: "",
-        category: "",
+        category: "Hybrid",
         description: "",
         requirements: "",
-        linkedin_url: "",
+        location: "",
+        duration: "",
+        stipend: "",
+        slots: "1",
+        link: "",
       });
       setInterests([]);
       setDeadline("");
+
+      router.refresh();
     } catch (err: unknown) {
       setStatus({
         type: "error",
@@ -123,13 +166,13 @@ export default function PostInternshipView() {
                 Post New Internship
               </Typography>
               <Typography variant="body2" color="muted">
-                Fill in the details to reach top students
+                Reach talented students across Pan-Atlantic University
               </Typography>
             </div>
           </Stack>
         </div>
 
-        <div className="p-10 space-y-10">
+        <div className="p-10 space-y-8">
           {status && (
             <div
               className={`p-4 rounded-2xl flex items-center gap-3 animate-in fade-in zoom-in duration-300 ${
@@ -149,67 +192,117 @@ export default function PostInternshipView() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <Input
-              label="Company Name"
-              placeholder="e.g. Google"
-              value={formData.company}
-              onChange={(e) =>
-                setFormData({ ...formData, company: e.target.value })
-              }
-              required
-            />
-            <Input
-              label="Role Title"
-              placeholder="e.g. Software Engineer Intern"
-              value={formData.role}
-              onChange={(e) =>
-                setFormData({ ...formData, role: e.target.value })
-              }
-              required
-            />
-            <Input
-              label="Field of Study"
-              placeholder="e.g. Computer Science"
-              value={formData.field}
-              onChange={(e) =>
-                setFormData({ ...formData, field: e.target.value })
-              }
-              required
-            />
-            <Select
-              label="Industry Category"
-              options={categories}
-              value={formData.category}
-              onChange={(e) =>
-                setFormData({ ...formData, category: e.target.value })
-              }
-              placeholder="Select category"
-              required
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Input
+                label="Role Title"
+                placeholder="e.g. Software Engineer Intern"
+                value={formData.role}
+                onChange={(e) =>
+                  setFormData({ ...formData, role: e.target.value })
+                }
+                required
+              />
+              {errors.role && (
+                <p className="text-red-500 text-xs mt-1">{errors.role}</p>
+              )}
+            </div>
+
+            <div>
+              <Input
+                label="Field of Study"
+                placeholder="e.g. Computer Science"
+                value={formData.field}
+                onChange={(e) =>
+                  setFormData({ ...formData, field: e.target.value })
+                }
+                required
+              />
+              {errors.field && (
+                <p className="text-red-500 text-xs mt-1">{errors.field}</p>
+              )}
+            </div>
+
+            <div>
+              <Select
+                label="Workplace Category"
+                options={categories}
+                value={formData.category}
+                onChange={(e) =>
+                  setFormData({ ...formData, category: e.target.value })
+                }
+                required
+              />
+              {errors.category && (
+                <p className="text-red-500 text-xs mt-1">{errors.category}</p>
+              )}
+            </div>
+
+            <div>
+              <Input
+                label="Location"
+                placeholder="e.g. Ibeju-Lekki, Lagos / Remote"
+                value={formData.location}
+                onChange={(e) =>
+                  setFormData({ ...formData, location: e.target.value })
+                }
+              />
+            </div>
+
+            <div>
+              <Input
+                label="Duration"
+                placeholder="e.g. 3 months, 6 months"
+                value={formData.duration}
+                onChange={(e) =>
+                  setFormData({ ...formData, duration: e.target.value })
+                }
+              />
+            </div>
+
+            <div>
+              <Input
+                label="Stipend / Compensation"
+                placeholder="e.g. ₦100,000/month or Competitive"
+                value={formData.stipend}
+                onChange={(e) =>
+                  setFormData({ ...formData, stipend: e.target.value })
+                }
+              />
+            </div>
           </div>
 
-          <Textarea
-            label="Job Description"
-            placeholder="Describe the role, responsibilities, and team..."
-            value={formData.description}
-            onChange={(e) =>
-              setFormData({ ...formData, description: e.target.value })
-            }
-            rows={4}
-            required
-          />
+          <div>
+            <Textarea
+              label="Job Description"
+              placeholder="Describe the role, responsibilities, and department..."
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              rows={4}
+              required
+            />
+            {errors.description && (
+              <p className="text-red-500 text-xs mt-1">{errors.description}</p>
+            )}
+          </div>
 
-          <Textarea
-            label="Requirements"
-            placeholder="List key qualifications, skills, and tools (one per line)..."
-            value={formData.requirements}
-            onChange={(e) =>
-              setFormData({ ...formData, requirements: e.target.value })
-            }
-            rows={4}
-            required
-          />
+          <div>
+            <Textarea
+              label="Requirements"
+              placeholder="List qualifications, skills, and tools required..."
+              value={formData.requirements}
+              onChange={(e) =>
+                setFormData({ ...formData, requirements: e.target.value })
+              }
+              rows={4}
+              required
+            />
+            {errors.requirements && (
+              <p className="text-red-500 text-xs mt-1">{errors.requirements}</p>
+            )}
+          </div>
 
           <div className="space-y-4">
             <Typography
@@ -217,16 +310,17 @@ export default function PostInternshipView() {
               weight="bold"
               className="text-slate-700 ml-1"
             >
-              Related Interests
+              Related Interests & Tags
             </Typography>
             <div className="flex flex-wrap gap-2">
               {interestsOptions.map((option) => (
                 <button
+                  type="button"
                   key={option}
                   onClick={() => toggleInterest(option)}
                   className={`px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${
                     interests.includes(option)
-                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-100 ring-2 ring-indigo-600 ring-offset-2"
+                      ? "bg-brand text-white shadow-lg shadow-brand/20 ring-2 ring-brand ring-offset-2"
                       : "bg-slate-50 text-slate-500 hover:bg-slate-100 border border-slate-100"
                   }`}
                 >
@@ -236,41 +330,52 @@ export default function PostInternshipView() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
-            <div className="space-y-2">
-              <Typography
-                variant="body2"
-                weight="bold"
-                className="text-slate-700 ml-1"
-              >
-                Application Deadline
-              </Typography>
-              <input
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+            <div>
+              <Input
+                label="Application Deadline"
                 type="date"
-                className="w-full h-[52px] px-4 rounded-xl border border-slate-100 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-slate-700"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
               />
+              {errors.deadline && (
+                <p className="text-red-500 text-xs mt-1">{errors.deadline}</p>
+              )}
             </div>
-            <Input
-              label="Recruiter LinkedIn URL"
-              placeholder="https://linkedin.com/in/..."
-              value={formData.linkedin_url}
-              onChange={(e) =>
-                setFormData({ ...formData, linkedin_url: e.target.value })
-              }
-            />
+
+            <div>
+              <Input
+                label="Recruiter Link (Optional)"
+                placeholder="https://..."
+                value={formData.link}
+                onChange={(e) =>
+                  setFormData({ ...formData, link: e.target.value })
+                }
+              />
+              {errors.link && (
+                <p className="text-red-500 text-xs mt-1">{errors.link}</p>
+              )}
+            </div>
           </div>
 
-          <Button
-            className="w-full py-4 rounded-2xl text-lg font-bold shadow-xl shadow-indigo-100"
-            size="lg"
-            isLoading={loading}
-            onClick={handlePost}
-            leftIcon={<FiPlus className="w-6 h-6" />}
-          >
-            Post Internship Position
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 pt-4">
+            <Button
+              variant="outline"
+              className="py-4 rounded-2xl text-base font-bold flex-1"
+              isLoading={loading}
+              onClick={() => handlePost("draft")}
+            >
+              Save as Draft
+            </Button>
+            <Button
+              className="py-4 rounded-2xl text-base font-bold shadow-xl shadow-brand/20 flex-1"
+              isLoading={loading}
+              onClick={() => handlePost("active")}
+              leftIcon={<FiPlus className="w-5 h-5" />}
+            >
+              Publish Internship
+            </Button>
+          </div>
         </div>
       </div>
     </div>

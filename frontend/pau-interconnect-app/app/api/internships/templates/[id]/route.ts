@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabase-server";
 
 export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } | Promise<{ id: string }> },
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const supabase = await getSupabaseServer();
   const {
@@ -14,7 +14,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const id = (await params).id;
+  const { id } = await params;
 
   const { data: existing } = await supabase
     .from("internship_templates")
@@ -22,8 +22,12 @@ export async function DELETE(
     .eq("id", id)
     .single();
 
-  if (!existing || existing.employer_id !== user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!existing) {
+    return NextResponse.json({ error: "Template not found" }, { status: 404 });
+  }
+
+  if (existing.employer_id !== user.id) {
+    return NextResponse.json({ error: "Forbidden: Not template owner" }, { status: 403 });
   }
 
   const { error } = await supabase
