@@ -18,6 +18,8 @@ import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/context/AuthContext";
 import { ApplicationProgress } from "@/components/ApplicationProgress";
 
+import { getDaysUntilDeadline } from "@/lib/deadlines";
+
 interface InternshipCardProps {
   internship: {
     id: string;
@@ -41,6 +43,7 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [cardStage, setCardStage] = useState(internship.applicationStage);
   const [isAccepting, setIsAccepting] = useState(false);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
   const { user } = useAuth();
 
   const checkSavedStatus = useCallback(
@@ -107,12 +110,7 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
     }
   };
 
-  const daysUntilDeadline = internship.deadline
-    ? Math.ceil(
-        (new Date(internship.deadline).getTime() - new Date().getTime()) /
-          (1000 * 60 * 60 * 24),
-      )
-    : 0;
+  const daysUntilDeadline = getDaysUntilDeadline(internship.deadline);
 
   const matchPct = internship.matchPercentage ?? 0;
   const matchColor =
@@ -127,14 +125,29 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
     { label: string; icon: LucideIcon; color: string }
   > = {
     accepted: {
-      label: "Approved",
+      label: "Accepted",
       icon: CheckCircle,
       color: "text-emerald-600 bg-emerald-50 border-emerald-100",
     },
-    rejected: {
-      label: "Denied",
-      icon: XCircle,
-      color: "text-red-500 bg-red-50 border-red-100",
+    offered: {
+      label: "Offered",
+      icon: CheckCircle,
+      color: "text-emerald-600 bg-emerald-50 border-emerald-100",
+    },
+    interview: {
+      label: "Interview",
+      icon: Loader2,
+      color: "text-blue-600 bg-blue-50 border-blue-100",
+    },
+    shortlisted: {
+      label: "Shortlisted",
+      icon: CheckCircle,
+      color: "text-purple-600 bg-purple-50 border-purple-100",
+    },
+    reviewed: {
+      label: "Reviewed",
+      icon: Loader2,
+      color: "text-indigo-600 bg-indigo-50 border-indigo-100",
     },
     pending: {
       label: "Pending",
@@ -145,6 +158,16 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
       label: "Applied",
       icon: Loader2,
       color: "text-blue-600 bg-blue-50 border-blue-100",
+    },
+    rejected: {
+      label: "Denied",
+      icon: XCircle,
+      color: "text-red-500 bg-red-50 border-red-100",
+    },
+    withdrawn: {
+      label: "Withdrawn",
+      icon: XCircle,
+      color: "text-slate-500 bg-slate-50 border-slate-200",
     },
   };
 
@@ -181,10 +204,42 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
         throw new Error(data.error || "Failed to accept offer");
       }
       setCardStage("accepted");
+      toast.success("Offer accepted! Your placement is now active.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to accept offer");
     } finally {
       setIsAccepting(false);
+    }
+  };
+
+  const handleWithdraw = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!internship.applicationId || isWithdrawing) return;
+    if (
+      !window.confirm(
+        "Are you sure you want to withdraw this application? This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    setIsWithdrawing(true);
+    try {
+      const res = await fetch(
+        `/api/applications/${internship.applicationId}/withdraw`,
+        { method: "POST" },
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to withdraw application");
+      }
+      setCardStage("withdrawn");
+      toast.success("Application withdrawn successfully");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to withdraw application",
+      );
+    } finally {
+      setIsWithdrawing(false);
     }
   };
 
@@ -263,7 +318,13 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
           </span>
           <span className="inline-flex items-center gap-1">
             <Clock className="w-3 h-3" />
-            {daysUntilDeadline > 0 ? `${daysUntilDeadline}d left` : "Closed"}
+            {daysUntilDeadline === null
+              ? "Open"
+              : daysUntilDeadline > 0
+                ? `${daysUntilDeadline}d left`
+                : daysUntilDeadline === 0
+                  ? "Ends today"
+                  : "Closed"}
           </span>
         </div>
       </div>
@@ -312,6 +373,23 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
             Accept Offer
           </button>
         )}
+
+        {cardStage &&
+          !["accepted", "rejected", "withdrawn"].includes(cardStage) &&
+          internship.applicationId && (
+            <div className="flex items-center justify-end pt-1">
+              <button
+                onClick={handleWithdraw}
+                disabled={isWithdrawing}
+                className="text-[10px] font-medium text-rose-500 hover:text-rose-700 hover:underline flex items-center gap-1 disabled:opacity-50 transition-colors"
+              >
+                {isWithdrawing && (
+                  <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                )}
+                Withdraw
+              </button>
+            </div>
+          )}
       </div>
     </div>
   );

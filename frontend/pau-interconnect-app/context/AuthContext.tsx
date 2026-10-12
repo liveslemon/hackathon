@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
 import type { Profile } from "@/types/domain";
+import { fastSignOut } from "@/lib/fast-signout";
 
 type AuthProfile = (Partial<Profile> & Record<string, unknown>) | null;
 
@@ -11,12 +12,16 @@ interface AuthState {
   user: User | null;
   profile: AuthProfile;
   loading: boolean;
+  refreshProfile: () => Promise<void>;
+  signOut: (redirectTo?: string) => void;
 }
 
 const AuthContext = createContext<AuthState>({
   user: null,
   profile: null,
   loading: true,
+  refreshProfile: async () => {},
+  signOut: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -31,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, 10000);
 
     let isMounted = true;
+    let activeUserId: string | null = null;
 
     const loadProfile = async (userId: string) => {
       try {
@@ -57,12 +63,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             profileError.message || "Unknown profile fetch error",
           );
         }
-        if (isMounted) setProfile(profileData);
+        // Only commit profile if this user is still the active authenticated user
+        if (isMounted && activeUserId === userId) {
+          setProfile(profileData);
+        }
       } catch {
         // Swallow common refresh errors
       } finally {
         clearTimeout(safetyTimeout);
-        if (isMounted) setLoading(false);
+        if (isMounted && activeUserId === userId) {
+          setLoading(false);
+        }
       }
     };
 
@@ -73,9 +84,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // the profile query after the callback returns, as Supabase recommends.
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       const currentUser = session?.user ?? null;
       if (!currentUser) {
+        activeUserId = null;
         if (isMounted) {
           setUser(null);
           setProfile(null);
@@ -84,7 +96,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(safetyTimeout);
         return;
       }
+
+      activeUserId = currentUser.id;
       setUser((prev) => (prev?.id === currentUser.id ? prev : currentUser));
+
+      // Defer profile fetch to next tick so auth lock is released
       setTimeout(() => {
         void loadProfile(currentUser.id);
       }, 0);
@@ -92,13 +108,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       isMounted = false;
+      activeUserId = null;
       clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
   }, []);
 
+  const refreshProfile = async () => {
+    if (!user) return;
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (data) setProfile(data as AuthProfile);
+    } catch {
+      // Ignore transient failures
+    }
+  };
+
+  const signOut = (redirectTo = "/") => {
+    setUser(null);
+    setProfile(null);
+    setLoading(false);
+    fastSignOut(redirectTo);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading }}>
+    <AuthContext.Provider value={{ user, profile, loading, refreshProfile, signOut }}>
       {children}
     </AuthContext.Provider>
   );

@@ -10,6 +10,7 @@ export default function CareerMetrics() {
     weekly_progress?: number;
     streak_days?: number;
   } | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadMetrics() {
@@ -24,14 +25,30 @@ export default function CareerMetrics() {
         setMetrics(data);
       } catch (e) {
         console.error("Failed to load career metrics", e);
+        // Fall back to zeroes so user sees metrics layout rather than infinite pulse
+        setMetrics({
+          career_score: 0,
+          ats_score: 0,
+          weekly_progress: 0,
+          streak_days: 0,
+        });
+      } finally {
+        setLoading(false);
       }
     }
-    loadMetrics();
+    void loadMetrics();
   }, []);
 
-  if (!metrics) {
+  if (loading) {
     return <div className="h-28 bg-white rounded-3xl animate-pulse mb-8" />;
   }
+
+  const activeMetrics = metrics || {
+    career_score: 0,
+    ats_score: 0,
+    weekly_progress: 0,
+    streak_days: 0,
+  };
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -48,7 +65,7 @@ export default function CareerMetrics() {
             Career Score
           </Typography>
           <Typography variant="h4" weight="bold" className="text-slate-800">
-            {metrics.career_score}
+            {activeMetrics.career_score ?? 0}
           </Typography>
         </div>
       </div>
@@ -66,7 +83,7 @@ export default function CareerMetrics() {
             ATS Readiness
           </Typography>
           <Typography variant="h4" weight="bold" className="text-slate-800">
-            {metrics.ats_score}%
+            {activeMetrics.ats_score ?? 0}%
           </Typography>
         </div>
       </div>
@@ -87,11 +104,11 @@ export default function CareerMetrics() {
             <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden w-16">
               <div
                 className="h-full bg-blue-500 rounded-full"
-                style={{ width: `${metrics.weekly_progress}%` }}
+                style={{ width: `${activeMetrics.weekly_progress ?? 0}%` }}
               />
             </div>
             <span className="text-sm font-bold text-slate-700">
-              {metrics.weekly_progress}%
+              {activeMetrics.weekly_progress ?? 0}%
             </span>
           </div>
         </div>
@@ -110,7 +127,7 @@ export default function CareerMetrics() {
             Activity Streak
           </Typography>
           <Typography variant="h4" weight="bold" className="text-slate-800">
-            {metrics.streak_days}{" "}
+            {activeMetrics.streak_days ?? 0}{" "}
             <span className="text-sm text-slate-400 font-medium">days</span>
           </Typography>
         </div>

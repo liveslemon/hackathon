@@ -8,6 +8,11 @@ const EnvSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1).optional(),
   NEXT_PUBLIC_AUTH_SIGNUP_REDIRECT_URL: z.string().url().optional(),
+  NEXT_PUBLIC_APP_URL: z.string().url().optional(),
+  BREVO_API_KEY: z.string().min(1).optional(),
+  RESEND_API_KEY: z.string().min(1).optional(),
+  EMAIL_FROM_ADDRESS: z.string().email().optional(),
+  EMAIL_FROM_NAME: z.string().optional(),
 });
 
 const parsed = EnvSchema.safeParse({
@@ -17,6 +22,11 @@ const parsed = EnvSchema.safeParse({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   NEXT_PUBLIC_AUTH_SIGNUP_REDIRECT_URL:
     process.env.NEXT_PUBLIC_AUTH_SIGNUP_REDIRECT_URL,
+  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+  BREVO_API_KEY: process.env.BREVO_API_KEY,
+  RESEND_API_KEY: process.env.RESEND_API_KEY,
+  EMAIL_FROM_ADDRESS: process.env.EMAIL_FROM_ADDRESS,
+  EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME,
 });
 
 export type AppEnv = z.infer<typeof EnvSchema>;
@@ -30,6 +40,11 @@ export const env: AppEnv = parsed.success
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       NEXT_PUBLIC_AUTH_SIGNUP_REDIRECT_URL:
         process.env.NEXT_PUBLIC_AUTH_SIGNUP_REDIRECT_URL,
+      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+      BREVO_API_KEY: process.env.BREVO_API_KEY,
+      RESEND_API_KEY: process.env.RESEND_API_KEY,
+      EMAIL_FROM_ADDRESS: process.env.EMAIL_FROM_ADDRESS,
+      EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME,
     };
 
 export function getSignupRedirectUrl(): string | undefined {
@@ -41,7 +56,7 @@ export function getSignupRedirectUrl(): string | undefined {
  * otherwise Vercel's own production domain (set automatically on Vercel).
  */
 export function getAppUrl(): string {
-  const explicit = process.env.NEXT_PUBLIC_APP_URL;
+  const explicit = env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_APP_URL;
   if (explicit) return explicit.replace(/\/+$/, "");
   const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL;
   if (vercel) return `https://${vercel}`;
@@ -52,7 +67,8 @@ export function getAppUrl(): string {
 
 export function getBackendUrl(): string {
   // Strip trailing slashes so `${url}${path}` never yields "//path".
-  if (env.NEXT_PUBLIC_BACKEND_URL) return env.NEXT_PUBLIC_BACKEND_URL.replace(/\/+$/, "");
+  const rawUrl = env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+  if (rawUrl) return rawUrl.replace(/\/+$/, "");
   return env.NODE_ENV === "development"
     ? "http://localhost:8000"
     : "https://pau-interconnect-backend.onrender.com";
@@ -61,9 +77,11 @@ export function getBackendUrl(): string {
 export function validateCriticalEnv(): { valid: boolean; missing: string[] } {
   const missing: string[] = [];
 
-  if (!env.NEXT_PUBLIC_SUPABASE_URL) missing.push("NEXT_PUBLIC_SUPABASE_URL");
-  if (!env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-    missing.push("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl) missing.push("NEXT_PUBLIC_SUPABASE_URL");
+  if (!anonKey) missing.push("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
   return {
     valid: missing.length === 0,

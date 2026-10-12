@@ -1,15 +1,16 @@
 "use client";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useId } from "react";
 import { cx } from "@/utils/cx";
 import { Typography } from "./Typography";
 
-interface ModalProps {
+export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   footer?: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
+  ariaLabel?: string;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -19,22 +20,80 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   footer,
   size = "md",
+  ariaLabel,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
+  const titleId = useId();
 
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+    if (!isOpen) return;
+
+    // Store active element to restore focus when closing
+    previouslyFocusedElementRef.current = document.activeElement as HTMLElement | null;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      // Focus Trap
+      if (e.key === "Tab" && modalRef.current) {
+        const focusableSelectors =
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+        const focusables = Array.from(
+          modalRef.current.querySelectorAll<HTMLElement>(focusableSelectors),
+        ).filter((el) => el.offsetParent !== null);
+
+        if (focusables.length === 0) {
+          e.preventDefault();
+          return;
+        }
+
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
     };
 
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-      window.addEventListener("keydown", handleEscape);
-    }
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    // Initial focus into modal
+    const timer = setTimeout(() => {
+      if (modalRef.current) {
+        const focusableSelectors =
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+        const firstFocusable = modalRef.current.querySelector<HTMLElement>(focusableSelectors);
+        if (firstFocusable) {
+          firstFocusable.focus();
+        } else {
+          modalRef.current.focus();
+        }
+      }
+    }, 50);
 
     return () => {
+      clearTimeout(timer);
       document.body.style.overflow = "unset";
-      window.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("keydown", handleKeyDown);
+      // Restore previous focus
+      if (previouslyFocusedElementRef.current && typeof previouslyFocusedElementRef.current.focus === "function") {
+        previouslyFocusedElementRef.current.focus();
+      }
     };
   }, [isOpen, onClose]);
 
@@ -48,24 +107,32 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={title ? titleId : undefined}
+      aria-label={!title ? (ariaLabel || "Dialog") : undefined}
+    >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300"
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Modal Content */}
       <div
         className={cx(
-          "relative bg-white w-full rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh] md:max-h-[85vh]",
+          "relative bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh] md:max-h-[85vh] focus:outline-none",
           sizes[size],
         )}
         ref={modalRef}
+        tabIndex={-1}
       >
         {/* Header */}
-        <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <div>
+        <div className="px-6 py-5 md:px-8 md:py-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/60 dark:bg-slate-800/40">
+          <div id={titleId}>
             {title && (
               <Typography variant="h4" weight="bold">
                 {title}
@@ -73,14 +140,17 @@ export const Modal: React.FC<ModalProps> = ({
             )}
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors"
+            aria-label="Close modal"
+            className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand cursor-pointer"
           >
             <svg
               className="w-5 h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -93,11 +163,11 @@ export const Modal: React.FC<ModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="p-8 overflow-y-auto">{children}</div>
+        <div className="p-6 md:p-8 overflow-y-auto">{children}</div>
 
         {/* Footer */}
         {footer && (
-          <div className="px-8 py-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
+          <div className="px-6 py-4 md:px-8 md:py-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 flex justify-end gap-3">
             {footer}
           </div>
         )}

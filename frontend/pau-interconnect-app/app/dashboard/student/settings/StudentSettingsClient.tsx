@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { readPrivacy } from "@/lib/privacy";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -73,13 +73,26 @@ export default function StudentSettingsClient({
     confirmPassword: "",
   });
 
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Warn about unsaved changes before leaving
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
   const handleSaveSettings = async () => {
     setIsSaving(true);
     setStatus(null);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData?.session?.user?.id;
-      if (!userId) throw new Error("Not logged in");
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      if (!userId) throw new Error("You must be logged in to save settings.");
 
       const { error } = await supabase
         .from("profiles")
@@ -89,7 +102,8 @@ export default function StudentSettingsClient({
         .eq("id", userId);
 
       if (error) throw error;
-      setStatus({ type: "success", message: "Settings saved!" });
+      setHasUnsavedChanges(false);
+      setStatus({ type: "success", message: "Settings saved successfully!" });
     } catch (err: unknown) {
       setStatus({
         type: "error",
@@ -162,23 +176,25 @@ export default function StudentSettingsClient({
   };
 
   const toggleNotification = (key: keyof NotificationPrefs) => {
-    setSettings({
-      ...settings,
+    setSettings((prev) => ({
+      ...prev,
       notifications: {
-        ...settings.notifications,
-        [key]: !settings.notifications[key],
+        ...prev.notifications,
+        [key]: !prev.notifications[key],
       },
-    });
+    }));
+    setHasUnsavedChanges(true);
   };
 
   const updatePrivacy = (
     key: keyof PrivacyPrefs,
     value: PrivacyPrefs[keyof PrivacyPrefs],
   ) => {
-    setSettings({
-      ...settings,
-      privacy: { ...settings.privacy, [key]: value },
-    });
+    setSettings((prev) => ({
+      ...prev,
+      privacy: { ...prev.privacy, [key]: value },
+    }));
+    setHasUnsavedChanges(true);
   };
 
   return (

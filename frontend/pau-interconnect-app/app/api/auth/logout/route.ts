@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
+import {
+  DEV_AUTH_MODE_COOKIE_NAME,
+  DEV_ROLE_COOKIE_NAME,
+} from "@/lib/role-guard";
+
 export const dynamic = "force-dynamic";
 
 export async function POST() {
@@ -12,6 +17,9 @@ export async function POST() {
       cookieStore.delete(cookie.name);
     }
   }
+
+  cookieStore.delete(DEV_ROLE_COOKIE_NAME);
+  cookieStore.delete(DEV_AUTH_MODE_COOKIE_NAME);
 
   return NextResponse.json({ status: "ok" });
 }

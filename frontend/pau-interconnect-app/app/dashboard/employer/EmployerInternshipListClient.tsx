@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { toast } from "sonner";
 import {
   Stack,
   Typography,
@@ -30,6 +31,7 @@ interface EmployerInternship {
   category: string;
   deadline?: string | null;
   status?: string;
+  created_at?: string;
   applied_internships?: Array<{ count?: number | null }>;
 }
 
@@ -98,9 +100,10 @@ export default function EmployerInternshipListClient({
         return bCount - aCount;
       case "newest":
       default:
-        // Assume newest based on created_at or fallback to id or something.
-        // Wait, created_at is not in EmployerInternship type in this file. Let's assume order is retained.
-        return 0; // We'll implement robust sort if created_at is added
+        return (
+          new Date(b.created_at || 0).getTime() -
+          new Date(a.created_at || 0).getTime()
+        );
     }
   });
 
@@ -122,9 +125,40 @@ export default function EmployerInternshipListClient({
     return <Badge variant="success">Active</Badge>;
   };
 
+  const handleClone = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setOpenMenu(null);
+    const job = internshipsState.find((j) => j.id === id);
+    if (!job) return;
+
+    const { authenticatedFetch } = await import("@/lib/api");
+    try {
+      const res = await authenticatedFetch<{ success: boolean; id: string }>(
+        "/api/internships/post",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            role: `${job.role} (Copy)`,
+            field: job.field,
+            category: job.category,
+            status: "draft",
+          }),
+        },
+      );
+      if (res?.success) {
+        toast.success("Posting cloned as a draft");
+        router.refresh();
+      }
+    } catch {
+      toast.error("Failed to clone posting");
+    }
+  };
+
   const handleToggleStatus = async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
+    setOpenMenu(null);
     const job = internshipsState.find((j) => j.id === id);
     const newStatus = job?.status === "closed" ? "active" : "closed";
 
@@ -141,8 +175,13 @@ export default function EmployerInternshipListClient({
           body: JSON.stringify({ status: newStatus }),
         },
       );
-    } catch (err: unknown) {
-      alert("Failed to update status");
+      toast.success(
+        newStatus === "closed"
+          ? "Posting closed"
+          : "Posting reopened",
+      );
+    } catch {
+      toast.error("Failed to update status");
       // revert
       setInternshipsState((prev) =>
         prev.map((j) =>
@@ -155,6 +194,7 @@ export default function EmployerInternshipListClient({
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
+    setOpenMenu(null);
     if (
       !confirm(
         "Are you sure? This will remove the posting and all associated applications.",
@@ -170,8 +210,9 @@ export default function EmployerInternshipListClient({
         `/api/internships/${id}`,
         { method: "DELETE" },
       );
-    } catch (err: unknown) {
-      alert("Failed to delete");
+      toast.success("Posting deleted");
+    } catch {
+      toast.error("Failed to delete posting");
       setInternshipsState(initialInternships); // Revert to full list
     }
   };
@@ -445,7 +486,12 @@ export default function EmployerInternshipListClient({
                           >
                             <Edit2 className="w-4 h-4" /> Edit Posting
                           </button>
-                          {/* Clone is omitted for MVP unless implemented */}
+                          <button
+                            onClick={(e) => handleClone(e, job.id)}
+                            className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 flex items-center gap-2 text-slate-700"
+                          >
+                            <Copy className="w-4 h-4" /> Clone Posting
+                          </button>
                           <button
                             onClick={(e) => handleToggleStatus(e, job.id)}
                             className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 flex items-center gap-2 text-slate-700"

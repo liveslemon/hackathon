@@ -8,7 +8,7 @@ import re
 import uuid as uuid_lib
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings, log_startup_diagnostics
@@ -18,6 +18,9 @@ from routers import system, cv, applications, admin, logbook, profiles, analysis
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
+
+# Maximum allowed request payload size (15 MB - covers largest CV uploads + form overhead)
+MAX_REQUEST_BODY_SIZE = 15 * 1024 * 1024
 
 
 @asynccontextmanager
@@ -51,7 +54,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# --- CORS (Improvement 01: no wildcard + credentials) ---
+# --- CORS (Improvement 01: explicit origins, no wildcard + credentials, expose X-Request-ID) ---
 # Browsers send Origin without a trailing slash; normalise so "https://x.app/" still matches.
 _origins = [o.strip().rstrip("/") for o in settings.FRONTEND_URL.split(",") if o.strip()]
 app.add_middleware(
@@ -59,13 +62,26 @@ app.add_middleware(
     allow_origins=_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+    expose_headers=["X-Request-ID"],
 )
 
 
-# --- Request-ID + access-log middleware (Improvement 10) ---
+# --- Request-ID, size limits + access-log middleware (Improvement 10) ---
 @app.middleware("http")
 async def request_middleware(request: Request, call_next):
+    # Enforce maximum payload size via Content-Length header
+    content_length = request.headers.get("Content-Length")
+    if content_length:
+        try:
+            if int(content_length) > MAX_REQUEST_BODY_SIZE:
+                return JSONResponse(
+                    status_code=413,
+                    content={"error": "Payload too large. Maximum size is 15MB."},
+                )
+        except (ValueError, TypeError):
+            pass
+
     # Assign request ID
     request_id = request.headers.get("X-Request-ID", str(uuid_lib.uuid4())[:8])
     request.state.request_id = request_id
@@ -94,7 +110,21 @@ async def request_middleware(request: Request, call_next):
     return response
 
 
-# --- Global exception handler (Improvement 03) ---
+# --- Explicit HTTP exception handler preserves status and headers ---
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    headers = getattr(exc, "headers", None) or {}
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": exc.detail,
+            "detail": exc.detail,
+        },
+        headers=headers,
+    )
+
+
+# --- Global exception handler (Improvement 03: never leaks stack traces or PII) ---
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     error_id = str(uuid_lib.uuid4())[:8]

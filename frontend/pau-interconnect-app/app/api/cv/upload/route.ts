@@ -7,6 +7,9 @@ import { supabaseFetch } from "@/lib/supabase-fetch";
 
 export const dynamic = "force-dynamic";
 
+const MAX_CV_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MIN_CV_FILE_SIZE = 100; // 100 bytes minimum
+
 function isMissingSchemaObjectError(error: {
   code?: string;
   message?: string;
@@ -26,8 +29,12 @@ function isMissingSchemaObjectError(error: {
 
 function toSafeErrorMessage(payload: unknown): string {
   if (payload && typeof payload === "object") {
-    const maybeMessage = (payload as { error?: unknown; message?: unknown })
-      .error;
+    const maybeDetail = (payload as { detail?: unknown }).detail;
+    if (typeof maybeDetail === "string" && maybeDetail.trim().length > 0) {
+      return maybeDetail;
+    }
+
+    const maybeMessage = (payload as { error?: unknown; message?: unknown }).error;
     if (typeof maybeMessage === "string" && maybeMessage.trim().length > 0) {
       return maybeMessage;
     }
@@ -72,12 +79,37 @@ export async function POST(request: Request) {
     );
   }
 
-  if (file.type !== "application/pdf") {
+  // Enforce file extension and MIME type
+  const lowerName = file.name.toLowerCase();
+  if (!lowerName.endsWith(".pdf") || file.type !== "application/pdf") {
     return NextResponse.json(
       {
         status: "error",
         code: "INVALID_FILE_TYPE",
         message: "Only PDF files are accepted.",
+      },
+      { status: 400 },
+    );
+  }
+
+  // Enforce file size limit server-side
+  if (file.size > MAX_CV_FILE_SIZE) {
+    return NextResponse.json(
+      {
+        status: "error",
+        code: "FILE_TOO_LARGE",
+        message: "File exceeds 5MB limit. Please upload a smaller PDF.",
+      },
+      { status: 400 },
+    );
+  }
+
+  if (file.size < MIN_CV_FILE_SIZE) {
+    return NextResponse.json(
+      {
+        status: "error",
+        code: "FILE_EMPTY",
+        message: "The uploaded file appears to be empty or corrupted.",
       },
       { status: 400 },
     );
@@ -108,11 +140,14 @@ export async function POST(request: Request) {
     );
   }
 
+  // Sanitize filename to prevent header injection or path traversal
+  const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 100);
+
   const backendForm = new FormData();
   backendForm.set("user_id", user.id);
-  backendForm.set("file", file, file.name);
+  backendForm.set("file", file, sanitizedFilename);
 
-  // Get the user's JWT to authenticate with the backend.
+  // Get the user's JWT to authenticate with the backend
   const cookieStore = await cookies();
   const sessionClient = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -168,19 +203,20 @@ export async function POST(request: Request) {
         })
         .eq("id", user.id);
 
+      const errorStatus = backendRes.status >= 400 && backendRes.status < 500
+        ? backendRes.status
+        : 502;
+
       return NextResponse.json(
         {
           status: "error",
           code: "CV_PROCESSING_FAILED",
           message,
         },
-        { status: 502 },
+        { status: errorStatus },
       );
     }
 
-    // The backend saved the CV and is analysing it in the background
-    // (parsing, profile auto-fill, matching). It marks the profile
-    // complete and sends a notification when done.
     return NextResponse.json(
       {
         status: "processing",
@@ -190,7 +226,7 @@ export async function POST(request: Request) {
       { status: 202 },
     );
   } catch {
-    const fallbackMessage = "CV processing failed due to a network issue.";
+    const fallbackMessage = "CV processing failed due to a network issue. Please check your connection and retry.";
 
     await supabase
       .from("profiles")

@@ -157,3 +157,100 @@ export function getDevModeProfileForRole(
       return null;
   }
 }
+
+export type RouteRoleRequirement =
+  | "public"
+  | "authenticated"
+  | "student"
+  | "employer"
+  | "admin";
+
+/** Determines the minimum required role for any frontend page or API route. */
+export function getRequiredRoleForRoute(pathname: string): RouteRoleRequirement {
+  // Public static / landing / login / public entity pages
+  if (
+    pathname === "/" ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/companies/") ||
+    pathname.startsWith("/internships/") ||
+    pathname === "/onboarding" ||
+    pathname.startsWith("/onboarding/") ||
+    pathname === "/api/auth/logout"
+  ) {
+    return "public";
+  }
+
+  // Admin-only pages and APIs
+  if (
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/") ||
+    pathname.startsWith("/dashboard/admin") ||
+    pathname === "/dashboard/analytics" ||
+    pathname.startsWith("/api/audit")
+  ) {
+    return "admin";
+  }
+
+  // Employer pages and APIs
+  if (
+    pathname.startsWith("/dashboard/employer") ||
+    /^\/profile\/[^/]+/.test(pathname) ||
+    pathname === "/dashboard/post" ||
+    pathname.startsWith("/api/reports") ||
+    pathname.startsWith("/api/internships/post") ||
+    pathname.startsWith("/api/internships/templates") ||
+    pathname.startsWith("/api/logbook/employer")
+  ) {
+    return "employer";
+  }
+
+  // Student pages and APIs
+  if (
+    pathname.startsWith("/dashboard/student") ||
+    pathname === "/my-internships" ||
+    pathname.startsWith("/my-internships/") ||
+    pathname === "/profile" ||
+    pathname.startsWith("/cv/") ||
+    pathname.startsWith("/api/cv/upload") ||
+    pathname.startsWith("/api/logbook/student") ||
+    pathname.startsWith("/api/logbook/entry") ||
+    pathname.startsWith("/api/me/export")
+  ) {
+    return "student";
+  }
+
+  // General authenticated routes (accessible by any logged-in user)
+  if (
+    pathname === "/dashboard" ||
+    pathname.startsWith("/api/onboarding") ||
+    pathname.startsWith("/api/analysis") ||
+    pathname.startsWith("/api/applications") ||
+    pathname.startsWith("/api/messages") ||
+    pathname.startsWith("/api/me")
+  ) {
+    return "authenticated";
+  }
+
+  return "public";
+}
+
+/** Returns whether a given user role (and admin status) is authorized to access a route. */
+export function isAllowedRouteForRole(
+  pathname: string,
+  role: AppRole | null,
+  isAdmin = false,
+): boolean {
+  const requirement = getRequiredRoleForRoute(pathname);
+
+  if (requirement === "public") return true;
+  if (!role && !isAdmin) return false;
+  if (isAdmin || role === "admin") return true;
+
+  if (requirement === "authenticated") return true;
+  if (requirement === "student") return role === "student";
+  if (requirement === "employer") return role === "employer";
+  if (requirement === "admin") return false;
+
+  return true;
+}
+

@@ -6,10 +6,13 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button, Input, Typography } from "@/components/ui";
+import { getUserRoleProfile } from "@/lib/role-guard";
 
 function adminDestination(): string {
-  const next = getNextPath();
-  return next?.startsWith("/dashboard/admin") ? next : "/dashboard/admin";
+  const next = getNextPath("admin", true);
+  return next?.startsWith("/dashboard/admin") || next === "/admin" || next?.startsWith("/admin/")
+    ? next
+    : "/dashboard/admin";
 }
 
 export default function AdminLogin() {
@@ -39,24 +42,16 @@ export default function AdminLogin() {
 
       // 2. Verify admin status
       if (authData.user) {
-        // Special Elevation for the primary admin email
-        if (authData.user.email === "hillary.ilona@pau.edu.ng") {
-          router.push(adminDestination());
-          return;
-        }
+        const { isAdmin } = await getUserRoleProfile(
+          supabase,
+          authData.user.id,
+        );
 
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("is_admin")
-          .eq("id", authData.user.id)
-          .single();
-
-        if (profileError) throw profileError;
-
-        if (!profile?.is_admin) {
+        if (!isAdmin) {
           // Sign them out — they don't belong here
           await supabase.auth.signOut();
-          setError("Unauthorized: Admin access only.");
+          await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+          setError("Unauthorized: This account does not have administrator privileges.");
           setLoading(false);
           return;
         }
@@ -110,15 +105,26 @@ export default function AdminLogin() {
               required
             />
 
-            <Input
-              id="password"
-              label="Password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <div>
+              <Input
+                id="password"
+                label="Password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <div className="flex justify-end mt-1.5">
+                <button
+                  type="button"
+                  onClick={() => router.push("/login/forgot-password")}
+                  className="text-xs text-brand hover:underline font-medium"
+                >
+                  Forgot password?
+                </button>
+              </div>
+            </div>
 
             <Button
               type="submit"

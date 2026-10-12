@@ -12,8 +12,8 @@ this service:
 This reduces matching from O(n) LLM calls to O(1) embedding + O(k) LLM calls.
 """
 
+import json
 import logging
-import hashlib
 from typing import Optional
 
 from core.db import supabase
@@ -21,14 +21,25 @@ from services.embedding_service import get_embedding
 from services.cv_parser_service import compute_structured_match, parse_job_structured
 from services.matching_service import compute_cosine_similarity, analyze_skills
 from services.llm_service import generate_completion
-from services.cache_service import embedding_cache, match_result_cache
 
 logger = logging.getLogger(__name__)
 
-# How many top matches to return from vector search
 TOP_K = 15
-# How many of those to enrich with LLM reasoning
 LLM_REASONING_TOP_N = 5
+
+
+def _ensure_vector(v) -> Optional[list[float]]:
+    """Helper to ensure a vector is a list of floats."""
+    if v is None:
+        return None
+    if isinstance(v, str):
+        try:
+            v = json.loads(v)
+        except Exception:
+            return None
+    if isinstance(v, list) and len(v) == 1024:
+        return [float(x) for x in v]
+    return None
 
 
 async def store_cv_embedding(user_id: str, cv_text: str) -> Optional[list[float]]:
@@ -41,10 +52,9 @@ async def store_cv_embedding(user_id: str, cv_text: str) -> Optional[list[float]
         if not embedding:
             return None
 
-        # Store in Supabase
-        (await asyncio.to_thread(supabase.table("profiles").update(
-            {"cv_embedding": embedding}
-        ).eq("id", user_id).execute))
+        await asyncio.to_thread(
+            lambda: supabase.table("profiles").update({"cv_embedding": embedding}).eq("id", user_id).execute()
+        )
 
         logger.info(f"[VectorMatch] Stored CV embedding for user {user_id}")
         return embedding
@@ -61,9 +71,9 @@ async def store_job_embedding(internship_id: str, job: dict) -> Optional[list[fl
     company = job.get("company", "")
 
     if isinstance(reqs, list):
-        reqs_text = ", ".join(reqs)
+        reqs_text = ", ".join(r for r in reqs if r)
     else:
-        reqs_text = str(reqs)
+        reqs_text = str(reqs or "")
 
     full_job_text = f"Role: {job_title}. Company: {company}. Description: {job_desc}. Requirements: {reqs_text}"
 
@@ -72,13 +82,14 @@ async def store_job_embedding(internship_id: str, job: dict) -> Optional[list[fl
         if not embedding:
             return None
 
-        # Also parse job structure (one-time LLM call per job)
         job_structured = await parse_job_structured(job)
 
-        (await asyncio.to_thread(supabase.table("internships").update({
-            "job_embedding": embedding,
-            "job_structured": job_structured,
-        }).eq("id", internship_id).execute))
+        await asyncio.to_thread(
+            lambda: supabase.table("internships").update({
+                "job_embedding": embedding,
+                "job_structured": job_structured,
+            }).eq("id", internship_id).execute()
+        )
 
         logger.info(f"[VectorMatch] Stored embedding + structure for internship {internship_id}")
         return embedding
@@ -87,87 +98,70 @@ async def store_job_embedding(internship_id: str, job: dict) -> Optional[list[fl
         return None
 
 
-async def find_top_matches_for_user(user_id: str, cv_text: str, cv_structured: dict = None, top_k: int = TOP_K) -> list[dict]:
+async def find_top_matches_for_user(
+    user_id: str,
+    cv_text: str,
+    cv_structured: dict = None,
+    top_k: int = TOP_K,
+) -> list[dict]:
     """
     Find the top-K matching internships for a user using vector similarity.
-    
-    Flow:
-    1. Get/compute CV embedding
-    2. Fetch all internship embeddings from DB  
-    3. Compute cosine similarity locally (fast, no API calls)
-    4. Return top-K sorted by similarity
-    5. Enrich top results with structured matching + LLM reasoning
     """
-    # Step 1: Get CV embedding (from DB or compute fresh)
     cv_embedding = await _get_or_compute_cv_embedding(user_id, cv_text)
     if not cv_embedding:
         logger.warning(f"[VectorMatch] No CV embedding for user {user_id}, falling back")
         return []
 
-    # Step 2: Fetch top-K internships using pgvector (native DB similarity search)
+    cv_embedding_list = _ensure_vector(cv_embedding)
+    if not cv_embedding_list:
+        logger.warning(f"[VectorMatch] Invalid CV embedding for user {user_id}")
+        return []
+
+    scored = []
+
+    # Step 2: Fetch top-K active internships using pgvector (native DB similarity search)
     try:
-        # Instead of fetching everything and doing math in Python, we let Postgres do it.
-        # This requires an RPC call if using the Supabase Python client for vector distance.
-        # We'll use the rpc method if available, otherwise fallback to fetching all.
         try:
-            res = (await asyncio.to_thread(supabase.rpc(
-                "match_internships", 
-                {"query_embedding": cv_embedding, "match_threshold": 0.3, "match_count": top_k * 2}
-            ).execute))
-            top_jobs_data = res.data
-            
-            # Reformat to match the expected structure
-            scored = []
+            res = await asyncio.to_thread(
+                lambda: supabase.rpc(
+                    "match_internships",
+                    {"query_embedding": cv_embedding_list, "match_threshold": 0.25, "match_count": top_k * 2},
+                ).execute()
+            )
+            top_jobs_data = res.data or []
             for job in top_jobs_data:
-                # The RPC typically returns a 'similarity' column (1 - distance)
-                sim = job.get("similarity", 0.5) 
+                sim = float(job.get("similarity", 0.5))
                 scored.append((sim, job))
-                
         except Exception as rpc_e:
-            # Fallback to Python if the RPC isn't created yet
-            logger.info(f"[VectorMatch] pgvector RPC not found, building Python fallback: {rpc_e}")
-            res = (await asyncio.to_thread(supabase.table("internships").select(
-                "id, role, company, description, requirements, category, job_embedding, job_structured"
-            ).execute))
+            logger.info(f"[VectorMatch] pgvector RPC unavailable or failed, using local fallback: {rpc_e}")
+            res = await asyncio.to_thread(
+                lambda: supabase.table("internships")
+                .select("id, role, company, description, requirements, category, status, job_embedding, job_structured")
+                .eq("status", "active")
+                .execute()
+            )
             internships = res.data or []
-            
-            scored = []
+
             for job in internships:
-                job_emb = job.get("job_embedding")
+                if job.get("status") and job.get("status") != "active":
+                    continue
+                job_emb = _ensure_vector(job.get("job_embedding"))
                 if not job_emb:
                     continue
-                # Supabase Python client returns vectors as strings
-                if isinstance(job_emb, str):
-                    import json
-                    try:
-                        job_emb = json.loads(job_emb)
-                    except Exception:
-                        pass
-                
-                # cv_embedding might also be a string
-                cv_emb_eval = cv_embedding
-                if isinstance(cv_emb_eval, str):
-                    import json
-                    try:
-                        cv_emb_eval = json.loads(cv_emb_eval)
-                    except Exception:
-                        pass
-                        
-                sim = compute_cosine_similarity(cv_emb_eval, job_emb)
+
+                sim = compute_cosine_similarity(cv_embedding_list, job_emb)
                 scored.append((sim, job))
-                
+
             scored.sort(key=lambda x: x[0], reverse=True)
-            
+
     except Exception as e:
         logger.error(f"[VectorMatch] Failed to search internships: {e}")
         return []
 
     top_jobs = scored[:top_k]
 
-    # Step 4: Enrich with structured matching (fast, no API calls)
     results = []
     for i, (sim_score, job) in enumerate(top_jobs):
-        # Calibrated semantic score: cosine 0.30 = 0%, 0.50 = 50%, 0.70+ = 100%
         semantic_percent = max(0, min(100, int((sim_score - 0.3) * 250)))
 
         job_id = job["id"]
@@ -176,13 +170,12 @@ async def find_top_matches_for_user(user_id: str, cv_text: str, cv_structured: d
         reqs = job.get("requirements", "")
 
         if isinstance(reqs, list):
-            req_list = reqs
-            reqs_text = ", ".join(reqs)
+            req_list = [str(r) for r in reqs if r]
+            reqs_text = ", ".join(req_list)
         else:
-            reqs_text = str(reqs)
+            reqs_text = str(reqs or "")
             req_list = [r.strip() for r in reqs_text.replace(",", "\n").split("\n") if r.strip()]
 
-        # Structured match (fast path)
         structured_score = 0
         structured_matched = []
         structured_missing = []
@@ -191,7 +184,6 @@ async def find_top_matches_for_user(user_id: str, cv_text: str, cv_structured: d
         if cv_structured:
             job_structured = job.get("job_structured")
             if not job_structured:
-                # Parse on the fly (will be cached for next time)
                 job_structured = _quick_job_structure(job)
 
             if job_structured:
@@ -201,7 +193,6 @@ async def find_top_matches_for_user(user_id: str, cv_text: str, cv_structured: d
                 structured_missing = struct_result["missing_skills"]
                 breakdown = struct_result["breakdown"]
 
-        # Blend scores
         if cv_structured and structured_score > 0:
             final_score = int(structured_score * 0.55 + semantic_percent * 0.35 + _keyword_score(cv_text, req_list) * 0.10)
         else:
@@ -210,7 +201,6 @@ async def find_top_matches_for_user(user_id: str, cv_text: str, cv_structured: d
 
         final_score = max(0, min(100, final_score))
 
-        # Build reasoning (LLM only for top N)
         reasoning = _build_quick_reasoning(final_score, structured_score, semantic_percent, breakdown)
 
         if i < LLM_REASONING_TOP_N and final_score >= 40:
@@ -240,45 +230,40 @@ async def find_top_students_for_job(internship_id: str, job: dict, top_k: int = 
     Find the top-K matching students for a new internship using vector similarity.
     Called when an employer posts a new job.
     """
-    # Get job embedding
     job_embedding = await _get_or_compute_job_embedding(internship_id, job)
     if not job_embedding:
         return []
 
-    # Fetch students with embeddings
+    job_emb_eval = _ensure_vector(job_embedding)
+    if not job_emb_eval:
+        return []
+
     try:
-        res = (await asyncio.to_thread(supabase.table("profiles").select(
-            "id, cv_text, cv_structured, cv_embedding"
-        ).eq("role", "student").not_("cv_embedding", "is", "null").execute))
+        # Correct PostgREST syntax for IS NOT NULL
+        res = await asyncio.to_thread(
+            lambda: supabase.table("profiles")
+            .select("id, cv_text, cv_structured, cv_embedding")
+            .eq("role", "student")
+            .not_.is_("cv_text", "null")
+            .execute()
+        )
         students = res.data or []
     except Exception as e:
         logger.error(f"[VectorMatch] Failed to fetch students: {e}")
         return []
 
-    # Score by vector similarity
     scored = []
-    
-    # Process job embedding string if necessary
-    job_emb_eval = job_embedding
-    if isinstance(job_emb_eval, str):
-        import json
-        try:
-            job_emb_eval = json.loads(job_emb_eval)
-        except Exception:
-            pass
-
     for student in students:
-        cv_emb = student.get("cv_embedding")
+        cv_emb = _ensure_vector(student.get("cv_embedding"))
+        if not cv_emb:
+            # If student has text but no embedding yet, compute it now
+            cv_text = student.get("cv_text", "")
+            if cv_text and len(cv_text.strip()) >= 50:
+                cv_emb = await store_cv_embedding(student["id"], cv_text)
+                cv_emb = _ensure_vector(cv_emb)
         if not cv_emb:
             continue
-            
-        if isinstance(cv_emb, str):
-            import json
-            try:
-                cv_emb = json.loads(cv_emb)
-            except Exception:
-                pass
-                
+
         sim = compute_cosine_similarity(job_emb_eval, cv_emb)
         scored.append((sim, student))
 
@@ -291,22 +276,25 @@ async def find_top_students_for_job(internship_id: str, job: dict, top_k: int = 
 async def _get_or_compute_cv_embedding(user_id: str, cv_text: str) -> Optional[list[float]]:
     """Get existing CV embedding from DB, or compute and store it."""
     try:
-        res = await asyncio.to_thread(supabase.table("profiles").select("cv_embedding").eq("id", user_id).single().execute)
-        existing = res.data.get("cv_embedding") if res.data else None
+        res = await asyncio.to_thread(
+            lambda: supabase.table("profiles").select("cv_embedding").eq("id", user_id).single().execute()
+        )
+        existing = _ensure_vector(res.data.get("cv_embedding") if res.data else None)
         if existing:
             return existing
     except Exception:
         pass
 
-    # Compute fresh
     return await store_cv_embedding(user_id, cv_text)
 
 
 async def _get_or_compute_job_embedding(internship_id: str, job: dict) -> Optional[list[float]]:
     """Get existing job embedding from DB, or compute and store it."""
     try:
-        res = await asyncio.to_thread(supabase.table("internships").select("job_embedding").eq("id", internship_id).single().execute)
-        existing = res.data.get("job_embedding") if res.data else None
+        res = await asyncio.to_thread(
+            lambda: supabase.table("internships").select("job_embedding").eq("id", internship_id).single().execute()
+        )
+        existing = _ensure_vector(res.data.get("job_embedding") if res.data else None)
         if existing:
             return existing
     except Exception:
@@ -319,20 +307,14 @@ def _quick_job_structure(job: dict) -> dict:
     """Quick non-LLM job structure extraction from requirements list."""
     reqs = job.get("requirements", "")
     if isinstance(reqs, list):
-        return {
-            "required_skills": [r.strip().lower() for r in reqs if len(r.strip()) < 50],
-            "nice_to_have_skills": [],
-            "domain": job.get("category", "").lower(),
-            "experience_level": "any",
-            "key_responsibilities": [],
-            "relevant_courses": [],
-        }
-    # Parse from text
-    skills = [r.strip().lower() for r in reqs.replace(",", "\n").split("\n") if r.strip() and len(r.strip()) < 50]
+        skills = [str(r).strip().lower() for r in reqs if str(r).strip() and len(str(r).strip()) < 50]
+    else:
+        skills = [r.strip().lower() for r in str(reqs or "").replace(",", "\n").split("\n") if r.strip() and len(r.strip()) < 50]
+
     return {
-        "required_skills": skills,
+        "required_skills": skills[:15],
         "nice_to_have_skills": [],
-        "domain": job.get("category", "").lower(),
+        "domain": str(job.get("category", "")).lower(),
         "experience_level": "any",
         "key_responsibilities": [],
         "relevant_courses": [],

@@ -23,7 +23,7 @@ cat > /tmp/internships_seed.json <<'JSON'
     "requirements": "JavaScript/Node, SQL, Git",
     "interests": ["backend","api"],
     "recruiter_link": "https://acme.example/careers",
-    "deadline": "2026-08-01T00:00:00Z"
+    "deadline": "2026-12-15T23:59:59Z"
   },
   {
     "company": "BrightHealth",
@@ -34,7 +34,7 @@ cat > /tmp/internships_seed.json <<'JSON'
     "requirements": "Python, pandas, SQL",
     "interests": ["ml","data"],
     "recruiter_link": "https://brighthealth.example/jobs",
-    "deadline": "2026-07-15T00:00:00Z"
+    "deadline": "2027-01-31T23:59:59Z"
   }
 ]
 JSON

@@ -34,12 +34,58 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "date must be YYYY-MM-DD" }, { status: 400 });
   }
 
+  if (date > today) {
+    return NextResponse.json(
+      { error: "Cannot create logbook entries for future dates." },
+      { status: 400 },
+    );
+  }
+
+  // 1. Resolve and validate the student's placement
+  let targetApplicationId = application_id;
+  if (!targetApplicationId) {
+    const { data: activePlacement } = await supabase
+      .from("applied_internships")
+      .select("id")
+      .eq("user_id", student_id)
+      .eq("placement_status", "active")
+      .maybeSingle();
+    targetApplicationId = activePlacement?.id ?? null;
+  }
+
+  if (!targetApplicationId) {
+    return NextResponse.json(
+      { error: "You need an active internship placement to record logbook entries." },
+      { status: 400 },
+    );
+  }
+
+  const { data: placement } = await supabase
+    .from("applied_internships")
+    .select("id, user_id, placement_status, internship:internships(employer_id, poster_id)")
+    .eq("id", targetApplicationId)
+    .maybeSingle();
+
+  if (!placement || placement.user_id !== student_id) {
+    return NextResponse.json(
+      { error: "Invalid internship placement." },
+      { status: 400 },
+    );
+  }
+
   const { data: existing } = await supabase
     .from("logbook_entries")
-    .select("date, status")
+    .select("date, status, feedback_notes")
     .eq("student_id", student_id)
     .eq("date", date)
     .maybeSingle();
+
+  if (placement.placement_status !== "active" && existing?.status !== "flagged") {
+    return NextResponse.json(
+      { error: "This internship placement has ended; its logbook is read-only." },
+      { status: 400 },
+    );
+  }
 
   if (!canEditEntry(existing, date, today)) {
     return NextResponse.json(
@@ -53,16 +99,23 @@ export async function POST(req: Request) {
     );
   }
 
+  const internship = Array.isArray(placement.internship)
+    ? placement.internship[0]
+    : placement.internship;
+  const employerId = internship?.employer_id ?? internship?.poster_id ?? null;
+
   const { data, error } = await supabase
     .from("logbook_entries")
     .upsert(
       {
         student_id,
-        application_id: application_id ?? null,
+        application_id: targetApplicationId,
+        employer_id: employerId,
         date,
         activities_raw,
         activities_enhanced: activities_enhanced || null,
         status: "pending",
+        feedback_notes: existing?.status === "flagged" ? existing.feedback_notes : null,
       },
       { onConflict: "student_id,date" },
     )
@@ -78,3 +131,4 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ entry: data });
 }
+

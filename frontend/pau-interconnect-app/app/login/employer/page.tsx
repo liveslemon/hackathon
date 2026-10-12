@@ -30,26 +30,25 @@ export default function EmployerLogin() {
 
       // Verify Employer Role
       if (data.user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", data.user.id)
-          .single();
-
-        if (profile?.role !== "employer") {
-          setErrorMsg("This account is not registered as an Employer.");
-          await supabase.auth.signOut();
-          setLoading(false);
-          return;
-        }
-      }
-
-      if (data.user) {
         const { role, isAdmin } = await getUserRoleProfile(
           supabase,
           data.user.id,
         );
-        const destination = getNextPath() ?? getDashboardPathForRole(role, isAdmin);
+
+        if (role !== "employer" && !isAdmin) {
+          await supabase.auth.signOut();
+          await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+          setErrorMsg(
+            role === "student"
+              ? "This account is registered as a Student. Please sign in via the Student portal."
+              : "This account is not registered as an Employer.",
+          );
+          setLoading(false);
+          return;
+        }
+
+        const destination =
+          getNextPath("employer", isAdmin) ?? getDashboardPathForRole(role, isAdmin);
         router.push(destination);
       } else {
         router.push("/dashboard/employer");
@@ -98,15 +97,26 @@ export default function EmployerLogin() {
               required
             />
 
-            <Input
-              id="password"
-              label="Password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <div>
+              <Input
+                id="password"
+                label="Password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <div className="flex justify-end mt-1.5">
+                <button
+                  type="button"
+                  onClick={() => router.push("/login/forgot-password")}
+                  className="text-xs text-brand hover:underline font-medium"
+                >
+                  Forgot password?
+                </button>
+              </div>
+            </div>
 
             <Button
               type="submit"

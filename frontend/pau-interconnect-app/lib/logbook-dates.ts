@@ -33,15 +33,20 @@ export function earliestBackfillDate(today: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+export function isFutureDate(date: string, today: string = todayInLagos()): boolean {
+  return daysAgo(date, today) < 0;
+}
+
 /**
  * Approved entries are locked. Entries a supervisor returned ("flagged") can
- * always be corrected. Otherwise only dates in the backfill window.
+ * always be corrected, but future dates are strictly rejected. Otherwise only dates in the backfill window.
  */
 export function canEditEntry(
   entry: { date: string; status?: string | null } | null,
   date: string,
   today: string,
 ): boolean {
+  if (isFutureDate(date, today)) return false;
   if (entry?.status === "approved") return false;
   if (entry?.status === "flagged") return true;
   const age = daysAgo(date, today);

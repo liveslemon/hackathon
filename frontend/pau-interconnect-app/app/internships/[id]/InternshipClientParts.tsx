@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { isOpenInternship } from "@/lib/internship-columns";
 import {
@@ -11,6 +12,9 @@ import {
   Sparkles,
   AlertTriangle,
   Loader2,
+  FileText,
+  User,
+  AlertCircle,
   type LucideIcon,
 } from "lucide-react";
 import { Modal, Textarea } from "@/components/ui";
@@ -33,6 +37,8 @@ interface InternshipClientPartsProps {
   missingSkills: string[];
   userId: string;
   studentEmail?: string;
+  hasCv?: boolean;
+  isProfileComplete?: boolean;
 }
 
 export default function InternshipClientParts({
@@ -44,7 +50,8 @@ export default function InternshipClientParts({
   matchingSkills,
   missingSkills,
   userId,
-  studentEmail,
+  hasCv = true,
+  isProfileComplete = true,
 }: InternshipClientPartsProps) {
   const [hasApplied, setHasApplied] = useState(initialHasApplied);
   const [isApplyModalOpen, setApplyModalOpen] = useState(false);
@@ -55,6 +62,14 @@ export default function InternshipClientParts({
   const [isReviewing] = useState(false);
   const [currentStage, setCurrentStage] = useState(initialStage || "applied");
   const [isAccepting, setIsAccepting] = useState(false);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
 
   const handleAcceptOffer = async () => {
     if (!applicationId) return;
@@ -64,10 +79,38 @@ export default function InternshipClientParts({
         method: "POST",
       });
       setCurrentStage("accepted");
+      toast.success("Offer accepted! Your placement is now active.");
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to accept offer.");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to accept offer.",
+      );
     } finally {
       setIsAccepting(false);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!applicationId || isWithdrawing) return;
+    if (
+      !window.confirm(
+        "Are you sure you want to withdraw this application? This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    setIsWithdrawing(true);
+    try {
+      await authenticatedFetch(`/api/applications/${applicationId}/withdraw`, {
+        method: "POST",
+      });
+      setCurrentStage("withdrawn");
+      toast.success("Application withdrawn successfully.");
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to withdraw application.",
+      );
+    } finally {
+      setIsWithdrawing(false);
     }
   };
 
@@ -105,18 +148,17 @@ export default function InternshipClientParts({
   };
 
   const handleDraftCoverLetter = async () => {
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     setIsDrafting(true);
-
-    // Clear letter only if drafting from scratch
-    if (!coverLetter) {
-      setCoverLetter("");
-    }
 
     try {
       const response = await authenticatedFetchStream(
         "/draft-cover-letter-stream",
         {
           method: "POST",
+          signal: controller.signal,
           body: JSON.stringify({
             user_id: userId,
             internship_id: internship.id,
@@ -168,6 +210,9 @@ export default function InternshipClientParts({
         }
       }
     } catch (error: unknown) {
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
       console.error("Drafting stream error:", error);
       toast.error(
         error instanceof Error
@@ -193,6 +238,11 @@ export default function InternshipClientParts({
       icon: X,
       className: "bg-red-500 hover:bg-red-500",
     },
+    withdrawn: {
+      label: "Application Withdrawn",
+      icon: X,
+      className: "bg-slate-500 hover:bg-slate-500",
+    },
     pending: {
       label: "Application Pending",
       icon: Clock,
@@ -202,6 +252,26 @@ export default function InternshipClientParts({
       label: "Application Pending",
       icon: Clock,
       className: "bg-indigo-600 hover:bg-indigo-600",
+    },
+    reviewed: {
+      label: "Under Review",
+      icon: Clock,
+      className: "bg-indigo-600 hover:bg-indigo-600",
+    },
+    shortlisted: {
+      label: "Shortlisted",
+      icon: CheckCircle2,
+      className: "bg-purple-600 hover:bg-purple-600",
+    },
+    interview: {
+      label: "Interview Scheduled",
+      icon: Sparkles,
+      className: "bg-blue-600 hover:bg-blue-600",
+    },
+    offered: {
+      label: "Offer Received",
+      icon: CheckCircle2,
+      className: "bg-emerald-600 hover:bg-emerald-600",
     },
   };
 
@@ -216,17 +286,19 @@ export default function InternshipClientParts({
 
   const currentStageIndex = STAGES.findIndex((s) => s.key === currentStage);
   const isRejected = currentStage === "rejected";
+  const isWithdrawn = currentStage === "withdrawn";
 
   const appStatus = applicationStatus?.toLowerCase() || "";
   const isClosed = !hasApplied && !isOpenInternship(internship);
+  const currentKey = currentStage?.toLowerCase() || appStatus;
   const statusData = hasApplied
-    ? statusConfig[appStatus] || statusConfig.pending
+    ? statusConfig[currentKey] || statusConfig[appStatus] || statusConfig.pending
     : null;
 
   return (
     <>
       {/* Stage Progress Tracker */}
-      {hasApplied && !isRejected && (
+      {hasApplied && !isRejected && !isWithdrawn && (
         <div className="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-100 overflow-hidden w-full relative">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
             Application Progress
@@ -277,19 +349,19 @@ export default function InternshipClientParts({
 
       {/* Accept Offer Button */}
       {currentStage === "offered" && (
-            <button
-              onClick={handleAcceptOffer}
-              disabled={isAccepting}
-              className="w-full mt-4 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition-colors"
-            >
-              {isAccepting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="w-4 h-4" />
-              )}
-              Accept Offer
-            </button>
+        <button
+          onClick={handleAcceptOffer}
+          disabled={isAccepting}
+          className="w-full mb-3 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+        >
+          {isAccepting ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <CheckCircle2 className="w-4 h-4" />
           )}
+          Accept Offer
+        </button>
+      )}
 
       {hasApplied && isRejected && (
         <div className="mb-4 p-4 bg-red-50 rounded-xl border border-red-100">
@@ -305,37 +377,95 @@ export default function InternshipClientParts({
           </p>
         </div>
       )}
+
+      {hasApplied && isWithdrawn && (
+        <div className="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-slate-500" />
+            <p className="text-sm font-semibold text-slate-700">
+              Application Withdrawn
+            </p>
+          </div>
+          <p className="text-xs text-slate-500 mt-1">
+            You have withdrawn your application for this internship.
+          </p>
+        </div>
+      )}
+
       <div className="space-y-2.5">
-        {/* Apply / Status Button */}
-        <button
-          onClick={() => !hasApplied && !isClosed && setApplyModalOpen(true)}
-          disabled={hasApplied || isClosed}
-          className={cx(
-            "w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white transition-colors",
-            hasApplied
-              ? cx(
-                  "cursor-default opacity-90",
-                  statusData?.className || "bg-indigo-600",
-                )
-              : isClosed
-                ? "bg-slate-400 cursor-not-allowed"
-                : "bg-slate-800 hover:bg-slate-700",
-          )}
-        >
-          {isClosed ? (
-            "Applications closed"
-          ) : hasApplied && statusData ? (
-            <>
-              <statusData.icon className="w-4 h-4" />
-              {statusData.label}
-            </>
+        {/* Action Button: Apply / Status / Complete profile / Upload CV */}
+        {!hasApplied ? (
+          !hasCv ? (
+            <Link
+              href="/dashboard/student/cv"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+              Upload CV to Apply
+            </Link>
+          ) : !isProfileComplete ? (
+            <Link
+              href="/profile"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+            >
+              <User className="w-4 h-4" />
+              Complete Profile to Apply
+            </Link>
+          ) : isClosed ? (
+            <button
+              disabled
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white bg-slate-400 cursor-not-allowed"
+            >
+              <Clock className="w-4 h-4" />
+              Applications closed
+            </button>
           ) : (
-            <>
+            <button
+              onClick={() => setApplyModalOpen(true)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white bg-slate-800 hover:bg-slate-700 transition-colors"
+            >
               <Send className="w-4 h-4" />
               Apply Now
-            </>
+            </button>
+          )
+        ) : (
+          <button
+            disabled
+            className={cx(
+              "w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white cursor-default opacity-90",
+              statusData?.className || "bg-indigo-600",
+            )}
+          >
+            {statusData ? (
+              <>
+                <statusData.icon className="w-4 h-4" />
+                {statusData.label}
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="w-4 h-4" />
+                Applied
+              </>
+            )}
+          </button>
+        )}
+
+        {/* Withdraw Button if application in progress */}
+        {hasApplied &&
+          !["accepted", "rejected", "withdrawn"].includes(currentStage) && (
+            <button
+              onClick={handleWithdraw}
+              disabled={isWithdrawing}
+              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 disabled:opacity-50 transition-colors"
+            >
+              {isWithdrawing ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <X className="w-3.5 h-3.5" />
+              )}
+              Withdraw Application
+            </button>
           )}
-        </button>
 
         {/* AI Review Button */}
         <button
@@ -350,7 +480,11 @@ export default function InternshipClientParts({
       {/* Apply Modal */}
       <Modal
         isOpen={isApplyModalOpen}
-        onClose={() => !isSubmitting && setApplyModalOpen(false)}
+        onClose={() => {
+          if (isSubmitting) return;
+          abortControllerRef.current?.abort();
+          setApplyModalOpen(false);
+        }}
         title="Apply"
         size="md"
         footer={

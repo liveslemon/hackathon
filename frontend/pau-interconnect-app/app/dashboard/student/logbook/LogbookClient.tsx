@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   Alert,
@@ -75,6 +75,8 @@ const LogbookClient = ({
   const [enhancedText, setEnhancedText] = useState("");
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   // One logbook per placement. Default to the active one; past ones are read-only.
   const activePlacement = placements.find((p) => p.placement_status === "active") ?? null;
   const [placementId, setPlacementId] = useState<string | null>(
@@ -100,34 +102,43 @@ const LogbookClient = ({
     [initialSession?.access_token],
   );
 
+  const loadHistory = useCallback(async () => {
+    if (!studentId) return;
+    setIsLoadingHistory(true);
+    setHistoryError(null);
+    try {
+      const data = await authenticatedFetch<{ entries?: LogbookEntry[] }>(
+        `/api/logbook/student?student_id=${studentId}`,
+        {},
+        15000,
+        existingSession,
+      );
+      const fetchedEntries = data.entries || [];
+      setEntries(fetchedEntries);
+      const todays = fetchedEntries.find((e) => e.date === todayInLagos());
+      if (todays) {
+        setTodayEntry(todays);
+        // Open today's entry so saving updates it instead of starting blank.
+        setSelectedEntry(todays);
+        setRawText(todays.activities_raw || "");
+        setEnhancedText(todays.activities_enhanced || "");
+      }
+    } catch (err) {
+      console.error("History fetch error:", err);
+      setHistoryError(
+        err instanceof Error ? err.message : "Failed to load logbook history.",
+      );
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, [studentId, existingSession]);
+
   useEffect(() => {
     if (studentId && !authLoading) {
-      const loadHistory = async () => {
-        try {
-          const data = await authenticatedFetch<{ entries?: LogbookEntry[] }>(
-            `/api/logbook/student?student_id=${studentId}`,
-            {},
-            15000,
-            existingSession,
-          );
-          const fetchedEntries = data.entries || [];
-          setEntries(fetchedEntries);
-          const todays = fetchedEntries.find((e) => e.date === todayInLagos());
-          if (todays) {
-            setTodayEntry(todays);
-            // Open today's entry so saving updates it instead of starting blank.
-            setSelectedEntry(todays);
-            setRawText(todays.activities_raw || "");
-            setEnhancedText(todays.activities_enhanced || "");
-          }
-        } catch (err) {
-          console.error("History fetch error:", err);
-        }
-      };
-
       void loadHistory();
     }
-  }, [studentId, authLoading, existingSession]);
+  }, [studentId, authLoading, loadHistory]);
+
 
   // Entries for the placement being viewed. Rows from before placements
   // existed have no application_id and belong to the active placement.
@@ -191,9 +202,11 @@ const LogbookClient = ({
       );
       if (data.enhanced_text) {
         setEnhancedText(data.enhanced_text);
+        toast.success("AI draft ready for review. Click 'Use this Narrative' to apply.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("AI service could not enhance notes at this time. Please try again.");
     } finally {
       setIsEnhancing(false);
     }
@@ -207,17 +220,41 @@ const LogbookClient = ({
       return;
     }
 
+    const targetDate = selectedEntry?.date ?? newEntryDate;
+    const previousEntries = [...entries];
+    const optimisticEntry: LogbookEntry = {
+      id: selectedEntry?.id || `temp-${Date.now()}`,
+      date: targetDate,
+      activities_raw: rawText,
+      activities_enhanced: enhancedText || null,
+      status: "pending",
+      employer_id: selectedPlacement?.company || "",
+      application_id: placementId,
+      feedback_notes: selectedEntry?.feedback_notes,
+    };
+
+    // Optimistic UI update
+    setEntries((prev) => {
+      const existingIdx = prev.findIndex((e) => e.date === targetDate);
+      if (existingIdx >= 0) {
+        const next = [...prev];
+        next[existingIdx] = optimisticEntry;
+        return next;
+      }
+      return [optimisticEntry, ...prev];
+    });
+
     setIsSubmitting(true);
     setSaveError("");
     try {
-      await authenticatedFetch(
+      const result = await authenticatedFetch<{ entry?: LogbookEntry }>(
         "/api/logbook/entry",
         {
           method: "POST",
           body: JSON.stringify({
             student_id: studentId,
             application_id: placementId,
-            date: selectedEntry?.date ?? newEntryDate,
+            date: targetDate,
             activities_raw: rawText,
             activities_enhanced: enhancedText || null,
           }),
@@ -226,21 +263,30 @@ const LogbookClient = ({
         existingSession,
       );
 
+      toast.success(selectedEntry ? "Entry updated." : "Entry saved.");
       setSelectedEntry(null);
       setRawText("");
       setEnhancedText("");
       setNewEntryDate(today);
 
-      const data = await authenticatedFetch<{ entries?: LogbookEntry[] }>(
-        `/api/logbook/student?student_id=${studentId}`,
-        {},
-        15000,
-        existingSession,
-      );
-      setEntries(data.entries || []);
+      if (result?.entry) {
+        setEntries((prev) => {
+          const idx = prev.findIndex((e) => e.date === targetDate);
+          if (idx >= 0) {
+            const next = [...prev];
+            next[idx] = result.entry!;
+            return next;
+          }
+          return [result.entry!, ...prev];
+        });
+      }
     } catch (err) {
+      // Rollback optimistic update on failure
       console.error(err);
-      setSaveError(err instanceof Error ? err.message : "Could not save this entry.");
+      setEntries(previousEntries);
+      const msg = err instanceof Error ? err.message : "Could not save this entry.";
+      setSaveError(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -654,58 +700,100 @@ const LogbookClient = ({
               </Button>
             </Stack>
 
-            <List disablePadding>
-              {visibleEntries.map((entry) => (
-                <ListItemButton
-                  key={entry.id}
-                  onClick={() => selectEntry(entry)}
-                  selected={selectedEntry?.id === entry.id}
-                  sx={{
-                    border: "1px solid",
-                    borderColor:
-                      selectedEntry?.id === entry.id
-                        ? "primary.main"
-                        : "divider",
-                    py: 2,
-                    borderRadius: 2,
-                    mb: 1.5,
-                  }}
-                >
-                  <ListItemText
-                    primary={new Date(entry.date).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                    secondary={entry.activities_raw}
-                    primaryTypographyProps={{
-                      variant: "body2",
-                      fontWeight: 600,
+            {isLoadingHistory ? (
+              <Stack direction="row" spacing={2} alignItems="center" justifyContent="center" sx={{ py: 6 }}>
+                <CircularProgress size={24} />
+                <Typography variant="body2" color="text.secondary">
+                  Loading logbook history...
+                </Typography>
+              </Stack>
+            ) : historyError ? (
+              <Alert
+                severity="error"
+                action={
+                  <Button color="inherit" size="small" onClick={() => void loadHistory()}>
+                    Retry
+                  </Button>
+                }
+                sx={{ borderRadius: 2, mb: 2 }}
+              >
+                {historyError}
+              </Alert>
+            ) : visibleEntries.length === 0 ? (
+              <Box
+                sx={{
+                  py: 6,
+                  px: 3,
+                  textAlign: "center",
+                  bgcolor: "grey.50",
+                  borderRadius: 2,
+                  border: "1px dashed",
+                  borderColor: "divider",
+                }}
+              >
+                <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                  No entries logged yet for this placement.
+                </Typography>
+                <Typography variant="caption" color="text.disabled">
+                  {placementIsActive
+                    ? "Record your activities above to create your first daily entry."
+                    : "This placement ended with no recorded entries."}
+                </Typography>
+              </Box>
+            ) : (
+              <List disablePadding>
+                {visibleEntries.map((entry) => (
+                  <ListItemButton
+                    key={entry.id}
+                    onClick={() => selectEntry(entry)}
+                    selected={selectedEntry?.id === entry.id}
+                    sx={{
+                      border: "1px solid",
+                      borderColor:
+                        selectedEntry?.id === entry.id
+                          ? "primary.main"
+                          : "divider",
+                      py: 2,
+                      borderRadius: 2,
+                      mb: 1.5,
                     }}
-                    secondaryTypographyProps={{
-                      variant: "caption",
-                      noWrap: true,
-                      sx: { maxWidth: 300 },
-                    }}
-                  />
-                  <Box sx={{ ml: "auto" }}>
-                    {entry.status === "approved" && (
-                      <CheckCircleOutline
-                        sx={{ fontSize: 16, color: "success.main" }}
-                      />
-                    )}
-                    {entry.status === "pending" && (
-                      <PendingIcon
-                        sx={{ fontSize: 16, color: "text.disabled" }}
-                      />
-                    )}
-                    {entry.status === "flagged" && (
-                      <FlaggedIcon sx={{ fontSize: 16, color: "error.main" }} />
-                    )}
-                  </Box>
-                </ListItemButton>
-              ))}
-            </List>
+                  >
+                    <ListItemText
+                      primary={new Date(`${entry.date}T00:00:00`).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                      secondary={entry.activities_raw}
+                      primaryTypographyProps={{
+                        variant: "body2",
+                        fontWeight: 600,
+                      }}
+                      secondaryTypographyProps={{
+                        variant: "caption",
+                        noWrap: true,
+                        sx: { maxWidth: 300 },
+                      }}
+                    />
+                    <Box sx={{ ml: "auto" }}>
+                      {entry.status === "approved" && (
+                        <CheckCircleOutline
+                          sx={{ fontSize: 16, color: "success.main" }}
+                        />
+                      )}
+                      {entry.status === "pending" && (
+                        <PendingIcon
+                          sx={{ fontSize: 16, color: "text.disabled" }}
+                        />
+                      )}
+                      {entry.status === "flagged" && (
+                        <FlaggedIcon sx={{ fontSize: 16, color: "error.main" }} />
+                      )}
+                    </Box>
+                  </ListItemButton>
+                ))}
+              </List>
+            )}
           </Box>
         </Stack>
       </Box>
@@ -714,3 +802,4 @@ const LogbookClient = ({
 };
 
 export default LogbookClient;
+

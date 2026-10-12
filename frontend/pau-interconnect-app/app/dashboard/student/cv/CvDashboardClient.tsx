@@ -170,6 +170,8 @@ export default function CvDashboardClient({
         );
       }
     };
+    // Check immediately upon entering analyzing status, then poll
+    void check();
     const timer = setInterval(check, POLL_MS);
     return () => {
       cancelled = true;
@@ -178,18 +180,37 @@ export default function CvDashboardClient({
   }, [status, userId, router]);
 
   const handleDropFiles = (files: FileList) => {
-    const pdf = Array.from(files).find(
-      (f) => f.type === "application/pdf" && f.size <= 5 * 1024 * 1024,
-    );
-    if (!pdf) {
-      setErrorMessage("Please upload a PDF file under 5MB.");
+    const file = Array.from(files)[0];
+    if (!file) return;
+
+    const isPdf =
+      file.type === "application/pdf" ||
+      file.name.toLowerCase().endsWith(".pdf");
+
+    if (!isPdf) {
+      setErrorMessage("Please upload a PDF document.");
       return;
     }
+    if (file.size < 100) {
+      setErrorMessage("File is too small or empty. Please upload a valid CV (min 100 bytes).");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage("File size exceeds 5MB limit. Please upload a smaller file.");
+      return;
+    }
+
     const id = Math.random().toString();
     setUploadedFiles([
-      { id, name: pdf.name, type: pdf.type, size: pdf.size, progress: 0 },
+      {
+        id,
+        name: file.name,
+        type: file.type || "application/pdf",
+        size: file.size,
+        progress: 0,
+      },
     ]);
-    setSelectedFile(pdf);
+    setSelectedFile(file);
     setStatus("idle");
     setErrorMessage("");
     simulateUploadProgress((progress) => {

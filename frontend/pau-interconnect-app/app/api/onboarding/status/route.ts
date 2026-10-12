@@ -37,7 +37,7 @@ export async function GET() {
   let { data: profile, error } = await supabase
     .from("profiles")
     .select(
-      "id, role, onboarding_stage, onboarding_completed_at, cv_processing_status, cv_processing_error",
+      "id, role, full_name, course, level, interests, company_name, company_description, company_website, industry, culture, onboarding_stage, onboarding_completed_at, cv_processing_status, cv_processing_error",
     )
     .eq("id", user.id)
     .maybeSingle();
@@ -45,13 +45,21 @@ export async function GET() {
   if (error && isMissingColumnOrCacheError(error)) {
     const fallback = await supabase
       .from("profiles")
-      .select("id, role")
+      .select("id, role, full_name")
       .eq("id", user.id)
       .maybeSingle();
 
     profile = fallback.data
       ? {
           ...fallback.data,
+          course: null,
+          level: null,
+          interests: null,
+          company_name: null,
+          company_description: null,
+          company_website: null,
+          industry: null,
+          culture: null,
           onboarding_stage: "started",
           onboarding_completed_at: null,
           cv_processing_status: "not_started",
@@ -80,6 +88,19 @@ export async function GET() {
       cvProcessingStatus: profile?.cv_processing_status ?? "not_started",
       cvProcessingError: profile?.cv_processing_error ?? null,
       role: profile?.role ?? null,
+      profile: profile
+        ? {
+            full_name: profile.full_name ?? "",
+            course: profile.course ?? "",
+            level: profile.level ?? "",
+            interests: profile.interests ?? [],
+            company_name: profile.company_name ?? "",
+            company_description: profile.company_description ?? "",
+            company_website: profile.company_website ?? "",
+            industry: profile.industry ?? "",
+            culture: profile.culture ?? "",
+          }
+        : null,
     },
   });
 }

@@ -27,6 +27,7 @@ export type ApplicantProfile = {
 };
 
 import { DecisionTimeline } from "@/components/DecisionTimeline";
+import { MessageThread } from "@/components/MessageThread";
 
 export type Applicant = {
   id: string;
@@ -44,17 +45,20 @@ interface ApplicantReviewClientProps {
   userProfile: unknown;
 }
 
-import { useRouter } from "next/navigation";
-
 export default function ApplicantReviewClient({
   internship,
   applicants: initialApplicants,
+  userProfile,
 }: ApplicantReviewClientProps) {
-  const router = useRouter();
   const [applicants, setApplicants] = useState<Applicant[]>(initialApplicants);
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedAppId, setExpandedAppId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "pipeline">("list");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "accepted" | "rejected">("all");
+  const [sortBy, setSortBy] = useState<"newest" | "match" | "name">("newest");
+  const [activeMessageApp, setActiveMessageApp] = useState<Applicant | null>(null);
+  const [activeConvoId, setActiveConvoId] = useState<string | null>(null);
+  const [isStartingConvo, setIsStartingConvo] = useState(false);
 
   const toggleExpand = (id: string) => {
     setExpandedAppId((prev) => (prev === id ? null : id));
@@ -70,6 +74,29 @@ export default function ApplicantReviewClient({
     return () =>
       window.removeEventListener("dashboardSearch", handleGlobalSearch);
   }, []);
+
+  const handleOpenMessage = async (app: Applicant) => {
+    setActiveMessageApp(app);
+    setIsStartingConvo(true);
+    try {
+      const res = await authenticatedFetch<{ conversation_id?: string }>("/api/messages/start", {
+        method: "POST",
+        body: JSON.stringify({
+          application_id: app.id,
+          message: `Hello ${app.profiles?.full_name || "Applicant"}, thank you for applying to the ${internship?.role || "internship"} role.`,
+        }),
+      });
+      if (res?.conversation_id) {
+        setActiveConvoId(res.conversation_id);
+      } else {
+        toast.error("Could not start conversation");
+      }
+    } catch {
+      toast.error("Failed to connect to messages");
+    } finally {
+      setIsStartingConvo(false);
+    }
+  };
 
   const handleStatusChange = async (
     applicationId: string,
@@ -116,12 +143,32 @@ export default function ApplicantReviewClient({
     }
   };
 
-  const filteredApplicants = applicants.filter((app) => {
-    const p = app.profiles || {};
-    const textToSearch =
-      `${p?.full_name || ""} ${p?.course || ""} ${p?.level || ""}`.toLowerCase();
-    return textToSearch.includes(searchQuery.toLowerCase());
-  });
+  const filteredApplicants = applicants
+    .filter((app) => {
+      const p = app.profiles || {};
+      const textToSearch =
+        `${p?.full_name || ""} ${p?.course || ""} ${p?.level || ""}`.toLowerCase();
+      const matchesSearch = textToSearch.includes(searchQuery.toLowerCase());
+      const matchesStatus =
+        statusFilter === "all" || (app.status || "pending") === statusFilter;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "match":
+          return (b.match_score || 0) - (a.match_score || 0);
+        case "name":
+          return (a.profiles?.full_name || "").localeCompare(
+            b.profiles?.full_name || "",
+          );
+        case "newest":
+        default:
+          return (
+            new Date(b.created_at || 0).getTime() -
+            new Date(a.created_at || 0).getTime()
+          );
+      }
+    });
 
   return (
     <div className="space-y-10">
@@ -144,34 +191,75 @@ export default function ApplicantReviewClient({
         </div>
       </header>
 
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex gap-2">
-          <button
-            onClick={() => setViewMode("list")}
-            className={cx(
-              "px-3 py-1.5 rounded-lg text-sm",
-              viewMode === "list"
-                ? "bg-slate-900 text-white"
-                : "bg-slate-100 text-slate-700",
-            )}
-          >
-            List View
-          </button>
-          <button
-            onClick={() => setViewMode("pipeline")}
-            className={cx(
-              "px-3 py-1.5 rounded-lg text-sm",
-              viewMode === "pipeline"
-                ? "bg-slate-900 text-white"
-                : "bg-slate-100 text-slate-700",
-            )}
-          >
-            Pipeline View
-          </button>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex gap-1.5 p-1 bg-slate-100 rounded-xl">
+            <button
+              onClick={() => setViewMode("list")}
+              className={cx(
+                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                viewMode === "list"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900",
+              )}
+            >
+              List View
+            </button>
+            <button
+              onClick={() => setViewMode("pipeline")}
+              className={cx(
+                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                viewMode === "pipeline"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900",
+              )}
+            >
+              Pipeline View
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1.5 pl-2">
+            {(["all", "pending", "accepted", "rejected"] as const).map((status) => {
+              const count =
+                status === "all"
+                  ? applicants.length
+                  : applicants.filter((a) => (a.status || "pending") === status).length;
+              return (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  className={cx(
+                    "px-3 py-1.5 rounded-xl text-xs font-bold transition-all",
+                    statusFilter === status
+                      ? "bg-brand text-white shadow-sm shadow-brand/20"
+                      : "bg-slate-100/70 text-slate-600 hover:bg-slate-200/70",
+                  )}
+                >
+                  {status.charAt(0).toUpperCase() + status.slice(1)} ({count})
+                </button>
+              );
+            })}
+          </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Typography variant="caption" color="muted" className="font-semibold">
+              Sort:
+            </Typography>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              className="text-xs font-medium border border-slate-200 bg-white rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-brand"
+            >
+              <option value="newest">Newest First</option>
+              <option value="match">Highest Match Score</option>
+              <option value="name">Candidate Name</option>
+            </select>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
           onClick={() => {
             const headers = [
               "Name",
@@ -204,6 +292,7 @@ export default function ApplicantReviewClient({
         >
           <Download className="w-4 h-4 mr-1" /> Export CSV
         </Button>
+        </div>
       </div>
 
       {applicants.length === 0 ? (
@@ -492,9 +581,7 @@ export default function ApplicantReviewClient({
                                   </button>
                                 )}
                               <button
-                                onClick={() =>
-                                  router.push(`/messages?application=${app.id}`)
-                                }
+                                onClick={() => handleOpenMessage(app)}
                                 className="mt-2 text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em] border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-center py-2 flex-1 flex items-center justify-center gap-1"
                               >
                                 <MessageSquare size={14} /> Message
@@ -510,6 +597,49 @@ export default function ApplicantReviewClient({
             );
           })}
         </Stack>
+      )}
+
+      {/* Messaging Modal */}
+      {activeMessageApp && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col h-[560px] border border-slate-100">
+            <div className="p-4 px-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/60">
+              <div>
+                <Typography variant="body1" weight="bold" className="text-slate-900">
+                  {activeMessageApp.profiles?.full_name || "Applicant"}
+                </Typography>
+                <Typography variant="caption" color="muted">
+                  Candidate for {internship?.role || "Internship"}
+                </Typography>
+              </div>
+              <button
+                onClick={() => {
+                  setActiveMessageApp(null);
+                  setActiveConvoId(null);
+                }}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 hover:text-slate-700 hover:bg-slate-200 flex items-center justify-center font-bold text-sm transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden p-3 bg-slate-50/30">
+              {isStartingConvo ? (
+                <div className="flex items-center justify-center h-full text-slate-400 text-sm animate-pulse">
+                  Connecting to candidate...
+                </div>
+              ) : activeConvoId ? (
+                <MessageThread
+                  conversationId={activeConvoId}
+                  currentUserId={(userProfile as { id?: string })?.id || ""}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+                  Could not load conversation thread.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

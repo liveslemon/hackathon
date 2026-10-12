@@ -38,7 +38,14 @@ export function toApiErrorMessage(payload: unknown, status: number): string {
   if (isApiErrorPayload(payload)) {
     if (Array.isArray(payload.detail)) {
       return payload.detail
-        .map((d: any) => `${d.loc?.join(".") || "Field"}: ${d.msg}`)
+        .map((d) => {
+          if (typeof d === "object" && d !== null && "msg" in d) {
+            const loc = (d as { loc?: (string | number)[]; msg?: string }).loc;
+            const msg = (d as { loc?: (string | number)[]; msg?: string }).msg;
+            return `${loc?.join(".") || "Field"}: ${msg || ""}`;
+          }
+          return String(d);
+        })
         .join(", ");
     }
     return (
