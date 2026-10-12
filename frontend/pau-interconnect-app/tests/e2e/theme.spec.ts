@@ -1,55 +1,58 @@
-import { test, expect } from "@playwright/test";
-import { setupSupabaseMocks, MOCK_STUDENT } from "./mock-supabase";
+import { test, expect, type Page } from "@playwright/test";
 
-test.describe("Theme & App Shell Verification", () => {
-  test.beforeEach(async ({ page }) => {
-    await setupSupabaseMocks(page, MOCK_STUDENT);
+// Protected routes are redirected to login by the server-side proxy, which the browser-side
+// Supabase mock can't intercept, so these checks run on public pages. The theme logic
+// (next-themes + tokens) is shared by every page.
+const PUBLIC_PAGES = ["/", "/login/student", "/login/employer"];
+
+function collectHydrationWarnings(page: Page) {
+  const warnings: string[] = [];
+  page.on("console", (msg) => {
+    const text = msg.text();
+    if (/hydrat|did not match/i.test(text)) warnings.push(text);
   });
+  return warnings;
+}
 
-  test("loads shell in light mode without hydration warnings", async ({ page }) => {
-    const consoleWarnings: string[] = [];
-    page.on("console", (msg) => {
-      const text = msg.text();
-      if (
-        text.includes("Warning: Text content did not match") ||
-        text.includes("hydration")
-      ) {
-        consoleWarnings.push(text);
+test.describe("Theme", () => {
+  for (const scheme of ["light", "dark"] as const) {
+    test(`follows the system ${scheme} theme without hydration warnings`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      const warnings = collectHydrationWarnings(page);
+
+      for (const path of PUBLIC_PAGES) {
+        await page.goto(path);
+        await page.waitForLoadState("networkidle");
+        if (scheme === "dark") await expect(page.locator("html")).toHaveClass(/dark/);
+        else await expect(page.locator("html")).not.toHaveClass(/dark/);
       }
+      expect(warnings).toEqual([]);
     });
+  }
 
-    await page.goto("/dashboard/student");
-    await expect(page.locator("text=Paystack").first()).toBeVisible({ timeout: 10000 });
+  test("an explicit choice overrides the system and persists across reloads", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.goto("/login/student");
+    await page.evaluate(() => localStorage.setItem("theme", "dark"));
+    await page.reload();
+    await expect(page.locator("html")).toHaveClass(/dark/);
 
-    // Expect no hydration warnings
-    expect(consoleWarnings).toHaveLength(0);
-
-    // Verify root html element exists and has color-scheme
-    const htmlElement = page.locator("html");
-    await expect(htmlElement).toBeVisible();
+    await page.goto("/");
+    await expect(page.locator("html")).toHaveClass(/dark/);
   });
 
-  test("toggles theme to dark and persists across reloads", async ({ page }) => {
-    await page.goto("/dashboard/student");
-    await expect(page.locator("text=Paystack").first()).toBeVisible({ timeout: 10000 });
+  test("the page background actually changes in dark mode", async ({ page }) => {
+    const bg = async () =>
+      page.evaluate(() => getComputedStyle(document.body).backgroundColor);
 
-    // Click theme toggle button in TopBar
-    const themeBtn = page.locator('button[title="Change theme"], button[aria-label="Toggle color theme"]').first();
-    await expect(themeBtn).toBeVisible();
-    await themeBtn.click();
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.goto("/login/student");
+    const light = await bg();
 
-    // Select dark theme from menu
-    const darkOption = page.locator('button[role="menuitem"]:has-text("Dark")').first();
-    await expect(darkOption).toBeVisible();
-    await darkOption.click();
-
-    // Check that html has dark class
-    const html = page.locator("html");
-    await expect(html).toHaveClass(/dark/);
-
-    // Reload page to verify persistence
+    await page.emulateMedia({ colorScheme: "dark" });
     await page.reload();
-    await expect(page.locator("text=Paystack").first()).toBeVisible({ timeout: 10000 });
-    await expect(page.locator("html")).toHaveClass(/dark/);
+    const dark = await bg();
+
+    expect(dark).not.toEqual(light);
   });
 });
