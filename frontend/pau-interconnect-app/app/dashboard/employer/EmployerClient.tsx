@@ -20,10 +20,9 @@ interface EmployerProfile {
 }
 
 export function PostInternshipButton({
-  employerProfile: _employerProfile,
   trigger,
 }: {
-  employerProfile: EmployerProfile;
+  employerProfile?: EmployerProfile;
   trigger?: React.ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(false);
