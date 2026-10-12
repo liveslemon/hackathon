@@ -41,7 +41,10 @@ export default async function AnalyticsView() {
 
   if (error) {
     return (
-      <div className="bg-red-50 text-red-700 p-6 rounded-3xl border border-red-100 mb-8">
+      <div
+        role="alert"
+        className="bg-danger-subtle text-danger-fg p-6 rounded-3xl border border-danger-subtle mb-8"
+      >
         <Typography variant="body1" weight="bold">
           {error}
         </Typography>
@@ -52,67 +55,70 @@ export default async function AnalyticsView() {
   return (
     <div className="space-y-12 animate-in fade-in duration-700">
       <Stack direction="row" spacing={6} className="flex-wrap gap-y-6">
-        <Card className="flex-1 min-w-[280px] bg-gradient-to-br from-emerald-500 to-emerald-600 border-none shadow-xl shadow-emerald-100">
-          <CardContent className="p-8 text-white">
+        <Card className="flex-1 min-w-[280px] bg-surface border border-border shadow-md">
+          <CardContent className="p-8">
             <Stack direction="row" justify="between" align="center">
               <div>
                 <Typography
                   variant="body2"
                   weight="bold"
-                  className="uppercase tracking-widest opacity-80 mb-2"
+                  color="muted"
+                  className="uppercase tracking-widest text-[11px] mb-2"
                 >
                   Total Internships
                 </Typography>
-                <Typography variant="h1" className="text-white">
+                <Typography variant="h1" className="text-fg">
                   {totalInternships}
                 </Typography>
               </div>
-              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                <FiBriefcase className="w-8 h-8" />
+              <div className="w-14 h-14 bg-success-subtle text-success-fg rounded-2xl flex items-center justify-center">
+                <FiBriefcase className="w-7 h-7" />
               </div>
             </Stack>
           </CardContent>
         </Card>
 
-        <Card className="flex-1 min-w-[280px] bg-gradient-to-br from-blue-500 to-blue-600 border-none shadow-xl shadow-blue-100">
-          <CardContent className="p-8 text-white">
+        <Card className="flex-1 min-w-[280px] bg-surface border border-border shadow-md">
+          <CardContent className="p-8">
             <Stack direction="row" justify="between" align="center">
               <div>
                 <Typography
                   variant="body2"
                   weight="bold"
-                  className="uppercase tracking-widest opacity-80 mb-2"
+                  color="muted"
+                  className="uppercase tracking-widest text-[11px] mb-2"
                 >
                   Total Applications
                 </Typography>
-                <Typography variant="h1" className="text-white">
+                <Typography variant="h1" className="text-fg">
                   {totalApplications}
                 </Typography>
               </div>
-              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                <FiUsers className="w-8 h-8" />
+              <div className="w-14 h-14 bg-brand-subtle text-brand rounded-2xl flex items-center justify-center">
+                <FiUsers className="w-7 h-7" />
               </div>
             </Stack>
           </CardContent>
         </Card>
 
-        <Card className="flex-1 min-w-[280px] bg-gradient-to-br from-amber-500 to-amber-600 border-none shadow-xl shadow-amber-100">
-          <CardContent className="p-8 text-white">
+        <Card className="flex-1 min-w-[280px] bg-surface border border-border shadow-md">
+          <CardContent className="p-8">
             <Stack direction="row" justify="between" align="center">
               <div>
                 <Typography
                   variant="body2"
                   weight="bold"
-                  className="uppercase tracking-widest opacity-80 mb-2"
+                  color="muted"
+                  className="uppercase tracking-widest text-[11px] mb-2"
                 >
                   Avg Applications
                 </Typography>
-                <Typography variant="h1" className="text-white">
+                <Typography variant="h1" className="text-fg">
                   {avgApplications}
                 </Typography>
               </div>
-              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                <FiTrendingUp className="w-8 h-8" />
+              <div className="w-14 h-14 bg-warning-subtle text-warning-fg rounded-2xl flex items-center justify-center">
+                <FiTrendingUp className="w-7 h-7" />
               </div>
             </Stack>
           </CardContent>
@@ -120,8 +126,8 @@ export default async function AnalyticsView() {
       </Stack>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        <Card className="border-slate-100 shadow-sm">
-          <CardContent className="p-8">
+        <Card className="border border-border bg-surface shadow-sm">
+          <CardContent className="p-6 sm:p-8">
             <Typography variant="h4" weight="bold" className="mb-8">
               Application Volume (Top 10 Roles)
             </Typography>
@@ -129,8 +135,8 @@ export default async function AnalyticsView() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-100 shadow-sm">
-          <CardContent className="p-8">
+        <Card className="border border-border bg-surface shadow-sm">
+          <CardContent className="p-6 sm:p-8">
             <Typography variant="h4" weight="bold" className="mb-8">
               Most Applied Internships
             </Typography>
@@ -138,18 +144,18 @@ export default async function AnalyticsView() {
               {(internshipStats || []).slice(0, 5).map((item, idx) => (
                 <div
                   key={idx}
-                  className="group p-4 bg-slate-50/50 rounded-2xl border border-transparent hover:border-indigo-100 hover:bg-indigo-50/30 transition-all duration-300"
+                  className="group p-4 bg-surface-sunken rounded-2xl border border-transparent hover:border-brand-subtle hover:bg-brand-subtle/30 transition-all duration-300"
                 >
                   <Stack direction="row" align="center" justify="between">
                     <Stack direction="row" spacing={4} align="center">
-                      <div className="w-10 h-10 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center font-bold text-indigo-500">
+                      <div className="w-10 h-10 bg-surface rounded-xl shadow-sm border border-border flex items-center justify-center font-bold text-brand">
                         {idx + 1}
                       </div>
                       <div>
                         <Typography
                           variant="body1"
                           weight="bold"
-                          className="group-hover:text-indigo-600 transition-colors uppercase tracking-tight"
+                          className="group-hover:text-brand transition-colors uppercase tracking-tight"
                         >
                           {item.title}
                         </Typography>
@@ -169,16 +175,51 @@ export default async function AnalyticsView() {
         </Card>
       </div>
 
-      <Card className="border-slate-100 shadow-sm overflow-hidden">
-        <div className="bg-slate-50/50 px-8 py-6 border-b border-slate-100">
+      <Card className="border border-border bg-surface shadow-sm overflow-hidden">
+        <div className="bg-surface-sunken px-6 sm:px-8 py-6 border-b border-border">
           <Typography variant="h4" weight="bold">
             Detailed Application Overview
           </Typography>
         </div>
-        <div className="overflow-x-auto">
+
+        {/* Mobile Cards (Viewports < 768px) */}
+        <div className="block md:hidden divide-y divide-border">
+          {(internshipStats || []).length === 0 ? (
+            <div className="p-8 text-center text-fg-subtle">
+              No internship application records found.
+            </div>
+          ) : (
+            (internshipStats || []).map((row, idx) => (
+              <div key={idx} className="p-5 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <Typography variant="body1" weight="bold" className="text-fg">
+                      {row.title}
+                    </Typography>
+                    <Typography variant="caption" color="muted">
+                      {row.company}
+                    </Typography>
+                  </div>
+                  <Badge variant="primary" size="sm">
+                    {row.applications} Apps
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between text-xs text-fg-muted pt-2 border-t border-border">
+                  <span>Category: {row.category || "General"}</span>
+                  <span>
+                    Deadline: {row.deadline ? new Date(row.deadline).toLocaleDateString() : "N/A"}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Table (Viewports >= 768px) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
+              <tr className="bg-surface-sunken border-b border-border">
                 <th className="px-8 py-4">
                   <Typography
                     variant="caption"
@@ -230,7 +271,7 @@ export default async function AnalyticsView() {
               {(internshipStats || []).map((row, idx) => (
                 <tr
                   key={idx}
-                  className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors"
+                  className="border-b border-border hover:bg-surface-sunken/50 transition-colors"
                 >
                   <td className="px-8 py-5">
                     <Typography variant="body2" weight="semibold">
@@ -256,7 +297,7 @@ export default async function AnalyticsView() {
                     <Typography
                       variant="body2"
                       weight="bold"
-                      className="text-indigo-600"
+                      className="text-brand"
                     >
                       {row.applications}
                     </Typography>

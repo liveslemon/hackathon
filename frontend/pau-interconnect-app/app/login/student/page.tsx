@@ -128,28 +128,31 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white md:bg-gradient-to-br md:from-brand md:to-brand-secondary flex items-center justify-center">
-      <div className="w-full max-w-md md:mx-6">
-        <div className="px-6 py-10 md:p-10 md:bg-white md:rounded-3xl md:shadow-2xl">
-          {/* Logo - mobile only */}
+    <div className="min-h-screen bg-background md:bg-gradient-to-br md:from-brand/10 md:via-background md:to-brand-secondary/10 flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-md">
+        <div className="px-6 py-10 md:p-10 bg-surface rounded-3xl border border-border shadow-xl">
+          {/* Logo and Heading */}
           <div className="flex flex-col items-center mb-8">
             <Image
               src="/favicon.ico"
               alt="PAU Logo"
               width={56}
               height={56}
-              className="w-14 h-14 mb-4 rounded-xl"
+              className="w-14 h-14 mb-4 rounded-xl shadow-sm"
             />
-            <Typography variant="h3" weight="bold" className="mb-1">
+            <Typography variant="h3" weight="bold" className="mb-1 text-center">
               Welcome Back
             </Typography>
-            <Typography variant="body2" color="muted">
+            <Typography variant="body2" color="muted" className="text-center">
               Sign in to your student account
             </Typography>
           </div>
 
           {snackbarOpen && snackbarSeverity === "error" && (
-            <div className="mb-6 px-4 py-3 rounded-xl bg-red-50 text-red-700 border border-red-100 text-sm font-medium">
+            <div
+              role="alert"
+              className="mb-6 px-4 py-3 rounded-2xl bg-danger-subtle text-danger-fg border border-danger-subtle text-sm font-medium"
+            >
               {snackbarMessage}
             </div>
           )}
@@ -228,10 +231,12 @@ const Login = () => {
 
       {snackbarOpen && (
         <div
+          role="status"
+          aria-live="polite"
           className={`fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300 z-[100] border ${
             snackbarSeverity === "success"
-              ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-              : "bg-red-50 text-red-700 border-red-100"
+              ? "bg-success-subtle text-success-fg border-success-subtle"
+              : "bg-danger-subtle text-danger-fg border-danger-subtle"
           }`}
         >
           <Typography variant="body2" weight="bold">
