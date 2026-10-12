@@ -17,6 +17,8 @@ from core.security import (
     verify_employer,
 )
 
+pytestmark = pytest.mark.real_auth
+
 
 def test_valid_token_local_verification(make_token):
     token = make_token(

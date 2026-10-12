@@ -355,9 +355,10 @@ def mock_supabase() -> MockSupabase:
 
 
 @pytest.fixture(autouse=True)
-def patch_backend_dependencies(mock_supabase: MockSupabase, monkeypatch):
+def patch_backend_dependencies(mock_supabase: MockSupabase, monkeypatch, request):
     """
     Automatically mock network-bound services (Supabase, local token verifier, LLMs).
+    Tests marked `real_auth` keep the real token verifiers so they can exercise core.security.
     """
     # Patch supabase across all modules
     targets = [
@@ -388,8 +389,9 @@ def patch_backend_dependencies(mock_supabase: MockSupabase, monkeypatch):
     def fake_verify_remotely(token: str) -> SimpleNamespace:
         return fake_verify_locally(token)
 
-    monkeypatch.setattr("core.security._verify_locally", fake_verify_locally, raising=False)
-    monkeypatch.setattr("core.security._verify_remotely", fake_verify_remotely, raising=False)
+    if request.node.get_closest_marker("real_auth") is None:
+        monkeypatch.setattr("core.security._verify_locally", fake_verify_locally, raising=False)
+        monkeypatch.setattr("core.security._verify_remotely", fake_verify_remotely, raising=False)
 
     # Mock job queue worker loop so it doesn't poll in background during tests
     async def noop_worker():
