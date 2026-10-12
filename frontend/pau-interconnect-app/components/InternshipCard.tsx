@@ -244,7 +244,7 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
   };
 
   return (
-    <div className="group bg-white rounded-xl border border-slate-100 hover:border-slate-200 transition-all duration-200 hover:shadow-md overflow-hidden flex flex-col h-full">
+    <div className="group bg-surface rounded-2xl border border-border hover:border-border-strong transition-all duration-200 hover:shadow-md overflow-hidden flex flex-col h-full text-fg">
       {/* Image */}
       <div className="relative h-[140px] overflow-hidden">
         <Image
@@ -290,34 +290,34 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
         <div className="mb-3">
           <Link
             href={`/internships/${internship.id}`}
-            className="hover:underline decoration-slate-300 underline-offset-2"
+            className="hover:underline decoration-border underline-offset-2"
           >
-            <h3 className="text-sm font-semibold text-slate-800 leading-snug line-clamp-2 group-hover:text-indigo-600 transition-colors">
+            <h3 className="text-sm font-semibold text-fg leading-snug line-clamp-2 group-hover:text-brand transition-colors">
               {internship.role}
             </h3>
           </Link>
           {internship.poster_id || internship.employer_id ? (
             <Link
               href={`/companies/${internship.poster_id || internship.employer_id}`}
-              className="text-xs text-slate-400 mt-1 font-medium hover:text-indigo-600 hover:underline"
+              className="text-xs text-fg-muted mt-1 font-medium hover:text-brand hover:underline"
               onClick={(e) => e.stopPropagation()}
             >
               {internship.company}
             </Link>
           ) : (
-            <p className="text-xs text-slate-400 mt-1 font-medium">
+            <p className="text-xs text-fg-muted mt-1 font-medium">
               {internship.company}
             </p>
           )}
         </div>
 
-        <div className="flex items-center gap-3 text-[11px] text-slate-400">
+        <div className="flex items-center gap-3 text-[11px] text-fg-muted">
           <span className="inline-flex items-center gap-1">
-            <MapPin className="w-3 h-3" />
+            <MapPin className="w-3 h-3 text-fg-subtle" />
             {internship.location}
           </span>
           <span className="inline-flex items-center gap-1">
-            <Clock className="w-3 h-3" />
+            <Clock className="w-3 h-3 text-fg-subtle" />
             {daysUntilDeadline === null
               ? "Open"
               : daysUntilDeadline > 0
@@ -330,9 +330,9 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-3 border-t border-slate-50 flex flex-col gap-2">
+      <div className="px-4 py-3 border-t border-border flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-semibold text-slate-300 uppercase tracking-wider">
+          <span className="text-[10px] font-semibold text-fg-subtle uppercase tracking-wider">
             {internship.category}
           </span>
 
