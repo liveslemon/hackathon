@@ -1,21 +1,38 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Typography,
-  Stack,
   Button,
   Input,
   Textarea,
   Select,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  PageHeader,
+  Badge,
+  Modal,
 } from "@/components/ui";
 import {
-  FiBriefcase,
-  FiPlus,
-  FiCheckCircle,
-  FiAlertCircle,
-} from "react-icons/fi";
+  Briefcase,
+  Plus,
+  Bookmark,
+  Calendar,
+  Clock,
+  MapPin,
+  DollarSign,
+  Sparkles,
+  ExternalLink,
+  CheckCircle2,
+  FolderOpen,
+  Eye,
+  FileText,
+} from "lucide-react";
+import { toast } from "sonner";
 import { postInternshipSchema } from "@/lib/validations/employer";
 
 const categories = [
@@ -41,6 +58,20 @@ const interestsOptions = [
   "Machine Learning",
 ];
 
+interface TemplateItem {
+  id: string;
+  name: string;
+  role?: string;
+  field?: string;
+  category?: string;
+  description?: string;
+  requirements?: string;
+  tags?: string[];
+  location?: string;
+  duration?: string;
+  stipend?: string;
+}
+
 export default function PostInternshipView() {
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -59,10 +90,29 @@ export default function PostInternshipView() {
   const [deadline, setDeadline] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [status, setStatus] = useState<{
-    type: "success" | "error";
-    message: string;
-  } | null>(null);
+
+  // Templates
+  const [templates, setTemplates] = useState<TemplateItem[]>([]);
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [saveTemplateModalOpen, setSaveTemplateModalOpen] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState("");
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
+  const fetchTemplates = useCallback(async () => {
+    try {
+      const res = await fetch("/api/internships/templates");
+      if (res.ok) {
+        const data = await res.json();
+        setTemplates(data || []);
+      }
+    } catch {
+      // Ignore background template load errors
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTemplates();
+  }, [fetchTemplates]);
 
   const toggleInterest = (item: string) => {
     setInterests((prev) =>
@@ -70,9 +120,68 @@ export default function PostInternshipView() {
     );
   };
 
+  const applyTemplate = (t: TemplateItem) => {
+    setFormData((prev) => ({
+      ...prev,
+      role: t.role || prev.role,
+      field: t.field || prev.field,
+      category: t.category || prev.category,
+      description: t.description || prev.description,
+      requirements: t.requirements || prev.requirements,
+      location: t.location || prev.location,
+      duration: t.duration || prev.duration,
+      stipend: t.stipend || prev.stipend,
+    }));
+    if (t.tags && t.tags.length > 0) {
+      setInterests(t.tags);
+    }
+    setTemplateModalOpen(false);
+    toast.success(`Template "${t.name}" applied`);
+  };
+
+  const handleSaveAsTemplate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTemplateName.trim()) {
+      toast.error("Template name is required");
+      return;
+    }
+    setSavingTemplate(true);
+    try {
+      const res = await fetch("/api/internships/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newTemplateName.trim(),
+          role: formData.role.trim() || undefined,
+          field: formData.field.trim() || undefined,
+          category: formData.category,
+          description: formData.description.trim() || undefined,
+          requirements: formData.requirements.trim() || undefined,
+          tags: interests,
+          location: formData.location.trim() || undefined,
+          duration: formData.duration.trim() || undefined,
+          stipend: formData.stipend.trim() || undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to save template");
+      }
+
+      toast.success(`Template "${newTemplateName}" saved!`);
+      setSaveTemplateModalOpen(false);
+      setNewTemplateName("");
+      fetchTemplates();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save template");
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
   const handlePost = async (publishStatus: "active" | "draft" = "active") => {
     setLoading(true);
-    setStatus(null);
     setErrors({});
 
     const payload = {
@@ -93,6 +202,7 @@ export default function PostInternshipView() {
         }
         setErrors(fieldErrors);
         setLoading(false);
+        toast.error("Please resolve highlighted validation errors before publishing");
         return;
       }
     }
@@ -117,267 +227,506 @@ export default function PostInternshipView() {
         throw new Error(result.error || "Failed to post internship");
       }
 
-      setStatus({
-        type: "success",
-        message:
-          publishStatus === "draft"
-            ? "Internship saved as draft!"
-            : "Internship posted successfully!",
-      });
+      toast.success(
+        publishStatus === "draft"
+          ? "Internship draft saved successfully!"
+          : "Internship posted and published live!",
+      );
 
-      // Clear form
-      setFormData({
-        role: "",
-        field: "",
-        category: "Hybrid",
-        description: "",
-        requirements: "",
-        location: "",
-        duration: "",
-        stipend: "",
-        slots: "1",
-        link: "",
-      });
-      setInterests([]);
-      setDeadline("");
-
+      router.push("/dashboard/employer/internships");
       router.refresh();
     } catch (err: unknown) {
-      setStatus({
-        type: "error",
-        message:
-          err instanceof Error ? err.message : "Failed to post internship",
-      });
+      toast.error(err instanceof Error ? err.message : "Failed to post internship");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto pb-12">
-      <div className="bg-white rounded-[32px] shadow-2xl shadow-indigo-50/50 border border-slate-100 overflow-hidden">
-        <div className="bg-gradient-to-r from-slate-50 to-white px-10 py-8 border-b border-slate-100 flex items-center justify-between">
-          <Stack direction="row" align="center" spacing={4}>
-            <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
-              <FiBriefcase className="w-6 h-6" />
-            </div>
-            <div>
-              <Typography variant="h3" weight="bold">
-                Post New Internship
-              </Typography>
-              <Typography variant="body2" color="muted">
-                Reach talented students across Pan-Atlantic University
-              </Typography>
-            </div>
-          </Stack>
-        </div>
-
-        <div className="p-10 space-y-8">
-          {status && (
-            <div
-              className={`p-4 rounded-2xl flex items-center gap-3 animate-in fade-in zoom-in duration-300 ${
-                status.type === "success"
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                  : "bg-rose-50 text-rose-700 border border-rose-100"
-              }`}
-            >
-              {status.type === "success" ? (
-                <FiCheckCircle className="w-5 h-5" />
-              ) : (
-                <FiAlertCircle className="w-5 h-5" />
-              )}
-              <Typography variant="body2" weight="bold">
-                {status.message}
-              </Typography>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Input
-                label="Role Title"
-                placeholder="e.g. Software Engineer Intern"
-                value={formData.role}
-                onChange={(e) =>
-                  setFormData({ ...formData, role: e.target.value })
-                }
-                required
-              />
-              {errors.role && (
-                <p className="text-red-500 text-xs mt-1">{errors.role}</p>
-              )}
-            </div>
-
-            <div>
-              <Input
-                label="Field of Study"
-                placeholder="e.g. Computer Science"
-                value={formData.field}
-                onChange={(e) =>
-                  setFormData({ ...formData, field: e.target.value })
-                }
-                required
-              />
-              {errors.field && (
-                <p className="text-red-500 text-xs mt-1">{errors.field}</p>
-              )}
-            </div>
-
-            <div>
-              <Select
-                label="Workplace Category"
-                options={categories}
-                value={formData.category}
-                onChange={(e) =>
-                  setFormData({ ...formData, category: e.target.value })
-                }
-                required
-              />
-              {errors.category && (
-                <p className="text-red-500 text-xs mt-1">{errors.category}</p>
-              )}
-            </div>
-
-            <div>
-              <Input
-                label="Location"
-                placeholder="e.g. Ibeju-Lekki, Lagos / Remote"
-                value={formData.location}
-                onChange={(e) =>
-                  setFormData({ ...formData, location: e.target.value })
-                }
-              />
-            </div>
-
-            <div>
-              <Input
-                label="Duration"
-                placeholder="e.g. 3 months, 6 months"
-                value={formData.duration}
-                onChange={(e) =>
-                  setFormData({ ...formData, duration: e.target.value })
-                }
-              />
-            </div>
-
-            <div>
-              <Input
-                label="Stipend / Compensation"
-                placeholder="e.g. ₦100,000/month or Competitive"
-                value={formData.stipend}
-                onChange={(e) =>
-                  setFormData({ ...formData, stipend: e.target.value })
-                }
-              />
-            </div>
-          </div>
-
-          <div>
-            <Textarea
-              label="Job Description"
-              placeholder="Describe the role, responsibilities, and department..."
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-              rows={4}
-              required
-            />
-            {errors.description && (
-              <p className="text-red-500 text-xs mt-1">{errors.description}</p>
+    <div className="space-y-8 max-w-7xl mx-auto pb-16">
+      <PageHeader
+        title="Post New Internship"
+        description="Reach talented students across Pan-Atlantic University for SIWES and direct placements."
+        actions={
+          <div className="flex items-center gap-2">
+            {templates.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setTemplateModalOpen(true)}
+                className="gap-2"
+              >
+                <FolderOpen className="w-4 h-4" />
+                Load Template ({templates.length})
+              </Button>
             )}
-          </div>
-
-          <div>
-            <Textarea
-              label="Requirements"
-              placeholder="List qualifications, skills, and tools required..."
-              value={formData.requirements}
-              onChange={(e) =>
-                setFormData({ ...formData, requirements: e.target.value })
-              }
-              rows={4}
-              required
-            />
-            {errors.requirements && (
-              <p className="text-red-500 text-xs mt-1">{errors.requirements}</p>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            <Typography
-              variant="body2"
-              weight="bold"
-              className="text-slate-700 ml-1"
-            >
-              Related Interests & Tags
-            </Typography>
-            <div className="flex flex-wrap gap-2">
-              {interestsOptions.map((option) => (
-                <button
-                  type="button"
-                  key={option}
-                  onClick={() => toggleInterest(option)}
-                  className={`px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${
-                    interests.includes(option)
-                      ? "bg-brand text-white shadow-lg shadow-brand/20 ring-2 ring-brand ring-offset-2"
-                      : "bg-slate-50 text-slate-500 hover:bg-slate-100 border border-slate-100"
-                  }`}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-            <div>
-              <Input
-                label="Application Deadline"
-                type="date"
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-              />
-              {errors.deadline && (
-                <p className="text-red-500 text-xs mt-1">{errors.deadline}</p>
-              )}
-            </div>
-
-            <div>
-              <Input
-                label="Recruiter Link (Optional)"
-                placeholder="https://..."
-                value={formData.link}
-                onChange={(e) =>
-                  setFormData({ ...formData, link: e.target.value })
-                }
-              />
-              {errors.link && (
-                <p className="text-red-500 text-xs mt-1">{errors.link}</p>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4 pt-4">
             <Button
               variant="outline"
-              className="py-4 rounded-2xl text-base font-bold flex-1"
+              size="sm"
+              onClick={() => setSaveTemplateModalOpen(true)}
+              className="gap-2"
+            >
+              <Bookmark className="w-4 h-4" />
+              Save as Template
+            </Button>
+          </div>
+        }
+      />
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left column: Posting Form */}
+        <div className="lg:col-span-7 space-y-6">
+          {/* Section 1: Role Overview */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2 text-primary font-medium text-xs">
+                <Briefcase className="w-4 h-4" />
+                <span>SECTION 1</span>
+              </div>
+              <CardTitle className="text-base">Role Identity & Track</CardTitle>
+              <CardDescription>
+                Define the primary position title and disciplinary discipline.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Input
+                  label="Role Title"
+                  placeholder="e.g. Software Engineer Intern"
+                  value={formData.role}
+                  onChange={(e) => {
+                    setFormData({ ...formData, role: e.target.value });
+                    if (errors.role) setErrors((prev) => ({ ...prev, role: "" }));
+                  }}
+                  required
+                />
+                {errors.role && (
+                  <p className="text-danger-fg text-xs mt-1 font-medium">{errors.role}</p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Input
+                    label="Academic Field / Industry Track"
+                    placeholder="e.g. Computer Science, Media"
+                    value={formData.field}
+                    onChange={(e) => {
+                      setFormData({ ...formData, field: e.target.value });
+                      if (errors.field) setErrors((prev) => ({ ...prev, field: "" }));
+                    }}
+                    required
+                  />
+                  {errors.field && (
+                    <p className="text-danger-fg text-xs mt-1 font-medium">{errors.field}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Select
+                    label="Workplace Arrangement"
+                    options={categories}
+                    value={formData.category}
+                    onChange={(e) => {
+                      setFormData({ ...formData, category: e.target.value });
+                      if (errors.category) setErrors((prev) => ({ ...prev, category: "" }));
+                    }}
+                    required
+                  />
+                  {errors.category && (
+                    <p className="text-danger-fg text-xs mt-1 font-medium">{errors.category}</p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section 2: Logistics & Compensation */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2 text-primary font-medium text-xs">
+                <MapPin className="w-4 h-4" />
+                <span>SECTION 2</span>
+              </div>
+              <CardTitle className="text-base">Location & Compensation</CardTitle>
+              <CardDescription>
+                Specify physical premises, duration, and monthly remuneration.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Input
+                    label="Location (City / Campus Area)"
+                    placeholder="e.g. Victoria Island, Lagos or Remote"
+                    value={formData.location}
+                    onChange={(e) =>
+                      setFormData({ ...formData, location: e.target.value })
+                    }
+                  />
+                  {errors.location && (
+                    <p className="text-danger-fg text-xs mt-1 font-medium">{errors.location}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Input
+                    label="Placement Duration"
+                    placeholder="e.g. 3 Months / 6 Months (SIWES)"
+                    value={formData.duration}
+                    onChange={(e) =>
+                      setFormData({ ...formData, duration: e.target.value })
+                    }
+                  />
+                  {errors.duration && (
+                    <p className="text-danger-fg text-xs mt-1 font-medium">{errors.duration}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Input
+                    label="Stipend / Compensation"
+                    placeholder="e.g. ₦100,000/month or Competitive"
+                    value={formData.stipend}
+                    onChange={(e) =>
+                      setFormData({ ...formData, stipend: e.target.value })
+                    }
+                  />
+                  {errors.stipend && (
+                    <p className="text-danger-fg text-xs mt-1 font-medium">{errors.stipend}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Input
+                    label="Open Positions / Slots"
+                    type="number"
+                    min="1"
+                    placeholder="1"
+                    value={formData.slots}
+                    onChange={(e) =>
+                      setFormData({ ...formData, slots: e.target.value })
+                    }
+                  />
+                  {errors.slots && (
+                    <p className="text-danger-fg text-xs mt-1 font-medium">{errors.slots}</p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section 3: Narrative & Requirements */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2 text-primary font-medium text-xs">
+                <FileText className="w-4 h-4" />
+                <span>SECTION 3</span>
+              </div>
+              <CardTitle className="text-base">Role Description & Requirements</CardTitle>
+              <CardDescription>
+                Detailed overview of expectations and student qualifications.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Textarea
+                  label="Role Description"
+                  placeholder="Describe the department, day-to-day project assignments, and mentorship provided (min 20 characters)..."
+                  value={formData.description}
+                  onChange={(e) => {
+                    setFormData({ ...formData, description: e.target.value });
+                    if (errors.description) setErrors((prev) => ({ ...prev, description: "" }));
+                  }}
+                  rows={4}
+                  required
+                />
+                {errors.description && (
+                  <p className="text-danger-fg text-xs mt-1 font-medium">{errors.description}</p>
+                )}
+              </div>
+
+              <div>
+                <Textarea
+                  label="Candidate Requirements"
+                  placeholder="Key competencies, coursework, tools, and eligibility standards (min 10 characters)..."
+                  value={formData.requirements}
+                  onChange={(e) => {
+                    setFormData({ ...formData, requirements: e.target.value });
+                    if (errors.requirements) setErrors((prev) => ({ ...prev, requirements: "" }));
+                  }}
+                  rows={4}
+                  required
+                />
+                {errors.requirements && (
+                  <p className="text-danger-fg text-xs mt-1 font-medium">{errors.requirements}</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section 4: Skills & Matching Keywords */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2 text-primary font-medium text-xs">
+                <Sparkles className="w-4 h-4" />
+                <span>SECTION 4</span>
+              </div>
+              <CardTitle className="text-base">Matching Keywords & Interests</CardTitle>
+              <CardDescription>
+                Tags power PAU InterConnect AI matching algorithms to surface relevant student profiles.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {interestsOptions.map((option) => {
+                  const isSelected = interests.includes(option);
+                  return (
+                    <button
+                      type="button"
+                      key={option}
+                      onClick={() => toggleInterest(option)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                        isSelected
+                          ? "bg-primary text-primary-fg border-primary shadow-xs"
+                          : "bg-surface-raised text-muted-fg border-border hover:bg-canvas hover:text-fg"
+                      }`}
+                    >
+                      {isSelected ? `✓ ${option}` : `+ ${option}`}
+                    </button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section 5: Timeline & Recruiter Link */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2 text-primary font-medium text-xs">
+                <Calendar className="w-4 h-4" />
+                <span>SECTION 5</span>
+              </div>
+              <CardTitle className="text-base">Application Timeline & Routing</CardTitle>
+              <CardDescription>
+                Application closure deadline and direct or external application routing.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Input
+                    label="Application Deadline"
+                    type="date"
+                    value={deadline}
+                    onChange={(e) => {
+                      setDeadline(e.target.value);
+                      if (errors.deadline) setErrors((prev) => ({ ...prev, deadline: "" }));
+                    }}
+                  />
+                  {errors.deadline && (
+                    <p className="text-danger-fg text-xs mt-1 font-medium">{errors.deadline}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Input
+                    label="External Link (Optional)"
+                    placeholder="https://company.com/apply"
+                    value={formData.link}
+                    onChange={(e) => {
+                      setFormData({ ...formData, link: e.target.value });
+                      if (errors.link) setErrors((prev) => ({ ...prev, link: "" }));
+                    }}
+                    helperText="Leave empty for direct applications via PAU InterConnect."
+                  />
+                  {errors.link && (
+                    <p className="text-danger-fg text-xs mt-1 font-medium">{errors.link}</p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Action Footer */}
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <Button
+              variant="outline"
+              className="py-3 text-sm font-medium flex-1"
               isLoading={loading}
               onClick={() => handlePost("draft")}
             >
               Save as Draft
             </Button>
             <Button
-              className="py-4 rounded-2xl text-base font-bold shadow-xl shadow-brand/20 flex-1"
+              className="py-3 text-sm font-medium flex-1 gap-2"
               isLoading={loading}
               onClick={() => handlePost("active")}
-              leftIcon={<FiPlus className="w-5 h-5" />}
             >
+              <Plus className="w-4 h-4" />
               Publish Internship
             </Button>
           </div>
         </div>
+
+        {/* Right column: Live Student Card Preview */}
+        <div className="lg:col-span-5 sticky top-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm font-semibold text-fg">
+              <Eye className="w-4 h-4 text-primary" />
+              <span>Live Student Preview</span>
+            </div>
+            <span className="text-xs text-muted-fg font-medium">Card View</span>
+          </div>
+
+          <div className="border border-border bg-surface rounded-xl p-5 shadow-xs space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+                  {formData.field || "Academic Track"}
+                </span>
+                <h3 className="font-semibold text-base text-fg leading-snug">
+                  {formData.role || "Role Title Preview"}
+                </h3>
+                <p className="text-xs text-muted-fg font-medium">Your Company</p>
+              </div>
+              <Badge variant="outline" className="shrink-0 text-xs">
+                {formData.category}
+              </Badge>
+            </div>
+
+            <p className="text-xs text-muted-fg line-clamp-3">
+              {formData.description ||
+                "Role description preview will appear here as you type. Provide clear expectations and responsibilities for student applicants."}
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 text-xs text-muted-fg pt-1">
+              <div className="flex items-center gap-1.5 truncate">
+                <MapPin className="w-3.5 h-3.5 shrink-0 text-muted-fg" />
+                <span className="truncate">{formData.location || "Location pending"}</span>
+              </div>
+              <div className="flex items-center gap-1.5 truncate">
+                <Clock className="w-3.5 h-3.5 shrink-0 text-muted-fg" />
+                <span className="truncate">{formData.duration || "Duration TBD"}</span>
+              </div>
+              <div className="flex items-center gap-1.5 truncate">
+                <DollarSign className="w-3.5 h-3.5 shrink-0 text-muted-fg" />
+                <span className="truncate">{formData.stipend || "Stipend competitive"}</span>
+              </div>
+              <div className="flex items-center gap-1.5 truncate">
+                <Calendar className="w-3.5 h-3.5 shrink-0 text-muted-fg" />
+                <span className="truncate">
+                  {deadline ? `Deadline: ${deadline}` : "Open rolling"}
+                </span>
+              </div>
+            </div>
+
+            {interests.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {interests.slice(0, 4).map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-surface-raised border border-border text-fg"
+                  >
+                    {tag}
+                  </span>
+                ))}
+                {interests.length > 4 && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium text-muted-fg">
+                    +{interests.length - 4} more
+                  </span>
+                )}
+              </div>
+            )}
+
+            <div className="border-t border-border pt-4 flex items-center justify-between">
+              <span className="text-xs text-muted-fg">
+                {formData.slots || "1"} slot{formData.slots === "1" ? "" : "s"} open
+              </span>
+              <Button size="sm" variant="outline" className="pointer-events-none text-xs">
+                View & Apply
+              </Button>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl border border-border bg-surface-raised/40 text-xs text-muted-fg space-y-2">
+            <div className="font-semibold text-fg flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-success-fg" />
+              <span>Posting Checklist</span>
+            </div>
+            <ul className="space-y-1 list-disc list-inside">
+              <li>Role title matches official student SIWES designations.</li>
+              <li>Provide transparent compensation expectations.</li>
+              <li>Add relevant skills for automated AI matching.</li>
+            </ul>
+          </div>
+        </div>
       </div>
+
+      {/* Template Chooser Modal */}
+      <Modal
+        isOpen={templateModalOpen}
+        onClose={() => setTemplateModalOpen(false)}
+        title="Saved Templates"
+        description="Select a template to quickly prefill role details."
+      >
+        <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+          {templates.map((t) => (
+            <div
+              key={t.id}
+              className="p-3.5 rounded-lg border border-border bg-surface hover:bg-canvas transition-colors flex items-center justify-between gap-3"
+            >
+              <div className="space-y-1">
+                <div className="font-medium text-sm text-fg">{t.name}</div>
+                <div className="text-xs text-muted-fg">
+                  {t.role || "Untitled"} &bull; {t.category || "Any"} &bull; {t.field || "Any field"}
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => applyTemplate(t)}
+              >
+                Use
+              </Button>
+            </div>
+          ))}
+        </div>
+      </Modal>
+
+      {/* Save Template Modal */}
+      <Modal
+        isOpen={saveTemplateModalOpen}
+        onClose={() => setSaveTemplateModalOpen(false)}
+        title="Save Current Form as Template"
+        description="Templates allow you to rapidly reuse role titles, requirements, and keywords for recurring recruiting cycles."
+      >
+        <form onSubmit={handleSaveAsTemplate} className="space-y-4">
+          <Input
+            label="Template Name"
+            placeholder="e.g. Summer Software Intern Template"
+            value={newTemplateName}
+            onChange={(e) => setNewTemplateName(e.target.value)}
+            required
+            autoFocus
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setSaveTemplateModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" isLoading={savingTemplate}>
+              Save Template
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
+
