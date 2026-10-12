@@ -24,6 +24,7 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
   >("info");
 
   const isEmployer = userProfile?.role === "employer";
+  const isAdmin = userProfile?.role === "admin";
 
   const handleLogout = () => {
     if (isLoggingOut) return;
@@ -32,7 +33,12 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
     setNotificationSeverity("info");
     setNotificationOpen(true);
 
-    fastSignOut(isEmployer ? "/login/employer" : "/login/student");
+    const logoutTarget = isAdmin
+      ? "/login/admin"
+      : isEmployer
+        ? "/login/employer"
+        : "/login/student";
+    fastSignOut(logoutTarget);
   };
 
   const displayName = isEmployer
@@ -40,7 +46,7 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
     : userProfile?.name?.split(" ")[0] ||
       userProfile?.full_name?.split(" ")[0] ||
       userProfile?.email ||
-      "Student";
+      (isAdmin ? "Admin" : "Student");
 
   return (
     <>
@@ -50,7 +56,11 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
             className="flex items-center gap-3 cursor-pointer group"
             onClick={() =>
               router.push(
-                isEmployer ? "/dashboard/employer" : "/dashboard/student",
+                isAdmin
+                  ? "/dashboard/admin"
+                  : isEmployer
+                    ? "/dashboard/employer"
+                    : "/dashboard/student",
               )
             }
           >
@@ -82,6 +92,7 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
                 <>
                   <button
                     onClick={() => router.push("/my-internships")}
+                    aria-label="My Internships"
                     className="w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-600 hover:bg-white transition-all"
                     title="My Internships"
                   >
@@ -89,6 +100,7 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
                   </button>
                   <button
                     onClick={() => router.push("/dashboard/student/logbook")}
+                    aria-label="Logbook"
                     className="w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-600 hover:bg-white transition-all"
                     title="Logbook"
                   >
@@ -96,6 +108,7 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
                   </button>
                   <button
                     onClick={() => router.push("/profile")}
+                    aria-label="Profile"
                     className="w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-600 hover:bg-white transition-all"
                     title="Profile"
                   >
@@ -106,6 +119,7 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut}
+                aria-label="Sign Out"
                 className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${isLoggingOut ? "opacity-50 cursor-not-allowed text-red-400" : "text-slate-400 hover:text-red-500 hover:bg-red-50"}`}
                 title="Logout"
               >

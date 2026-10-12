@@ -36,9 +36,13 @@ export default async function OnboardingPage({
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, onboarding_stage")
+      .select("role, onboarding_stage, is_admin")
       .eq("id", user.id)
       .maybeSingle();
+
+    if (profile?.is_admin || profile?.role === "admin") {
+      redirect("/dashboard/admin");
+    }
 
     if (profile?.onboarding_stage === "completed" && profile.role) {
       redirect(

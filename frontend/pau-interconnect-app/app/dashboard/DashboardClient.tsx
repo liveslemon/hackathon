@@ -1,160 +1,44 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Image from "next/image";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
-import PostInternshipView from "./post/PostInternshipView";
-import { Button, Stack, Typography, Divider } from "@/components/ui";
-import { FiLogOut, FiPieChart, FiPlusSquare } from "react-icons/fi";
-import AnalyticsView from "./AnalyticsView";
+import { useAuth } from "@/context/AuthContext";
+import { getDashboardPathForRole, type AppRole } from "@/lib/role-guard";
 import type { Session } from "@supabase/supabase-js";
-import { fastSignOut } from "@/lib/fast-signout";
 
 export default function DashboardClient({
   session,
 }: {
-  session: Session | null;
+  session?: Session | null;
 }) {
-  const [activeTab, setActiveTab] = useState("analytics");
-  const [categories, setCategories] = useState<
-    { label: string; value: number }[]
-  >([]);
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { user, profile, loading } = useAuth();
 
   useEffect(() => {
-    if (!session?.user) {
-      router.push("/");
+    if (loading) return;
+
+    const activeUser = user || session?.user;
+    if (!activeUser) {
+      router.replace("/login/student?next=/dashboard");
       return;
     }
 
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from("internships")
-          .select("category");
+    const isAdmin = Boolean(profile?.is_admin) || profile?.role === "admin";
+    const role = (profile?.role as AppRole) ?? null;
 
-        if (!error && data) {
-          const counts: Record<string, number> = {};
-          data.forEach((item: { category: string | null }) => {
-            const category = item.category || "Unknown";
-            counts[category] = (counts[category] || 0) + 1;
-          });
-          const categoryArray = Object.entries(counts).map(
-            ([label, value]) => ({
-              label,
-              value,
-            }),
-          );
-          setCategories(categoryArray);
-        }
-      } catch (err) {
-        console.error("Dashboard fetch error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!isAdmin && profile?.onboarding_stage !== "completed") {
+      router.replace("/onboarding");
+      return;
+    }
 
-    fetchData();
-  }, [session, router]);
-
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-  const handleLogout = () => {
-    if (isLoggingOut) return;
-    setIsLoggingOut(true);
-
-    fastSignOut("/");
-  };
-
-  if (!session?.user || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
-      </div>
-    );
-  }
+    router.replace(getDashboardPathForRole(role, isAdmin));
+  }, [user, session, profile, loading, router]);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] p-6 md:p-10">
-      <div className="max-w-7xl mx-auto space-y-10">
-        <header className="flex justify-between items-center bg-white/60 backdrop-blur-xl p-6 rounded-[32px] border border-white shadow-xl shadow-indigo-50/50">
-          <Stack direction="row" align="center" spacing={4}>
-            <div className="w-12 h-12 bg-gradient-to-br from-brand to-brand-secondary rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
-              <Image
-                src="/favicon.ico"
-                alt="Logo"
-                width={32}
-                height={32}
-                className="w-8 h-8 opacity-90"
-              />
-            </div>
-            <div>
-              <Typography variant="h4" weight="bold">
-                Admin Portal
-              </Typography>
-              <Typography variant="caption" weight="semibold" color="muted">
-                Manage your platform ecosystem
-              </Typography>
-            </div>
-          </Stack>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            leftIcon={
-              isLoggingOut ? (
-                <div className="w-4 h-4 rounded-full border-2 border-red-500 border-t-transparent animate-spin" />
-              ) : (
-                <FiLogOut className="w-4 h-4" />
-              )
-            }
-            className={`rounded-xl transition-all font-bold ${isLoggingOut ? "opacity-50 cursor-not-allowed border-red-200 text-red-500 bg-red-50" : "border-slate-200 hover:border-red-200 hover:text-red-500 hover:bg-red-50"}`}
-          >
-            {isLoggingOut ? "Logging out..." : "Logout"}
-          </Button>
-        </header>
-
-        <Stack direction="row" spacing={4} className="flex-wrap gap-y-4">
-          <Button
-            variant={activeTab === "analytics" ? "solid" : "outline"}
-            onClick={() => setActiveTab("analytics")}
-            leftIcon={<FiPieChart className="w-5 h-5" />}
-            className={`px-8 h-14 rounded-2xl font-bold transition-all duration-300 ${
-              activeTab === "analytics"
-                ? "shadow-xl shadow-indigo-100"
-                : "bg-white border-slate-100 text-slate-500 hover:border-brand hover:text-brand"
-            }`}
-          >
-            Analytics Overview
-          </Button>
-          <Button
-            variant={activeTab === "post" ? "solid" : "outline"}
-            onClick={() => setActiveTab("post")}
-            leftIcon={<FiPlusSquare className="w-5 h-5" />}
-            className={`px-8 h-14 rounded-2xl font-bold transition-all duration-300 ${
-              activeTab === "post"
-                ? "shadow-xl shadow-indigo-100"
-                : "bg-white border-slate-100 text-slate-500 hover:border-brand hover:text-brand"
-            }`}
-          >
-            Post Internship
-          </Button>
-        </Stack>
-
-        <Divider className="opacity-40" />
-
-        <main className="animate-in fade-in slide-in-from-bottom-6 duration-500 fill-mode-both">
-          {activeTab === "analytics" && (
-            <AnalyticsView categories={categories} />
-          )}
-          {activeTab === "post" && <PostInternshipView />}
-        </main>
-      </div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8fafc]">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand mb-4" />
+      <p className="text-sm font-medium text-slate-500">Redirecting to your dashboard...</p>
     </div>
   );
 }
+
