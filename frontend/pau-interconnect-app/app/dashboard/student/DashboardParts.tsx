@@ -178,18 +178,24 @@ export async function InternshipGridSection() {
 
   if (!user) return null;
 
-  // Parallelize the three heavy data fetches
-  const [internshipsResult, matchesResult, appliedResult] = await Promise.all([
-    supabase.from("internships").select(INTERNSHIP_LIST_COLUMNS),
-    supabase
-      .from("match_results")
-      .select("internship_id, match_score")
-      .eq("user_id", user.id),
-    supabase
-      .from("applied_internships")
-      .select("internship_id, status, stage")
-      .eq("user_id", user.id),
-  ]);
+  // Parallelize the data fetches including student profile interests
+  const [internshipsResult, matchesResult, appliedResult, profileResult] =
+    await Promise.all([
+      supabase.from("internships").select(INTERNSHIP_LIST_COLUMNS),
+      supabase
+        .from("match_results")
+        .select("internship_id, match_score")
+        .eq("user_id", user.id),
+      supabase
+        .from("applied_internships")
+        .select("internship_id, status, stage")
+        .eq("user_id", user.id),
+      supabase
+        .from("profiles")
+        .select("interests")
+        .eq("id", user.id)
+        .maybeSingle(),
+    ]);
 
   const internshipsData = internshipsResult.data || [];
   const matches = matchesResult.data || [];
@@ -201,10 +207,12 @@ export async function InternshipGridSection() {
 
   const stageMap = new Map(applications.map((a) => [a.internship_id, a.stage]));
 
-  // Discovery shows open roles; keep ones the student applied to so the
-  // Applied / Accepted / Rejected filters still find them after closing.
+  // Discovery shows open roles; hide draft internships from students; keep ones
+  // the student applied to so the Applied / Accepted / Denied filters still find them.
   const visibleInternships = internshipsData.filter(
-    (internship) => isOpenInternship(internship) || statusMap.has(internship.id),
+    (internship) =>
+      internship.status !== "draft" &&
+      (isOpenInternship(internship) || statusMap.has(internship.id)),
   );
 
   const internshipsWithMatches: InternshipWithMatch[] = visibleInternships.map(
@@ -221,7 +229,10 @@ export async function InternshipGridSection() {
   return (
     <InternshipGrid
       initialInternships={internshipsWithMatches}
-      userProfile={{ id: user.id }}
+      userProfile={{
+        id: user.id,
+        interests: profileResult?.data?.interests,
+      }}
     />
   );
 }

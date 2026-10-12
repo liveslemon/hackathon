@@ -6,7 +6,7 @@
     "field": "Software Development",
     "category": "Engineering",
     "description": "Work on developing and maintaining frontend features.",
-    "deadline": "2025-12-01",
+    "deadline": "2026-12-01",
     "interests": ["Frontend", "React", "UI/UX"]
   },
   {
@@ -16,7 +16,7 @@
     "field": "Data Science",
     "category": "Analytics",
     "description": "Analyze data sets and provide actionable insights.",
-    "deadline": "2025-11-15",
+    "deadline": "2026-11-15",
     "interests": ["Data Analysis", "Python", "SQL"]
   },
   {
@@ -26,7 +26,7 @@
     "field": "Software Development",
     "category": "Engineering",
     "description": "Assist in building backend APIs and database integration.",
-    "deadline": "2025-12-10",
+    "deadline": "2026-12-10",
     "interests": ["Backend", "Node.js", "Databases"]
   },
   {
@@ -36,7 +36,7 @@
     "field": "Artificial Intelligence",
     "category": "Engineering",
     "description": "Work on ML models and NLP tasks.",
-    "deadline": "2025-12-05",
+    "deadline": "2026-12-05",
     "interests": ["Machine Learning", "Python", "AI"]
   },
   {
@@ -46,7 +46,7 @@
     "field": "Finance",
     "category": "Business",
     "description": "Assist with financial analysis and reporting.",
-    "deadline": "2025-11-30",
+    "deadline": "2026-11-30",
     "interests": ["Finance", "Excel", "Analytics"]
   },
   {
@@ -56,7 +56,7 @@
     "field": "Design",
     "category": "Creative",
     "description": "Create and improve design prototypes for applications.",
-    "deadline": "2025-12-15",
+    "deadline": "2026-12-15",
     "interests": ["Design", "Figma", "UI/UX"]
   },
   {
@@ -66,7 +66,7 @@
     "field": "Research",
     "category": "Science",
     "description": "Conduct research on sustainable technologies.",
-    "deadline": "2025-12-20",
+    "deadline": "2026-12-20",
     "interests": ["Research", "Environment", "Sustainability"]
   },
   {
@@ -76,7 +76,7 @@
     "field": "Marketing",
     "category": "Business",
     "description": "Assist with campaigns and digital marketing strategies.",
-    "deadline": "2025-12-10",
+    "deadline": "2026-12-10",
     "interests": ["Marketing", "Social Media", "Content"]
   },
   {
@@ -86,7 +86,7 @@
     "field": "Security",
     "category": "IT",
     "description": "Assist in monitoring and improving system security.",
-    "deadline": "2025-11-28",
+    "deadline": "2026-11-28",
     "interests": ["Security", "Networking", "Ethical Hacking"]
   },
   {
@@ -96,7 +96,7 @@
     "field": "Healthcare",
     "category": "Science",
     "description": "Work on healthcare technology research and applications.",
-    "deadline": "2025-12-12",
+    "deadline": "2026-12-12",
     "interests": ["Healthcare", "Research", "Technology"]
   }
 ]

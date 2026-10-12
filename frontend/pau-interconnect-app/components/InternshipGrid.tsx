@@ -100,19 +100,50 @@ const InternshipGrid = ({
     if (statusFilter !== "All") {
       filtered = filtered.filter((internship) => {
         const status = (internship.applicationStatus || "").toLowerCase();
-        if (statusFilter === "Applied")
-          return ["pending", "applied", "submitted"].includes(status);
-        if (statusFilter === "Accepted")
-          return status === "accepted" || status === "approved";
-        if (statusFilter === "Rejected")
-          return status === "rejected" || status === "denied";
-        if (statusFilter === "None") return !internship.applicationStatus;
+        const stage = (internship.applicationStage || "").toLowerCase();
+        if (statusFilter === "Applied") {
+          return (
+            [
+              "pending",
+              "applied",
+              "submitted",
+              "reviewed",
+              "shortlisted",
+              "interview",
+              "offered",
+            ].includes(status) ||
+            [
+              "applied",
+              "reviewed",
+              "shortlisted",
+              "interview",
+              "offered",
+            ].includes(stage)
+          );
+        }
+        if (statusFilter === "Accepted") {
+          return (
+            status === "accepted" ||
+            status === "approved" ||
+            stage === "accepted"
+          );
+        }
+        if (statusFilter === "Rejected") {
+          return (
+            status === "rejected" ||
+            status === "denied" ||
+            stage === "rejected"
+          );
+        }
+        if (statusFilter === "None") {
+          return !internship.applicationStatus && !internship.applicationStage;
+        }
         return true;
       });
     }
 
     if (matchFilter !== "All") {
-      const minMatch = parseInt(matchFilter);
+      const minMatch = parseInt(matchFilter, 10);
       filtered = filtered.filter(
         (internship) => (internship.matchPercentage ?? 0) >= minMatch,
       );
@@ -120,19 +151,36 @@ const InternshipGrid = ({
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (internship) =>
-          internship.company?.toLowerCase().includes(query) ||
-          internship.role?.toLowerCase().includes(query) ||
-          internship.field?.toLowerCase().includes(query),
-      );
+      filtered = filtered.filter((internship) => {
+        const companyMatch = internship.company?.toLowerCase().includes(query);
+        const roleMatch = internship.role?.toLowerCase().includes(query);
+        const fieldMatch = internship.field?.toLowerCase().includes(query);
+        const categoryMatch = internship.category?.toLowerCase().includes(query);
+        const locationMatch = internship.location?.toLowerCase().includes(query);
+        const descMatch = internship.description?.toLowerCase().includes(query);
+        const interestsMatch = getInternshipInterests(internship).some((i) =>
+          i.toLowerCase().includes(query),
+        );
+        return Boolean(
+          companyMatch ||
+            roleMatch ||
+            fieldMatch ||
+            categoryMatch ||
+            locationMatch ||
+            descMatch ||
+            interestsMatch,
+        );
+      });
     }
 
     filtered.sort((a, b) => {
       if (sortBy === "match")
         return (b.matchPercentage ?? 0) - (a.matchPercentage ?? 0);
-      if (sortBy === "deadline")
-        return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+      if (sortBy === "deadline") {
+        const timeA = a.deadline ? new Date(a.deadline).getTime() : Infinity;
+        const timeB = b.deadline ? new Date(b.deadline).getTime() : Infinity;
+        return timeA - timeB;
+      }
       if (sortBy === "company")
         return (a.company || "").localeCompare(b.company || "");
       return 0;
