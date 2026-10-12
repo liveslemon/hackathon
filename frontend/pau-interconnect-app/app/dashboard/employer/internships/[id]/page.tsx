@@ -1,7 +1,7 @@
 import React, { Suspense } from "react";
 import { maskStudentForEmployer } from "@/lib/privacy";
 import { redirect } from "next/navigation";
-import { Stack, Typography } from "@/components/ui";
+import { Stack, Typography, Skeleton } from "@/components/ui";
 import DashboardShellWrapper from "../../DashboardShellWrapper";
 import ApplicantReviewClient from "./ApplicantReviewClient";
 import type { Applicant } from "./ApplicantReviewClient";
@@ -130,7 +130,7 @@ export default async function EmployerApplicantReviewPage(props: {
   if (!internship) {
     return (
       <DashboardShellWrapper userProfile={profile}>
-        <div className="p-12 text-center space-y-4">
+        <div className="p-12 text-center space-y-4 max-w-xl mx-auto">
           <Typography variant="h3" color="error" weight="bold">
             Internship Access Denied
           </Typography>
@@ -140,7 +140,7 @@ export default async function EmployerApplicantReviewPage(props: {
             <strong>{user.id}</strong>).
           </Typography>
           {fetchError && (
-            <div className="bg-rose-50 p-4 rounded-xl border border-rose-100 max-w-lg mx-auto mt-6">
+            <div className="bg-danger-subtle p-4 rounded-xl border border-border max-w-lg mx-auto mt-6">
               <Typography
                 variant="caption"
                 color="error"
@@ -157,14 +157,14 @@ export default async function EmployerApplicantReviewPage(props: {
 
   return (
     <DashboardShellWrapper userProfile={profile}>
-      <main className="max-w-5xl mx-auto py-8 lg:py-12">
+      <main className="max-w-5xl mx-auto py-8 lg:py-12 px-4 sm:px-6">
         <Suspense
           fallback={
             <Stack spacing={4}>
-              <div className="h-8 w-48 bg-slate-100 rounded-xl animate-pulse mb-8" />
-              <div className="h-32 w-full bg-slate-100 rounded-[32px] animate-pulse" />
-              <div className="h-32 w-full bg-slate-100 rounded-[32px] animate-pulse" />
-              <div className="h-32 w-full bg-slate-100 rounded-[32px] animate-pulse" />
+              <Skeleton className="h-8 w-48 rounded-xl mb-6" />
+              <Skeleton className="h-28 w-full rounded-2xl" />
+              <Skeleton className="h-28 w-full rounded-2xl" />
+              <Skeleton className="h-28 w-full rounded-2xl" />
             </Stack>
           }
         >
