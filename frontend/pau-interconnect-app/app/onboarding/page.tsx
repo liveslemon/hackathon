@@ -54,7 +54,7 @@ export default async function OnboardingPage({
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex items-start justify-center py-10 px-4 overflow-y-auto">
+    <div className="min-h-screen bg-background flex items-start justify-center py-6 md:py-10 px-4 overflow-y-auto">
       <OnboardingClient
         initialUser={user}
         initialRolePreference={preferredRole}

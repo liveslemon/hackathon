@@ -189,21 +189,109 @@ Deno.serve(async (req: Request) => {
 
     // 6. Deliver Email (Brevo primary, Resend fallback)
     if (employer.email) {
-      const emailHtml = `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b;">
-          <h2 style="color: #1e293b;">Posting Deadline Reminder</h2>
-          <p>Hi ${safeEmployerName},</p>
-          <p>Your posting "<strong>${safeRole}</strong>" has a deadline in 3 days with ${applicantCount} applicants so far.</p>
-          <a href="${reviewLink}" style="display: inline-block; background: #4f46e5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px; font-weight: 600;">
-            Review Applications
-          </a>
-          <p style="color: #64748b; margin-top: 24px; font-size: 12px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
-            You're receiving this because deadline reminders are enabled on your account.
-            <br />
-            <a href="${settingsLink}" style="color: #4f46e5; text-decoration: none;">Manage email preferences or unsubscribe</a>
-          </p>
-        </div>
-      `;
+      const emailHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>Reminder: ${safeRole} closes in 3 days</title>
+  <style>
+    :root { color-scheme: light dark; supported-color-schemes: light dark; }
+    body {
+      margin: 0; padding: 0; width: 100% !important;
+      -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f8fafc; color: #0f172a;
+    }
+    @media (prefers-color-scheme: dark) {
+      body, .email-bg { background-color: #090d16 !important; color: #f8fafc !important; }
+      .email-card { background-color: #111827 !important; border-color: #1e293b !important; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important; }
+      .email-title { color: #f8fafc !important; }
+      .email-text { color: #cbd5e1 !important; }
+      .email-muted { color: #94a3b8 !important; }
+      .email-footer-border { border-color: #1e293b !important; }
+      .email-btn { background-color: #6366f1 !important; color: #ffffff !important; }
+      .email-badge { background-color: rgba(99, 102, 241, 0.15) !important; color: #818cf8 !important; }
+    }
+  </style>
+</head>
+<body class="email-bg" style="margin: 0; padding: 32px 16px; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" class="email-bg" style="background-color: #f8fafc;">
+    <tr>
+      <td align="center">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 580px; text-align: left;">
+          <tr>
+            <td style="padding: 0 0 24px 0; text-align: center;">
+              <span style="display: inline-block; font-weight: 800; font-size: 18px; letter-spacing: -0.025em; color: #4f46e5;">
+                PAU InterConnect
+              </span>
+              <div style="font-size: 12px; font-weight: 500; color: #64748b; margin-top: 2px;">
+                Pan-Atlantic University Career Portal
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="email-card" style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.05); overflow: hidden;">
+                <tr>
+                  <td height="5" style="background: linear-gradient(90deg, #4f46e5, #7c3aed); font-size: 1px; line-height: 1px;">&nbsp;</td>
+                </tr>
+                <tr>
+                  <td style="padding: 36px 32px 32px 32px;">
+                    <div style="margin-bottom: 16px;">
+                      <span class="email-badge" style="display: inline-block; padding: 4px 12px; background-color: #eef2ff; color: #4f46e5; border-radius: 9999px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
+                        Deadline Notice
+                      </span>
+                    </div>
+                    <h1 class="email-title" style="margin: 0 0 16px 0; font-size: 22px; font-weight: 700; color: #0f172a; line-height: 1.3;">
+                      Posting Deadline Reminder
+                    </h1>
+                    <div class="email-text" style="font-size: 15px; line-height: 1.6; color: #334155;">
+                      <p style="margin-top: 0; margin-bottom: 12px;">Hi ${safeEmployerName},</p>
+                      <p style="margin-top: 0; margin-bottom: 12px;">
+                        Your posting &ldquo;<strong>${safeRole}</strong>&rdquo; has a deadline in <strong>3 days</strong> with <strong>${applicantCount} applicants</strong> so far.
+                      </p>
+                      <p style="margin-top: 0; margin-bottom: 0;">
+                        Visit your employer portal to review candidates and take action before the listing closes.
+                      </p>
+                    </div>
+                    <div style="margin-top: 28px; margin-bottom: 8px;">
+                      <a href="${reviewLink}" class="email-btn" style="display: inline-block; background-color: #4f46e5; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 12px 28px; border-radius: 12px; box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);">
+                        Review Applications
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="email-footer-border" style="padding: 20px 32px 28px 32px; border-top: 1px solid #f1f5f9; background-color: transparent;">
+                    <p class="email-muted" style="margin: 0 0 8px 0; font-size: 12px; line-height: 1.5; color: #64748b;">
+                      You&rsquo;re receiving this because deadline reminder emails are enabled on your account.
+                    </p>
+                    <p class="email-muted" style="margin: 0; font-size: 12px; line-height: 1.5; color: #64748b;">
+                      <a href="${settingsLink}" style="color: #4f46e5; text-decoration: underline;">
+                        Manage email preferences or unsubscribe
+                      </a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 24px 0 0 0; text-align: center;">
+              <p class="email-muted" style="margin: 0; font-size: 11px; color: #94a3b8;">
+                &copy; ${new Date().getFullYear()} Pan-Atlantic University &bull; KM 52 Lekki-Epe Expressway, Ibeju-Lekki, Lagos
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
       try {
         if (brevoApiKey) {

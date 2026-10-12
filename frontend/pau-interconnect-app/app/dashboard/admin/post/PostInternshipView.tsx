@@ -143,9 +143,9 @@ export default function PostInternshipView() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-500">
-      <div className="bg-white rounded-[32px] p-8 md:p-12 border border-slate-100 shadow-xl shadow-indigo-50/50 space-y-10 relative overflow-hidden">
+      <div className="bg-surface rounded-[32px] p-6 sm:p-8 md:p-12 border border-border shadow-xl space-y-10 relative overflow-hidden">
         {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
@@ -156,19 +156,18 @@ export default function PostInternshipView() {
               Fill in the details to reach more candidates
             </Typography>
           </div>
-          <div className="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center shadow-inner">
+          <div className="w-16 h-16 bg-brand-subtle text-brand rounded-2xl flex items-center justify-center shadow-inner">
             <FiPlus className="w-8 h-8" />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 relative z-10">
           <Input
             label="Company Name"
             placeholder="Enter company name"
             value={company}
             onChange={(e) => setCompany(e.target.value)}
             required
-            className="bg-slate-50 border-transparent focus:bg-white"
           />
           <Input
             label="Role Title"
@@ -176,7 +175,6 @@ export default function PostInternshipView() {
             value={role}
             onChange={(e) => setRole(e.target.value)}
             required
-            className="bg-slate-50 border-transparent focus:bg-white"
           />
           <Input
             label="Field"
@@ -184,20 +182,19 @@ export default function PostInternshipView() {
             value={field}
             onChange={(e) => setField(e.target.value)}
             required
-            className="bg-slate-50 border-transparent focus:bg-white"
           />
           <div className="space-y-1.5 ml-1">
-            <label className="block text-sm font-semibold text-slate-700">
+            <label className="block text-sm font-semibold text-fg">
               Category *
             </label>
             <select
-              className="w-full py-2.5 px-4 rounded-xl border border-transparent bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all text-slate-900"
+              className="w-full py-2.5 px-4 rounded-xl border border-border bg-surface-sunken focus:bg-surface focus:outline-none focus:ring-2 focus:ring-focus-ring/20 focus:border-brand transition-all text-fg"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
             >
-              <option value="">Select Category</option>
+              <option value="" className="bg-surface text-fg">Select Category</option>
               {CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
+                <option key={cat} value={cat} className="bg-surface text-fg">
                   {cat}
                 </option>
               ))}
@@ -213,7 +210,6 @@ export default function PostInternshipView() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             required
-            className="bg-slate-50 border-transparent focus:bg-white"
           />
           <Textarea
             label="Requirements (One per line)"
@@ -222,7 +218,6 @@ export default function PostInternshipView() {
             value={requirements}
             onChange={(e) => setRequirements(e.target.value)}
             required
-            className="bg-slate-50 border-transparent focus:bg-white"
           />
         </div>
 
@@ -241,11 +236,12 @@ export default function PostInternshipView() {
                 return (
                   <button
                     key={option}
+                    type="button"
                     onClick={() => toggleInterest(option)}
                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 border ${
                       isSelected
-                        ? "bg-brand text-white border-brand shadow-lg shadow-indigo-100 scale-105"
-                        : "bg-white text-slate-500 border-slate-100 hover:border-indigo-200 hover:text-indigo-500"
+                        ? "bg-brand text-brand-fg border-brand shadow-sm scale-105"
+                        : "bg-surface text-fg-muted border-border hover:border-brand-subtle hover:text-brand"
                     }`}
                   >
                     {option}
@@ -256,21 +252,19 @@ export default function PostInternshipView() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 relative z-10">
           <Input
             label="Application Deadline"
             type="date"
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
             required
-            className="bg-slate-50 border-transparent focus:bg-white"
           />
           <Input
             label="LinkedIn URL (Optional)"
             placeholder="https://linkedin.com/jobs/..."
             value={linkedin}
             onChange={(e) => setLinkedin(e.target.value)}
-            className="bg-slate-50 border-transparent focus:bg-white"
           />
         </div>
 
@@ -278,7 +272,7 @@ export default function PostInternshipView() {
           <Button
             onClick={handlePostInternship}
             isLoading={isLoading}
-            className="w-full h-14 rounded-2xl shadow-xl shadow-indigo-100 hover:shadow-indigo-200 text-lg font-bold"
+            className="w-full h-14 rounded-2xl text-lg font-bold"
           >
             Publish Internship Post
           </Button>
@@ -287,16 +281,18 @@ export default function PostInternshipView() {
 
       {notification.type && (
         <div
+          role="status"
+          aria-live="polite"
           className={`fixed bottom-10 left-1/2 -translate-x-1/2 px-8 py-4 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-5 duration-300 flex items-center gap-4 z-[100] border ${
             notification.type === "success"
-              ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-              : "bg-red-50 text-red-700 border-red-100"
+              ? "bg-success-subtle text-success-fg border-success-subtle"
+              : "bg-danger-subtle text-danger-fg border-danger-subtle"
           }`}
         >
           {notification.type === "success" ? (
-            <FiCheckCircle className="w-6 h-6" />
+            <FiCheckCircle className="w-6 h-6 text-success-fg" />
           ) : (
-            <FiAlertCircle className="w-6 h-6" />
+            <FiAlertCircle className="w-6 h-6 text-danger-fg" />
           )}
           <Typography variant="body1" weight="bold">
             {notification.message}

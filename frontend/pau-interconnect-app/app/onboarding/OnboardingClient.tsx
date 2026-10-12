@@ -472,17 +472,16 @@ export default function OnboardingClient({
   })();
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4">
+    <div className="w-full max-w-5xl mx-auto px-4 py-4 sm:py-6">
       <div
-        className="flex flex-row bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xl"
+        className="flex flex-col md:flex-row bg-surface rounded-3xl border border-border overflow-hidden shadow-xl"
         style={{ minHeight: "620px" }}
       >
         <aside
-          className="bg-slate-50 border-r border-slate-200 px-6 py-10 shrink-0"
-          style={{ width: "260px" }}
+          className="bg-surface-sunken border-b md:border-b-0 md:border-r border-border px-6 py-8 md:py-10 shrink-0 w-full md:w-[280px]"
         >
-          <div className="mb-10">
-            <Typography variant="h6" weight="bold" className="mb-1">
+          <div className="mb-8 md:mb-10">
+            <Typography variant="h6" weight="bold" className="mb-1 text-fg">
               PAU InterConnect
             </Typography>
             <Typography variant="body2" color="muted">
@@ -490,7 +489,7 @@ export default function OnboardingClient({
             </Typography>
           </div>
 
-          <div>
+          <div className="flex md:flex-col overflow-x-auto md:overflow-visible gap-4 md:gap-0 pb-4 md:pb-0">
             {steps.map((item, index) => {
               const stepNumber = index + 1;
               const isDone = stepNumber < step;
@@ -498,39 +497,39 @@ export default function OnboardingClient({
               const isLast = index === steps.length - 1;
 
               return (
-                <div key={item.title} className="relative flex gap-4">
+                <div key={item.title} className="relative flex items-center md:items-start gap-3 md:gap-4 shrink-0">
                   <div className="flex flex-col items-center">
                     <div
                       className={`relative z-10 h-7 w-7 rounded-full border-2 shrink-0 flex items-center justify-center text-xs font-bold transition-colors ${
                         isDone
-                          ? "bg-brand border-brand text-white"
+                          ? "bg-brand border-brand text-brand-fg"
                           : isActive
-                            ? "bg-white border-brand text-brand"
-                            : "bg-white border-slate-300 text-slate-400"
+                            ? "bg-surface border-brand text-brand"
+                            : "bg-surface border-border-strong text-fg-subtle"
                       }`}
                     >
                       {isDone ? "✓" : stepNumber}
                     </div>
                     {!isLast && (
                       <div
-                        className={`w-0.5 flex-1 my-1 ${
-                          isDone ? "bg-brand" : "bg-slate-200"
+                        className={`hidden md:block w-0.5 flex-1 my-1 ${
+                          isDone ? "bg-brand" : "bg-border"
                         }`}
                         style={{ minHeight: "32px" }}
                       />
                     )}
                   </div>
-                  <div className={`pb-8 ${isLast ? "pb-0" : ""}`}>
+                  <div className={`md:pb-8 ${isLast ? "md:pb-0" : ""}`}>
                     <Typography
                       variant="body2"
                       weight={isActive ? "bold" : "medium"}
-                      className={isActive ? "text-slate-900" : "text-slate-500"}
+                      className={isActive ? "text-fg" : "text-fg-muted"}
                     >
                       {item.title}
                     </Typography>
                     <Typography
                       variant="caption"
-                      className="text-slate-400 leading-tight block mt-0.5"
+                      className="text-fg-muted leading-tight hidden md:block mt-0.5"
                     >
                       {item.subtitle}
                     </Typography>
@@ -541,7 +540,7 @@ export default function OnboardingClient({
           </div>
         </aside>
 
-        <main className="flex-1 min-w-0 px-8 py-10 flex flex-col">
+        <main className="flex-1 min-w-0 px-6 sm:px-10 py-8 sm:py-10 flex flex-col">
           <div className="flex items-start justify-between gap-4 mb-8">
             <div>
               <Typography variant="h2" weight="bold" className="mb-2">
@@ -557,28 +556,28 @@ export default function OnboardingClient({
               </Typography>
             </div>
 
-            <Typography variant="body2" className="text-slate-500">
+            <Typography variant="body2" color="muted">
               Having trouble?{" "}
-              <span className="text-brand font-semibold">Get Help</span>
+              <span className="text-brand dark:text-indigo-400 font-semibold cursor-pointer hover:underline">Get Help</span>
             </Typography>
           </div>
 
-          <div className="min-h-80">
+          <div className="min-h-80 flex-1">
             {step === 1 && (
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-2xl">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
                 <button
                   type="button"
                   onClick={() => setRole("student")}
-                  className={`text-left rounded-2xl border p-4 sm:p-6 transition-colors ${
+                  className={`text-left rounded-2xl border p-5 sm:p-6 transition-colors ${
                     role === "student"
-                      ? "border-brand bg-brand/5"
-                      : "border-slate-200 bg-white hover:border-slate-300"
+                      ? "border-brand bg-brand-subtle"
+                      : "border-border bg-surface hover:border-border-strong"
                   }`}
                 >
-                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl border border-slate-200 bg-white flex items-center justify-center mb-3 sm:mb-4">
-                    <GraduationCap className="w-5 h-5 text-brand" />
+                  <div className="h-12 w-12 rounded-xl border border-border bg-surface-sunken flex items-center justify-center mb-4">
+                    <GraduationCap className="w-6 h-6 text-brand" />
                   </div>
-                  <Typography variant="h6" weight="bold" className="mb-1">
+                  <Typography variant="h6" weight="bold" className="mb-1 text-fg">
                     Student
                   </Typography>
                   <Typography variant="body2" color="muted">
@@ -589,16 +588,16 @@ export default function OnboardingClient({
                 <button
                   type="button"
                   onClick={() => setRole("employer")}
-                  className={`text-left rounded-2xl border p-4 sm:p-6 transition-colors ${
+                  className={`text-left rounded-2xl border p-5 sm:p-6 transition-colors ${
                     role === "employer"
-                      ? "border-brand bg-brand/5"
-                      : "border-slate-200 bg-white hover:border-slate-300"
+                      ? "border-brand bg-brand-subtle"
+                      : "border-border bg-surface hover:border-border-strong"
                   }`}
                 >
-                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl border border-slate-200 bg-white flex items-center justify-center mb-3 sm:mb-4">
-                    <Building2 className="w-5 h-5 text-brand" />
+                  <div className="h-12 w-12 rounded-xl border border-border bg-surface-sunken flex items-center justify-center mb-4">
+                    <Building2 className="w-6 h-6 text-brand" />
                   </div>
-                  <Typography variant="h6" weight="bold" className="mb-1">
+                  <Typography variant="h6" weight="bold" className="mb-1 text-fg">
                     Employer
                   </Typography>
                   <Typography variant="body2" color="muted">
@@ -659,7 +658,7 @@ export default function OnboardingClient({
                   }
                 />
                 {initialUser && (
-                  <Typography variant="caption" className="text-slate-500">
+                  <Typography variant="caption" color="muted">
                     You are already signed in. Leave password blank to keep your
                     current password.
                   </Typography>
@@ -713,7 +712,7 @@ export default function OnboardingClient({
                   <Typography variant="body2" color="muted">
                     Select interests for better internship matching.
                   </Typography>
-                  <Typography variant="caption" className="text-slate-500">
+                  <Typography variant="caption" color="muted">
                     {formData.interests.length} selected
                   </Typography>
                 </div>
@@ -809,7 +808,7 @@ export default function OnboardingClient({
           </div>
 
           {!isCompleteStep && (
-            <div className="flex justify-between mt-auto pt-8 border-t border-slate-100">
+            <div className="flex justify-between mt-auto pt-8 border-t border-border">
               {step > 1 ? (
                 <Button variant="ghost" onClick={handleBack}>
                   ← Back
@@ -838,12 +837,14 @@ export default function OnboardingClient({
 
       {snackbar.open && (
         <div
-          className={`fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl border shadow-lg ${
+          role="status"
+          aria-live="polite"
+          className={`fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-2xl border shadow-xl z-50 ${
             snackbar.severity === "success"
-              ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+              ? "bg-success-subtle text-success-fg border-success-subtle"
               : snackbar.severity === "warning"
-                ? "bg-amber-50 text-amber-800 border-amber-100"
-                : "bg-red-50 text-red-700 border-red-100"
+                ? "bg-warning-subtle text-warning-fg border-warning-subtle"
+                : "bg-danger-subtle text-danger-fg border-danger-subtle"
           }`}
         >
           {snackbar.message}

@@ -53,10 +53,10 @@ export default function AdminClient({
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] p-6 md:p-10">
+    <div className="min-h-screen bg-background p-4 sm:p-6 md:p-10">
       {showSearch && <SearchOverlay onClose={() => setShowSearch(false)} />}
       <div className="max-w-7xl mx-auto">
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 bg-white/80 backdrop-blur-md p-6 rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 bg-surface/90 backdrop-blur-md p-6 rounded-2xl border border-border shadow-sm overflow-hidden">
           <Stack direction="row" align="center" spacing={4}>
             <Image
               src="/favicon.ico"
@@ -72,14 +72,14 @@ export default function AdminClient({
 
           <div className="flex-1 max-w-md w-full relative group">
             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-slate-400 group-hover:text-indigo-500 transition-colors" />
+              <Search className="h-4 w-4 text-fg-subtle group-hover:text-brand transition-colors" />
             </div>
             <input
               type="text"
               placeholder="Super search..."
               readOnly
               onClick={() => setShowSearch(true)}
-              className="block w-full pl-12 pr-12 py-3 bg-slate-50/50 border border-slate-100 rounded-2xl text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all cursor-pointer hover:bg-slate-50 shadow-inner"
+              className="block w-full pl-12 pr-12 py-3 bg-surface-sunken border border-border rounded-2xl text-sm placeholder:text-fg-subtle text-fg focus:outline-none focus:ring-2 focus:ring-focus-ring/20 focus:border-brand transition-all cursor-pointer shadow-inner"
             />
           </div>
 
@@ -93,15 +93,15 @@ export default function AdminClient({
               disabled={isLoggingOut}
               leftIcon={
                 isLoggingOut ? (
-                  <div className="w-4 h-4 rounded-full border-2 border-red-500 border-t-transparent animate-spin" />
+                  <div className="w-4 h-4 rounded-full border-2 border-danger border-t-transparent animate-spin" />
                 ) : (
                   <LogOut className="w-4 h-4" />
                 )
               }
               className={`rounded-xl transition-all ${
                 isLoggingOut
-                  ? "opacity-50 cursor-not-allowed border-red-200 text-red-500 bg-red-50"
-                  : "border-slate-200 hover:border-red-200 hover:text-red-500 hover:bg-red-50"
+                  ? "opacity-50 cursor-not-allowed border-danger-subtle text-danger-fg bg-danger-subtle"
+                  : "border-border hover:border-danger hover:text-danger-fg hover:bg-danger-subtle"
               }`}
             >
               {isLoggingOut ? "Logging out..." : "Logout"}
@@ -121,7 +121,7 @@ export default function AdminClient({
                 "px-8 rounded-xl font-bold transition-all duration-300",
                 activeTab === tab.key
                   ? "shadow-sm border-brand"
-                  : "bg-white border-slate-100 text-slate-600 hover:border-brand hover:text-brand",
+                  : "bg-surface border-border text-fg-muted hover:border-brand hover:text-brand",
               )}
             >
               {tab.label}
