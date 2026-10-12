@@ -3,19 +3,31 @@
 import React, { useState } from "react";
 import { toast } from "sonner";
 import { cx } from "@/utils/cx";
-import { Typography, Stack, Button, Badge } from "@/components/ui";
 import {
-  ChevronDown,
+  Typography,
+  Stack,
+  Button,
+  StatusPill,
+  EmptyState,
+  Drawer,
+  Modal,
+} from "@/components/ui";
+import {
   FileText,
   CheckCircle,
   XCircle,
   User,
   MessageSquare,
+  Download,
+  ChevronRight,
 } from "lucide-react";
+
 import { authenticatedFetch, ensureFreshCvUrl } from "@/lib/api";
 import { PipelineView } from "./PipelineView";
-import { Download } from "lucide-react";
 import { downloadCSV } from "@/lib/csv";
+import { MatchScore } from "@/components/match/MatchScore";
+import { DecisionTimeline } from "@/components/DecisionTimeline";
+import { MessageThread } from "@/components/MessageThread";
 
 export type ApplicantProfile = {
   id?: string;
@@ -25,9 +37,6 @@ export type ApplicantProfile = {
   level?: string;
   cv_url?: string;
 };
-
-import { DecisionTimeline } from "@/components/DecisionTimeline";
-import { MessageThread } from "@/components/MessageThread";
 
 export type Applicant = {
   id: string;
@@ -52,17 +61,14 @@ export default function ApplicantReviewClient({
 }: ApplicantReviewClientProps) {
   const [applicants, setApplicants] = useState<Applicant[]>(initialApplicants);
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedAppId, setExpandedAppId] = useState<string | null>(null);
+  const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "pipeline">("list");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "accepted" | "rejected">("all");
   const [sortBy, setSortBy] = useState<"newest" | "match" | "name">("newest");
   const [activeMessageApp, setActiveMessageApp] = useState<Applicant | null>(null);
   const [activeConvoId, setActiveConvoId] = useState<string | null>(null);
   const [isStartingConvo, setIsStartingConvo] = useState(false);
-
-  const toggleExpand = (id: string) => {
-    setExpandedAppId((prev) => (prev === id ? null : id));
-  };
+  const [isUpdatingStage, setIsUpdatingStage] = useState(false);
 
   // --- Search Sync ---
   React.useEffect(() => {
@@ -111,6 +117,7 @@ export default function ApplicantReviewClient({
           ? "rejected"
           : "pending";
 
+    setIsUpdatingStage(true);
     try {
       const result = await authenticatedFetch<{
         email?: { status: string; reason?: string; error?: string };
@@ -118,6 +125,7 @@ export default function ApplicantReviewClient({
         method: "PATCH",
         body: JSON.stringify({ stage: stageValue }),
       });
+
       const email = result?.email;
       if (email?.status === "sent") {
         toast.success("Stage updated. The student was emailed.");
@@ -127,7 +135,10 @@ export default function ApplicantReviewClient({
             email.reason ?? email.error ?? "unknown reason"
           }`,
         );
+      } else {
+        toast.success("Stage updated successfully.");
       }
+
       setApplicants((prev) =>
         prev.map((app) =>
           app.id === applicationId
@@ -135,11 +146,52 @@ export default function ApplicantReviewClient({
             : app,
         ),
       );
+
+      // Keep selected applicant synchronized if open in drawer
+      setSelectedApplicant((prev) =>
+        prev && prev.id === applicationId
+          ? { ...prev, stage: stageValue, status: statusValue }
+          : prev,
+      );
     } catch (err: unknown) {
       toast.error(
-        "Failed to update student state: " +
+        "Failed to update candidate state: " +
           (err instanceof Error ? err.message : "Unknown error"),
       );
+    } finally {
+      setIsUpdatingStage(false);
+    }
+  };
+
+  const handleViewCv = async (app: Applicant) => {
+    const studentInfo = app.profiles;
+    if (!studentInfo?.cv_url) {
+      toast.error("Candidate has not uploaded a CV");
+      return;
+    }
+
+    const popup = window.open("about:blank", "_blank");
+    if (!popup) {
+      toast.error("Popup blocked. Please allow popups for this site.");
+      return;
+    }
+
+    try {
+      const studentId = studentInfo.id;
+      if (!studentId) {
+        popup.close();
+        toast.error("Candidate profile is missing an ID");
+        return;
+      }
+      const freshUrl = await ensureFreshCvUrl(studentId, studentInfo.cv_url);
+      const rawFullName = studentInfo?.full_name || "Student";
+      const safeName = rawFullName.trim().replace(/\s+/g, "_") + "_CV";
+      const viewerUrl = `/cv/view?name=${encodeURIComponent(safeName)}&url=${encodeURIComponent(freshUrl)}`;
+      popup.location.href = viewerUrl;
+    } catch (err) {
+      console.error("CV view error:", err);
+      popup.close();
+      toast.error("Failed to load secure CV link");
     }
   };
 
@@ -171,36 +223,39 @@ export default function ApplicantReviewClient({
     });
 
   return (
-    <div className="space-y-10">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div className="space-y-1">
+    <div className="space-y-8">
+      {/* 1. Header */}
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
           <Typography
             variant="h2"
             weight="bold"
-            className="text-slate-900 tracking-tight"
+            className="text-fg tracking-tight mb-1"
           >
             {internship?.role || "Internship"} Applicants
           </Typography>
-          <Typography color="muted" className="font-medium text-sm">
+          <Typography variant="body2" color="muted">
             Reviewing{" "}
-            <span className="text-brand font-bold">
+            <span className="text-brand font-semibold">
               {filteredApplicants.length}
             </span>{" "}
-            candidates for this role.
+            {filteredApplicants.length === 1 ? "candidate" : "candidates"} for this position.
           </Typography>
         </div>
       </header>
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+      {/* 2. Controls Bar */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface p-4 rounded-2xl border border-border shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-1.5 p-1 bg-slate-100 rounded-xl">
+          {/* View mode toggle */}
+          <div className="flex gap-1 p-1 bg-surface-sunken rounded-xl border border-border/60">
             <button
               onClick={() => setViewMode("list")}
               className={cx(
                 "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
                 viewMode === "list"
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900",
+                  ? "bg-surface text-fg shadow-sm"
+                  : "text-fg-muted hover:text-fg",
               )}
             >
               List View
@@ -210,14 +265,15 @@ export default function ApplicantReviewClient({
               className={cx(
                 "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
                 viewMode === "pipeline"
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900",
+                  ? "bg-surface text-fg shadow-sm"
+                  : "text-fg-muted hover:text-fg",
               )}
             >
               Pipeline View
             </button>
           </div>
 
+          {/* Status filter pills */}
           <div className="flex items-center gap-1.5 pl-2">
             {(["all", "pending", "accepted", "rejected"] as const).map((status) => {
               const count =
@@ -231,8 +287,8 @@ export default function ApplicantReviewClient({
                   className={cx(
                     "px-3 py-1.5 rounded-xl text-xs font-bold transition-all",
                     statusFilter === status
-                      ? "bg-brand text-white shadow-sm shadow-brand/20"
-                      : "bg-slate-100/70 text-slate-600 hover:bg-slate-200/70",
+                      ? "bg-brand text-fg-inverse shadow-sm"
+                      : "bg-surface-sunken text-fg-muted hover:bg-surface border border-border/40",
                   )}
                 >
                   {status.charAt(0).toUpperCase() + status.slice(1)} ({count})
@@ -242,15 +298,16 @@ export default function ApplicantReviewClient({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Sort & Export controls */}
+        <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
           <div className="flex items-center gap-2">
-            <Typography variant="caption" color="muted" className="font-semibold">
+            <Typography variant="caption" color="muted" className="font-semibold text-fg-muted">
               Sort:
             </Typography>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-              className="text-xs font-medium border border-slate-200 bg-white rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-brand"
+              className="text-xs font-medium border border-border bg-surface rounded-lg px-2.5 py-1.5 text-fg focus:outline-none focus:ring-2 focus:ring-focus-ring"
             >
               <option value="newest">Newest First</option>
               <option value="match">Highest Match Score</option>
@@ -260,386 +317,340 @@ export default function ApplicantReviewClient({
           <Button
             variant="outline"
             size="sm"
-          onClick={() => {
-            const headers = [
-              "Name",
-              "Email",
-              "Course",
-              "Level",
-              "Match Score",
-              "Status",
-              "Stage",
-              "Applied Date",
-              "Cover Letter",
-            ];
-            const rows = filteredApplicants.map((app) => [
-              app.profiles?.full_name || "",
-              app.profiles?.email || "",
-              app.profiles?.course || "",
-              app.profiles?.level || "",
-              String(app.match_score || 0),
-              app.status || "pending",
-              app.stage || "applied",
-              app.created_at || "",
-              (app.cover_letter || "").replace(/\n/g, " "),
-            ]);
-            downloadCSV(
-              headers,
-              rows,
-              `applicants-${internship?.role?.replace(/\s/g, "-") || "export"}`,
-            );
-          }}
-        >
-          <Download className="w-4 h-4 mr-1" /> Export CSV
-        </Button>
+            onClick={() => {
+              const headers = [
+                "Name",
+                "Email",
+                "Course",
+                "Level",
+                "Match Score",
+                "Status",
+                "Stage",
+                "Applied Date",
+                "Cover Letter",
+              ];
+              const rows = filteredApplicants.map((app) => [
+                app.profiles?.full_name || "",
+                app.profiles?.email || "",
+                app.profiles?.course || "",
+                app.profiles?.level || "",
+                String(app.match_score || 0),
+                app.status || "pending",
+                app.stage || "applied",
+                app.created_at || "",
+                (app.cover_letter || "").replace(/\n/g, " "),
+              ]);
+              downloadCSV(
+                headers,
+                rows,
+                `applicants-${internship?.role?.replace(/\s/g, "-") || "export"}`,
+              );
+            }}
+            leftIcon={<Download className="w-3.5 h-3.5" />}
+          >
+            Export CSV
+          </Button>
         </div>
       </div>
 
+      {/* 3. Main Content: Empty / Pipeline / List */}
       {applicants.length === 0 ? (
-        <div className="p-20 text-center bg-white rounded-[40px] border border-slate-100 shadow-sm">
-          <div className="w-16 h-16 bg-slate-50 rounded-[28px] flex items-center justify-center mx-auto mb-6 text-slate-300 border border-slate-100">
-            <User size={32} />
-          </div>
-          <Typography
-            variant="h4"
-            weight="bold"
-            className="mb-2 text-slate-900"
-          >
-            No applicants yet
-          </Typography>
-          <Typography color="muted" className="max-w-md mx-auto text-sm">
-            When students apply, they&apos;ll appear here for your professional
-            review.
-          </Typography>
-        </div>
+        <EmptyState
+          icon={<User className="w-8 h-8 text-brand" />}
+          title="No applicants yet"
+          description="When students apply, they'll appear here for your professional candidate review."
+        />
+      ) : filteredApplicants.length === 0 ? (
+        <EmptyState
+          icon={<User className="w-8 h-8 text-brand" />}
+          title="No candidates match your filters"
+          description="Try selecting a different status filter or clearing your search query."
+          action={{
+            label: "Reset Filters",
+            onClick: () => {
+              setStatusFilter("all");
+              setSearchQuery("");
+            },
+          }}
+        />
       ) : viewMode === "pipeline" ? (
         <PipelineView
           applicants={filteredApplicants}
           onStageChange={handleStatusChange}
+          onSelectApplicant={(app) => setSelectedApplicant(app)}
         />
       ) : (
-        <Stack spacing={2}>
+        <Stack spacing={3}>
           {filteredApplicants.map((app) => {
             const studentInfo = app.profiles || {};
-            const isExpanded = expandedAppId === app.id;
+            const isSelected = selectedApplicant?.id === app.id;
 
             return (
               <div
                 key={app.id}
+                tabIndex={0}
+                role="button"
+                aria-label={`View dossier for ${studentInfo?.full_name || "Student"}`}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedApplicant(app);
+                  }
+                }}
+                onClick={() => setSelectedApplicant(app)}
                 className={cx(
-                  "bg-white rounded-[32px] transition-all duration-300 overflow-hidden",
-                  isExpanded
-                    ? "border border-slate-200 shadow-xl shadow-slate-200/40"
-                    : "border border-slate-100/60 hover:border-slate-200 hover:shadow-md",
+                  "bg-surface rounded-2xl p-4 sm:p-5 transition-all duration-200 border cursor-pointer group flex flex-col md:flex-row md:items-center justify-between gap-4",
+                  isSelected
+                    ? "border-brand ring-2 ring-brand/20 shadow-md"
+                    : "border-border hover:border-border-strong hover:shadow-sm",
                 )}
               >
-                {/* Unified Header & Info Strip */}
-                <div
-                  onClick={() => toggleExpand(app.id)}
-                  className="p-5 flex items-center justify-between cursor-pointer group"
-                >
-                  <div className="flex items-center gap-5 flex-1 min-w-0">
-                    <div
-                      className={cx(
-                        "w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold transition-all",
-                        isExpanded
-                          ? "bg-brand text-white"
-                          : "bg-slate-50 text-slate-400 group-hover:bg-brand/5 group-hover:text-brand",
-                      )}
-                    >
-                      {studentInfo?.full_name?.charAt(0) || "S"}
-                    </div>
-
-                    <div className="flex flex-col md:flex-row md:items-center gap-x-6 gap-y-1 min-w-0 flex-1">
-                      <div className="min-w-0">
-                        <Typography
-                          variant="body1"
-                          weight="bold"
-                          className="text-slate-900 truncate"
-                        >
-                          {studentInfo?.full_name || "Unknown Student"}
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          color="muted"
-                          className="font-medium"
-                        >
-                          {studentInfo?.course || "Course N/A"} • Lv.
-                          {studentInfo?.level || "N/A"}
-                        </Typography>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <Badge
-                          variant="slate"
-                          size="sm"
-                          className="bg-slate-50 border-none text-[10px] font-bold text-slate-400 tracking-wider"
-                        >
-                          {app.match_score || 0}% MATCH
-                        </Badge>
-                        <Badge
-                          size="sm"
-                          className={cx(
-                            "text-[10px] font-bold tracking-wider border-none",
-                            app.stage === "accepted"
-                              ? "bg-emerald-50 text-emerald-600"
-                              : app.stage === "rejected"
-                                ? "bg-rose-50 text-rose-600"
-                                : "bg-brand/5 text-brand",
-                          )}
-                        >
-                          {(app.stage || "APPLIED").toUpperCase()}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-
+                {/* Left: Avatar & Candidate Identity */}
+                <div className="flex items-center gap-4 min-w-0 flex-1">
                   <div
                     className={cx(
-                      "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
-                      isExpanded
-                        ? "bg-brand/10 text-brand rotate-180"
-                        : "bg-slate-50 text-slate-300",
+                      "w-12 h-12 rounded-xl flex items-center justify-center text-base font-bold shrink-0 transition-colors",
+                      isSelected
+                        ? "bg-brand text-fg-inverse"
+                        : "bg-surface-sunken text-fg-muted group-hover:bg-brand-subtle group-hover:text-brand",
                     )}
                   >
-                    <ChevronDown size={18} />
+                    {studentInfo?.full_name?.charAt(0) || "S"}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Typography
+                        variant="body1"
+                        weight="bold"
+                        className="text-fg group-hover:text-brand transition-colors truncate"
+                      >
+                        {studentInfo?.full_name || "Unknown Student"}
+                      </Typography>
+                      {app.created_at && (
+                        <span className="text-[11px] text-fg-subtle hidden sm:inline">
+                          • Applied {new Date(app.created_at).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                    <Typography
+                      variant="caption"
+                      className="text-fg-muted truncate block"
+                    >
+                      {studentInfo?.course || "Course N/A"} • Lv. {studentInfo?.level || "N/A"}
+                    </Typography>
                   </div>
                 </div>
 
-                {/* Expanded Details Dossier */}
-                {isExpanded && (
-                  <div className="px-5 pb-6 border-t border-slate-50 bg-[#fcfdfe]/50 animate-in slide-in-from-top-4 duration-300">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-6">
-                      {/* Left Column (70%) - Cover Letter focus */}
-                      <div className="lg:col-span-8">
-                        <Typography
-                          variant="caption"
-                          weight="bold"
-                          className="text-slate-400 uppercase tracking-widest text-[10px] block mb-3 ml-1"
-                        >
-                          Cover Letter
-                        </Typography>
-                        <div className="bg-slate-100/50 p-6 rounded-2xl border border-slate-200/40 max-h-[220px] overflow-y-auto group hover:bg-white transition-colors">
-                          <Typography
-                            variant="body2"
-                            className="text-slate-600 leading-relaxed whitespace-pre-wrap font-medium"
-                          >
-                            {app.cover_letter ||
-                              "The candidate did not provide a personal statement."}
-                          </Typography>
-                        </div>
-                        <DecisionTimeline applicationId={app.id} />
-                      </div>
+                {/* Middle: Live Match Score & Stage Pill */}
+                <div className="flex items-center gap-3 shrink-0 flex-wrap">
+                  <MatchScore score={app.match_score} />
+                  <StatusPill status={app.stage || "applied"} />
+                </div>
 
-                      {/* Right Column (30%) - Student Actions */}
-                      <div className="lg:col-span-4 space-y-6">
-                        <div className="space-y-4">
-                          <Typography
-                            variant="caption"
-                            weight="bold"
-                            className="text-slate-400 uppercase tracking-widest text-[10px] block mb-2"
-                          >
-                            Student Actions
-                          </Typography>
-
-                          <Button
-                            variant="outline"
-                            className="w-full h-11 border-slate-200 text-slate-600 hover:border-brand hover:text-brand hover:bg-brand/5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all p-0"
-                            onClick={async () => {
-                              if (!studentInfo?.cv_url) return;
-
-                              const popup = window.open(
-                                "about:blank",
-                                "_blank",
-                              );
-                              if (!popup) {
-                                alert(
-                                  "Popup blocked. Please allow popups for this site.",
-                                );
-                                return;
-                              }
-
-                              try {
-                                const studentId = studentInfo.id;
-                                if (!studentId) {
-                                  popup.close();
-                                  alert(
-                                    "Candidate profile is missing an id; cannot open CV.",
-                                  );
-                                  return;
-                                }
-                                const freshUrl = await ensureFreshCvUrl(
-                                  studentId,
-                                  studentInfo.cv_url,
-                                );
-
-                                const rawFullName =
-                                  studentInfo?.full_name || "Student";
-                                const safeName =
-                                  rawFullName.trim().replace(/\s+/g, "_") +
-                                  " CV";
-                                const viewerUrl = `/cv/view?name=${encodeURIComponent(safeName)}&url=${encodeURIComponent(freshUrl)}`;
-                                popup.location.href = viewerUrl;
-                              } catch (err) {
-                                console.error("CV view error:", err);
-                                popup.close();
-                              }
-                            }}
-                            disabled={!studentInfo?.cv_url}
-                          >
-                            <FileText size={18} />
-                            View CV / Resume
-                          </Button>
-
-                          <div className="flex flex-col gap-2 pt-2">
-                            <div className="flex justify-between items-center mb-1 px-1">
-                              <Typography
-                                variant="caption"
-                                weight="bold"
-                                className="text-slate-400"
-                              >
-                                STAGE:
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                weight="bold"
-                                className={cx(
-                                  app.stage === "accepted"
-                                    ? "text-emerald-500"
-                                    : app.stage === "rejected"
-                                      ? "text-rose-500"
-                                      : "text-brand",
-                                )}
-                              >
-                                {(app.stage || "applied").toUpperCase()}
-                              </Typography>
-                            </div>
-
-                            <select
-                              value={app.stage || "applied"}
-                              onChange={(e) =>
-                                handleStatusChange(app.id, e.target.value)
-                              }
-                              className="w-full h-11 rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-700 bg-slate-50 hover:bg-white focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
-                            >
-                              <option value="applied">Applied</option>
-                              <option value="reviewed">Reviewed</option>
-                              <option value="shortlisted">Shortlisted</option>
-                              <option value="interview">Interview</option>
-                              <option value="offered">Offered</option>
-                              {app.stage === "accepted" && (
-                                <option value="accepted" disabled>
-                                  Accepted (by student)
-                                </option>
-                              )}
-                              <option value="rejected">Rejected</option>
-                            </select>
-
-                            <div className="grid grid-cols-2 gap-3 mt-2">
-                              <button
-                                onClick={() =>
-                                  handleStatusChange(app.id, "offered")
-                                }
-                                className={cx(
-                                  "h-11 rounded-xl flex items-center justify-center gap-2 font-bold transition-all text-sm",
-                                  app.stage === "offered"
-                                    ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20"
-                                    : "bg-emerald-50 text-emerald-700 border border-emerald-100 hover:bg-emerald-100",
-                                )}
-                              >
-                                <CheckCircle size={18} />
-                                Offer
-                              </button>
-
-                              <button
-                                onClick={() =>
-                                  handleStatusChange(app.id, "rejected")
-                                }
-                                className={cx(
-                                  "h-11 rounded-xl flex items-center justify-center gap-2 font-bold transition-all text-sm",
-                                  app.stage === "rejected"
-                                    ? "bg-rose-600 text-white shadow-lg shadow-rose-600/20"
-                                    : "bg-white border border-rose-200 text-rose-600 hover:bg-rose-50",
-                                )}
-                              >
-                                <XCircle size={18} />
-                                Reject
-                              </button>
-                            </div>
-
-                            <div className="flex gap-2">
-                              {app.stage !== "applied" &&
-                                app.stage !== "accepted" &&
-                                app.stage !== "rejected" && (
-                                  <button
-                                    onClick={() =>
-                                      handleStatusChange(app.id, "applied")
-                                    }
-                                    className="mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] hover:text-brand transition-colors text-center py-2 flex-1"
-                                  >
-                                    Reset to Applied
-                                  </button>
-                                )}
-                              <button
-                                onClick={() => handleOpenMessage(app)}
-                                className="mt-2 text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em] border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-center py-2 flex-1 flex items-center justify-center gap-1"
-                              >
-                                <MessageSquare size={14} /> Message
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {/* Right: Quick Action Buttons & Drawer Arrow */}
+                <div
+                  className="flex items-center gap-2 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-border/40 justify-between md:justify-end"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    onClick={() => handleOpenMessage(app)}
+                    leftIcon={<MessageSquare className="w-3.5 h-3.5" />}
+                    className="text-xs font-semibold"
+                  >
+                    Message
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    onClick={() => setSelectedApplicant(app)}
+                    className="text-xs font-semibold"
+                  >
+                    Review Dossier
+                  </Button>
+                  <ChevronRight className="w-4 h-4 text-fg-subtle group-hover:text-brand group-hover:translate-x-0.5 transition-all hidden sm:block" />
+                </div>
               </div>
             );
           })}
         </Stack>
       )}
 
-      {/* Messaging Modal */}
-      {activeMessageApp && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col h-[560px] border border-slate-100">
-            <div className="p-4 px-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/60">
-              <div>
-                <Typography variant="body1" weight="bold" className="text-slate-900">
-                  {activeMessageApp.profiles?.full_name || "Applicant"}
-                </Typography>
-                <Typography variant="caption" color="muted">
-                  Candidate for {internship?.role || "Internship"}
-                </Typography>
+      {/* 4. Applicant Detail Drawer */}
+      <Drawer
+        isOpen={Boolean(selectedApplicant)}
+        onClose={() => setSelectedApplicant(null)}
+        title={selectedApplicant?.profiles?.full_name || "Applicant Dossier"}
+        className="w-full sm:max-w-lg"
+      >
+        {selectedApplicant && (
+          <div className="p-6 space-y-6">
+            {/* Candidate Header Identity */}
+            <div className="flex items-start gap-4 p-4 rounded-2xl bg-surface-sunken border border-border">
+              <div className="w-14 h-14 rounded-xl bg-brand text-fg-inverse flex items-center justify-center text-xl font-bold shrink-0">
+                {selectedApplicant.profiles?.full_name?.charAt(0) || "S"}
               </div>
-              <button
-                onClick={() => {
-                  setActiveMessageApp(null);
-                  setActiveConvoId(null);
-                }}
-                className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 hover:text-slate-700 hover:bg-slate-200 flex items-center justify-center font-bold text-sm transition-colors"
-              >
-                ✕
-              </button>
+              <div className="min-w-0 flex-1">
+                <Typography variant="h4" weight="bold" className="text-fg truncate">
+                  {selectedApplicant.profiles?.full_name || "Unknown Student"}
+                </Typography>
+                <Typography variant="caption" className="text-fg-muted block mt-0.5">
+                  {selectedApplicant.profiles?.course || "Course N/A"} • Level {selectedApplicant.profiles?.level || "N/A"}
+                </Typography>
+                {selectedApplicant.profiles?.email && (
+                  <Typography variant="caption" className="text-fg-subtle truncate block mt-0.5">
+                    {selectedApplicant.profiles.email}
+                  </Typography>
+                )}
+              </div>
             </div>
-            <div className="flex-1 overflow-hidden p-3 bg-slate-50/30">
-              {isStartingConvo ? (
-                <div className="flex items-center justify-center h-full text-slate-400 text-sm animate-pulse">
-                  Connecting to candidate...
-                </div>
-              ) : activeConvoId ? (
+
+            {/* Compatibility Match Score */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Typography variant="subtitle2" weight="bold" className="text-fg-muted uppercase tracking-wider text-[11px]">
+                  Compatibility Match
+                </Typography>
+                <StatusPill status={selectedApplicant.stage || "applied"} />
+              </div>
+              <div className="p-4 rounded-xl bg-surface border border-border">
+                <MatchScore
+                  score={selectedApplicant.match_score}
+                  showExplanation={true}
+                  className="w-full"
+                />
+              </div>
+            </div>
+
+            {/* Decision & Stage Control */}
+            <div className="space-y-3 p-4 rounded-2xl bg-surface border border-border">
+              <Typography variant="subtitle2" weight="bold" className="text-fg uppercase tracking-wider text-[11px]">
+                Review Decision
+              </Typography>
+
+              <div className="space-y-2">
+                <label className="text-xs text-fg-muted block font-medium">
+                  Update Stage
+                </label>
+                <select
+                  value={selectedApplicant.stage || "applied"}
+                  disabled={isUpdatingStage}
+                  onChange={(e) =>
+                    handleStatusChange(selectedApplicant.id, e.target.value)
+                  }
+                  className="w-full h-11 rounded-xl border border-border px-3 text-sm font-semibold text-fg bg-surface-sunken focus:outline-none focus:ring-2 focus:ring-focus-ring transition-all"
+                >
+                  <option value="applied">Applied</option>
+                  <option value="reviewed">Reviewed</option>
+                  <option value="shortlisted">Shortlisted</option>
+                  <option value="interview">Interview</option>
+                  <option value="offered">Offered</option>
+                  {selectedApplicant.stage === "accepted" && (
+                    <option value="accepted" disabled>
+                      Accepted (by student)
+                    </option>
+                  )}
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+
+              {/* Stage Quick Action Buttons */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <Button
+                  variant="solid"
+                  className="h-11 bg-success hover:bg-success text-fg-inverse font-bold"
+                  onClick={() => handleStatusChange(selectedApplicant.id, "offered")}
+                  isLoading={isUpdatingStage && selectedApplicant.stage === "offered"}
+                  leftIcon={<CheckCircle className="w-4 h-4" />}
+                >
+                  Make Offer
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-11 border-danger text-danger-fg hover:bg-danger-subtle font-bold"
+                  onClick={() => handleStatusChange(selectedApplicant.id, "rejected")}
+                  isLoading={isUpdatingStage && selectedApplicant.stage === "rejected"}
+                  leftIcon={<XCircle className="w-4 h-4" />}
+                >
+                  Reject
+                </Button>
+              </div>
+            </div>
+
+            {/* Quick Actions: View CV & Message */}
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                variant="outline"
+                className="h-11"
+                onClick={() => handleViewCv(selectedApplicant)}
+                disabled={!selectedApplicant.profiles?.cv_url}
+                leftIcon={<FileText className="w-4 h-4" />}
+              >
+                View CV
+              </Button>
+              <Button
+                variant="outline"
+                className="h-11"
+                onClick={() => handleOpenMessage(selectedApplicant)}
+                leftIcon={<MessageSquare className="w-4 h-4" />}
+              >
+                Send Message
+              </Button>
+            </div>
+
+            {/* Cover Letter */}
+            <div className="space-y-2">
+              <Typography variant="subtitle2" weight="bold" className="text-fg-muted uppercase tracking-wider text-[11px]">
+                Candidate Statement
+              </Typography>
+              <div className="p-4 rounded-xl bg-surface-sunken border border-border text-sm text-fg leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap">
+                {selectedApplicant.cover_letter || "The candidate did not provide a cover letter."}
+              </div>
+            </div>
+
+            {/* Decision History Audit Trail */}
+            <div className="space-y-2 pt-2 border-t border-border">
+              <Typography variant="subtitle2" weight="bold" className="text-fg-muted uppercase tracking-wider text-[11px]">
+                Decision History
+              </Typography>
+              <DecisionTimeline applicationId={selectedApplicant.id} />
+            </div>
+          </div>
+        )}
+      </Drawer>
+
+      {/* 5. In-App Messaging Modal */}
+      {activeMessageApp && (
+        <Modal
+          isOpen={true}
+          onClose={() => {
+            setActiveMessageApp(null);
+            setActiveConvoId(null);
+          }}
+          title={`Message ${activeMessageApp.profiles?.full_name || "Candidate"}`}
+          size="lg"
+        >
+          <div className="h-[460px] flex flex-col">
+            {isStartingConvo ? (
+              <div className="flex-1 flex items-center justify-center text-fg-muted text-sm animate-pulse">
+                Connecting to candidate...
+              </div>
+            ) : activeConvoId ? (
+              <div className="flex-1 overflow-hidden p-2">
                 <MessageThread
                   conversationId={activeConvoId}
                   currentUserId={(userProfile as { id?: string })?.id || ""}
                 />
-              ) : (
-                <div className="flex items-center justify-center h-full text-slate-400 text-sm">
-                  Could not load conversation thread.
-                </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-fg-muted text-sm">
+                Could not start conversation thread.
+              </div>
+            )}
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

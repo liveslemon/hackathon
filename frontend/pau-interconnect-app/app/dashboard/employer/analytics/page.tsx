@@ -1,6 +1,7 @@
 import { getSupabaseServer } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import { EmployerAnalyticsClient } from "./AnalyticsClient";
+import DashboardShellWrapper from "../DashboardShellWrapper";
 
 export default async function EmployerAnalyticsPage() {
   const supabase = await getSupabaseServer();
@@ -9,14 +10,18 @@ export default async function EmployerAnalyticsPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login/employer");
 
-  const { data: internships } = await supabase
-    .from("internships")
-    .select(
-      "id, role, field, category, created_at, deadline, status, view_count",
-    )
-    .eq("employer_id", user.id);
+  const [internshipsRes, profileRes] = await Promise.all([
+    supabase
+      .from("internships")
+      .select(
+        "id, role, field, category, created_at, deadline, status, view_count",
+      )
+      .eq("employer_id", user.id),
+    supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+  ]);
 
-  const internshipIds = internships?.map((i) => i.id) || [];
+  const internships = internshipsRes.data || [];
+  const internshipIds = internships.map((i) => i.id);
 
   let applications: Array<{
     id: string;
@@ -26,6 +31,7 @@ export default async function EmployerAnalyticsPage() {
     created_at: string;
     internship_id: string;
   }> = [];
+
   if (internshipIds.length > 0) {
     const { data } = await supabase
       .from("applied_internships")
@@ -63,9 +69,12 @@ export default async function EmployerAnalyticsPage() {
   }
 
   return (
-    <EmployerAnalyticsClient
-      internships={internships || []}
-      applications={applications}
-    />
+    <DashboardShellWrapper userProfile={profileRes.data}>
+      <EmployerAnalyticsClient
+        internships={internships}
+        applications={applications}
+      />
+    </DashboardShellWrapper>
   );
 }
+

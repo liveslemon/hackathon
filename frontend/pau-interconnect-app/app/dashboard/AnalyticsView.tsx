@@ -2,12 +2,15 @@
 
 import React from "react";
 import {
-  Typography,
   Card,
   CardContent,
-  Stack,
+  CardHeader,
+  PageHeader,
+  StatCard,
+  EmptyState,
 } from "@/components/ui";
-import { FiBriefcase, FiUsers, FiTrendingUp } from "react-icons/fi";
+
+import { Briefcase, Users, TrendingUp, PieChart, Layers } from "lucide-react";
 
 export default function AnalyticsView({
   categories,
@@ -18,84 +21,97 @@ export default function AnalyticsView({
   totalApplications?: number;
   avgApplications?: string;
 }) {
-  const totalInternships = (categories || []).reduce((acc, cat) => acc + (cat.value || 0), 0);
-
-  const stats = [
-    {
-      title: "Total Internships",
-      value: totalInternships,
-      icon: <FiBriefcase className="w-6 h-6" />,
-      color: "bg-blue-500",
-      shadow: "shadow-blue-100",
-    },
-    {
-      title: "Total Applications",
-      value: totalApplications,
-      icon: <FiUsers className="w-6 h-6" />,
-      color: "bg-emerald-500",
-      shadow: "shadow-emerald-100",
-    },
-    {
-      title: "Avg Applications / Role",
-      value: avgApplications,
-      icon: <FiTrendingUp className="w-6 h-6" />,
-      color: "bg-amber-500",
-      shadow: "shadow-amber-100",
-    },
-  ];
+  const totalInternships = (categories || []).reduce(
+    (acc, cat) => acc + (cat.value || 0),
+    0,
+  );
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-500">
-      <Stack direction="row" spacing={6} className="flex-wrap gap-y-6">
-        {stats.map((item, idx) => (
-          <Card key={idx} className={`flex-1 min-w-[240px] border-slate-100 shadow-xl ${item.shadow} hover:scale-[1.02] transition-transform duration-300`}>
-            <CardContent className="p-8">
-              <Stack direction="row" spacing={4} align="center">
-                <div className={`w-14 h-14 ${item.color} text-white rounded-2xl flex items-center justify-center shadow-lg shadow-current/20`}>
-                  {item.icon}
-                </div>
-                <div className="space-y-1">
-                  <Typography variant="body2" weight="bold" color="muted" className="uppercase tracking-widest text-[10px]">
-                    {item.title}
-                  </Typography>
-                  <Typography variant="h2" weight="bold" className="text-slate-900">
-                    {item.value}
-                  </Typography>
-                </div>
-              </Stack>
-            </CardContent>
-          </Card>
-        ))}
-      </Stack>
+    <div className="space-y-8 max-w-7xl mx-auto pb-16">
+      <PageHeader
+        title="Platform Analytics"
+        description="Comprehensive breakdown of active listings, student demand, and placement categories."
+      />
 
-      <Card className="border-slate-100 shadow-sm overflow-hidden">
-        <div className="bg-slate-50/50 px-8 py-6 border-b border-slate-100">
-          <Typography variant="h4" weight="bold">Internships by Category</Typography>
-        </div>
-        <CardContent className="p-8 space-y-8">
-          {(!categories || categories.length === 0) ? (
-            <div className="text-center py-12 text-slate-400 text-sm">
-              No internship categories found. Post internships to view breakdown.
-            </div>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard
+          label="Total Internships"
+          value={totalInternships}
+          icon={<Briefcase className="w-5 h-5" />}
+          change={{ value: "All Active & Archived", trend: "neutral" }}
+        />
+        <StatCard
+          label="Total Applications"
+          value={totalApplications}
+          icon={<Users className="w-5 h-5" />}
+          change={{ value: "Student Submissions", trend: "up" }}
+        />
+        <StatCard
+          label="Avg Applications / Role"
+          value={avgApplications}
+          icon={<TrendingUp className="w-5 h-5" />}
+          change={{ value: "Placement Liquidity", trend: "neutral" }}
+        />
+      </div>
+
+      {/* Category Breakdown */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2 text-primary font-medium text-xs">
+            <Layers className="w-4 h-4" />
+            <span>DISTRIBUTION</span>
+          </div>
+          <h3 className="text-base font-semibold text-fg">Internships by Category</h3>
+          <p className="text-xs text-muted-fg">
+            Relative proportion of work models and placement disciplines.
+          </p>
+        </CardHeader>
+
+        <CardContent className="space-y-6">
+          {!categories || categories.length === 0 ? (
+            <EmptyState
+              icon={<PieChart className="w-8 h-8" />}
+              title="No Categories Available"
+              description="Post internships to populate category telemetry."
+            />
           ) : (
-            categories.map((cat, idx) => {
-              const total = categories.reduce((acc, c) => acc + (c.value || 0), 0);
-              const percentage = total > 0 ? ((cat.value || 0) / total) * 100 : 0;
-              return (
-                <div key={idx} className="space-y-3">
-                  <div className="flex justify-between items-center px-1">
-                    <Typography variant="body1" weight="bold" className="text-slate-700">{cat.label || "Unknown"}</Typography>
-                    <Typography variant="body2" weight="bold" color="primary">{cat.value || 0}</Typography>
+            <div className="space-y-4">
+              {categories.map((cat, idx) => {
+                const total = categories.reduce(
+                  (acc, c) => acc + (c.value || 0),
+                  0,
+                );
+                const percentage =
+                  total > 0 ? Math.round(((cat.value || 0) / total) * 100) : 0;
+
+                const colorTokens = [
+                  "bg-[var(--chart-1)]",
+                  "bg-[var(--chart-2)]",
+                  "bg-[var(--chart-3)]",
+                  "bg-[var(--chart-4)]",
+                  "bg-[var(--chart-5)]",
+                ];
+                const barColor = colorTokens[idx % colorTokens.length];
+
+                return (
+                  <div key={idx} className="space-y-2">
+                    <div className="flex justify-between items-center text-sm font-medium">
+                      <span className="text-fg">{cat.label || "General"}</span>
+                      <span className="text-muted-fg font-mono">
+                        {cat.value || 0} ({percentage}%)
+                      </span>
+                    </div>
+                    <div className="w-full h-3 bg-surface-sunken rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${barColor} rounded-full transition-all duration-700 ease-out`}
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden shadow-inner">
-                    <div 
-                      className="h-full bg-gradient-to-r from-brand to-brand-secondary rounded-full transition-all duration-1000 ease-out"
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })
+                );
+              })}
+            </div>
           )}
         </CardContent>
       </Card>

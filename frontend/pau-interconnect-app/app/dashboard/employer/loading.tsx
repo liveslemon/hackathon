@@ -14,7 +14,7 @@ export default function Loading() {
           {[...Array(3)].map((_, i) => (
             <div
               key={i}
-              className="flex-1 min-w-[140px] h-14 bg-white rounded-2xl border border-slate-100 flex items-center px-6 gap-3"
+              className="flex-1 min-w-[140px] h-14 bg-surface rounded-2xl border border-border flex items-center px-6 gap-3"
             >
               <Skeleton className="h-5 w-5 rounded-md" />
               <Skeleton className="h-4 w-20" />
@@ -22,22 +22,22 @@ export default function Loading() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-12">
-          {[...Array(2)].map((_, i) => (
-            <Skeleton key={i} className="h-[160px] rounded-[32px]" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-[140px] rounded-2xl" />
           ))}
         </div>
 
-        <Skeleton className="h-px w-full my-12" />
+        <Skeleton className="h-px w-full my-10" />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          <div className="space-y-6">
-            <Skeleton className="h-8 w-48 rounded-xl mb-6 ml-2" />
-            <Skeleton className="h-[400px] w-full rounded-[40px]" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
+          <div className="space-y-4">
+            <Skeleton className="h-7 w-48 rounded-xl" />
+            <Skeleton className="h-[360px] w-full rounded-2xl" />
           </div>
-          <div className="space-y-6">
-            <Skeleton className="h-8 w-48 rounded-xl mb-6 ml-2" />
-            <Skeleton className="h-[400px] w-full rounded-[40px]" />
+          <div className="space-y-4">
+            <Skeleton className="h-7 w-48 rounded-xl" />
+            <Skeleton className="h-[360px] w-full rounded-2xl" />
           </div>
         </div>
       </main>

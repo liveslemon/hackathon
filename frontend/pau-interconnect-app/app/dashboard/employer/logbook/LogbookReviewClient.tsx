@@ -2,8 +2,25 @@
 
 import React, { useState } from "react";
 import { toast } from "sonner";
-import { Button, Typography, Stack, Card, Badge } from "@/components/ui";
-import { FiCheckCircle, FiXCircle, FiClock, FiCheckSquare, FiSquare } from "react-icons/fi";
+import {
+  Button,
+  Card,
+  CardContent,
+  PageHeader,
+  StatusPill,
+  EmptyState,
+  Modal,
+  Textarea,
+} from "@/components/ui";
+import {
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  CheckSquare,
+  Square,
+  Calendar,
+} from "lucide-react";
+
 import { authenticatedFetch } from "@/lib/api";
 
 interface LogbookEntry {
@@ -17,7 +34,7 @@ interface LogbookEntry {
   profiles?: {
     full_name: string;
     email: string;
-    avatar_url: string;
+    avatar_url?: string;
   };
 }
 
@@ -32,6 +49,12 @@ export default function LogbookReviewClient({
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkApproving, setIsBulkApproving] = useState(false);
+
+  // Revision Modal State
+  const [flagModalOpen, setFlagModalOpen] = useState(false);
+  const [flagTargetEntryId, setFlagTargetEntryId] = useState<string | null>(null);
+  const [flagFeedback, setFlagFeedback] = useState("");
+  const [submittingFlag, setSubmittingFlag] = useState(false);
 
   const pendingEntries = entries.filter((e) => e.status === "pending");
   const historyEntries = entries.filter((e) => e.status !== "pending");
@@ -53,28 +76,64 @@ export default function LogbookReviewClient({
     }
   };
 
-  const handleUpdateStatus = async (entryId: string, newStatus: string) => {
-    let feedback_notes: string | undefined = undefined;
-    if (newStatus === "flagged") {
-      const reason = window.prompt(
-        "Please provide feedback on why this logbook entry needs revision:",
-      );
-      if (reason === null) return; // User cancelled
-      if (!reason.trim()) {
-        toast.error("Feedback note is required when returning an entry for revision.");
-        return;
-      }
-      feedback_notes = reason.trim();
+  const openFlagModal = (entryId: string) => {
+    setFlagTargetEntryId(entryId);
+    setFlagFeedback("");
+    setFlagModalOpen(true);
+  };
+
+  const handleConfirmFlag = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!flagTargetEntryId) return;
+    if (!flagFeedback.trim()) {
+      toast.error("Please enter a revision reason for the student.");
+      return;
     }
 
+    setSubmittingFlag(true);
+    const targetId = flagTargetEntryId;
+    const note = flagFeedback.trim();
+    const previousEntries = [...entries];
+
+    // Optimistic UI
+    setEntries((prev) =>
+      prev.map((item) =>
+        item.id === targetId ? { ...item, status: "flagged", feedback_notes: note } : item,
+      ),
+    );
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(targetId);
+      return next;
+    });
+
+    try {
+      await authenticatedFetch(`/api/logbook/entry/${targetId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "flagged", feedback_notes: note }),
+      });
+      toast.success("Entry returned to student for revision.");
+      setFlagModalOpen(false);
+      setFlagTargetEntryId(null);
+    } catch (err) {
+      setEntries(previousEntries);
+      toast.error(
+        "Failed to request revision: " +
+          (err instanceof Error ? err.message : "Unknown error"),
+      );
+    } finally {
+      setSubmittingFlag(false);
+    }
+  };
+
+  const handleApprove = async (entryId: string) => {
     const previousEntries = [...entries];
     // Optimistic UI update
     setEntries((prev) =>
       prev.map((e) =>
-        e.id === entryId ? { ...e, status: newStatus, feedback_notes } : e,
+        e.id === entryId ? { ...e, status: "approved" } : e,
       ),
     );
-    // Remove from selection if pending
     setSelectedIds((prev) => {
       const next = new Set(prev);
       next.delete(entryId);
@@ -85,15 +144,10 @@ export default function LogbookReviewClient({
     try {
       await authenticatedFetch(`/api/logbook/entry/${entryId}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status: newStatus, feedback_notes }),
+        body: JSON.stringify({ status: "approved" }),
       });
-      toast.success(
-        newStatus === "approved"
-          ? "Logbook entry approved."
-          : "Entry returned for student revision.",
-      );
+      toast.success("Logbook entry approved.");
     } catch (err: unknown) {
-      // Rollback on failure
       setEntries(previousEntries);
       toast.error(
         "Failed to update status: " +
@@ -109,7 +163,6 @@ export default function LogbookReviewClient({
     if (idsToApprove.length === 0) return;
 
     const previousEntries = [...entries];
-    // Optimistic UI update
     setEntries((prev) =>
       prev.map((e) =>
         selectedIds.has(e.id) ? { ...e, status: "approved" } : e,
@@ -128,7 +181,6 @@ export default function LogbookReviewClient({
       });
       toast.success(`Successfully approved ${idsToApprove.length} entries.`);
     } catch (err: unknown) {
-      // Rollback on failure
       setEntries(previousEntries);
       setSelectedIds(new Set(idsToApprove));
       toast.error(
@@ -140,245 +192,244 @@ export default function LogbookReviewClient({
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "approved":
-        return (
-          <Badge variant="success" className="px-3 py-1 text-xs">
-            Approved
-          </Badge>
-        );
-      case "flagged":
-        return (
-          <Badge variant="error" className="px-3 py-1 text-xs">
-            Revision Requested
-          </Badge>
-        );
-      default:
-        return (
-          <Badge
-            variant="warning"
-            className="px-3 py-1 text-xs bg-amber-100 text-amber-700 font-bold uppercase tracking-wider"
-          >
-            Pending Review
-          </Badge>
-        );
-    }
-  };
-
   return (
-    <div className="space-y-12">
-      <div>
-        <Typography variant="h2" weight="bold" className="mb-2">
-          Logbook Reviews
-        </Typography>
-        <Typography variant="body1" color="muted">
-          Verify and approve your interns&apos; daily logbook entries.
-        </Typography>
-      </div>
-
-      <Stack spacing={10}>
-        {/* Pending Reviews Section */}
-        <div>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <Typography
-              variant="h4"
-              weight="bold"
-              className="flex items-center gap-3"
-            >
-              <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-500">
-                <FiClock size={20} />
-              </div>
-              Pending Approval ({pendingEntries.length})
-            </Typography>
-
-            {pendingEntries.length > 0 && (
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleSelectAll}
-                  className="text-xs font-semibold"
-                >
-                  {selectedIds.size === pendingEntries.length ? (
-                    <>
-                      <FiCheckSquare className="mr-1.5 inline" size={14} /> Deselect All
-                    </>
-                  ) : (
-                    <>
-                      <FiSquare className="mr-1.5 inline" size={14} /> Select All
-                    </>
-                  )}
-                </Button>
-                {selectedIds.size > 0 && (
-                  <Button
-                    variant="solid"
-                    size="sm"
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs"
-                    onClick={handleBulkApprove}
-                    isLoading={isBulkApproving}
-                  >
-                    <FiCheckCircle className="mr-1.5 inline" size={14} />
-                    Approve Selected ({selectedIds.size})
-                  </Button>
+    <div className="space-y-8 max-w-5xl mx-auto pb-16">
+      <PageHeader
+        title="Logbook Reviews"
+        description="Verify SIWES logbook activity entries submitted by your active interns."
+        actions={
+          pendingEntries.length > 0 ? (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleSelectAll}
+                className="gap-2 text-xs"
+              >
+                {selectedIds.size === pendingEntries.length ? (
+                  <>
+                    <CheckSquare className="w-4 h-4 text-primary" /> Deselect All
+                  </>
+                ) : (
+                  <>
+                    <Square className="w-4 h-4" /> Select All ({pendingEntries.length})
+                  </>
                 )}
-              </div>
-            )}
-          </div>
+              </Button>
+              {selectedIds.size > 0 && (
+                <Button
+                  size="sm"
+                  className="gap-2 text-xs"
+                  onClick={handleBulkApprove}
+                  isLoading={isBulkApproving}
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Approve Selected ({selectedIds.size})
+                </Button>
+              )}
+            </div>
+          ) : undefined
+        }
+      />
 
-          <Stack spacing={4}>
-            {pendingEntries.length === 0 && (
-              <Card className="p-16 text-center border-dashed border-2 bg-slate-50/50 rounded-[40px]">
-                <Typography color="muted" weight="medium">
-                  All caught up! No pending logbook entries to review.
-                </Typography>
-              </Card>
-            )}
+      {/* Pending Reviews Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm font-semibold text-fg">
+            <Clock className="w-4 h-4 text-warning-fg" />
+            <span>Pending Approval ({pendingEntries.length})</span>
+          </div>
+        </div>
+
+        {pendingEntries.length === 0 ? (
+          <EmptyState
+            icon={<CheckCircle2 className="w-8 h-8 text-success-fg" />}
+            title="All caught up!"
+            description="There are no pending student logbook entries awaiting employer sign-off."
+          />
+        ) : (
+          <div className="space-y-4">
             {pendingEntries.map((entry) => {
               const isSelected = selectedIds.has(entry.id);
               return (
                 <Card
                   key={entry.id}
-                  className={`p-8 bg-white border rounded-[32px] hover:shadow-xl transition-all group ${
-                    isSelected ? "border-emerald-400 ring-2 ring-emerald-100" : "border-slate-100 hover:ring-2 hover:ring-brand/5"
+                  className={`transition-all border ${
+                    isSelected
+                      ? "ring-2 ring-primary border-primary bg-primary-subtle/20"
+                      : "hover:border-border-strong"
                   }`}
                 >
-                  <Stack direction="row" justify="between" align="start">
-                    <div className="flex items-start gap-4 flex-1">
-                      <button
-                        type="button"
-                        onClick={() => toggleSelect(entry.id)}
-                        className="mt-1 text-slate-400 hover:text-emerald-600 transition-colors focus:outline-none"
-                        aria-label={isSelected ? "Deselect entry" : "Select entry"}
-                      >
-                        {isSelected ? (
-                          <FiCheckSquare size={20} className="text-emerald-600" />
-                        ) : (
-                          <FiSquare size={20} />
-                        )}
-                      </button>
-
-                      <div className="flex-1">
-                        <Stack
-                          direction="row"
-                          align="center"
-                          spacing={4}
-                          className="mb-2"
+                  <CardContent className="p-6">
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                      <div className="flex items-start gap-4 flex-1">
+                        <button
+                          type="button"
+                          onClick={() => toggleSelect(entry.id)}
+                          className="mt-1 text-muted-fg hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+                          aria-label={isSelected ? "Deselect entry" : "Select entry"}
                         >
-                          <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-600">
-                            {entry.profiles?.full_name?.charAt(0) || "S"}
-                          </div>
-                          <div>
-                            <Typography
-                              variant="h4"
-                              weight="bold"
-                              className="text-slate-900 mb-0.5"
-                            >
-                              {entry.profiles?.full_name || "Unknown Student"}
-                            </Typography>
-                            <div className="flex items-center gap-3">
-                              <Typography
-                                variant="caption"
-                                color="muted"
-                                className="font-medium"
-                              >
-                                {new Date(entry.date).toLocaleDateString([], {
-                                  weekday: "long",
-                                  month: "short",
-                                  day: "numeric",
-                                })}
-                              </Typography>
-                              {getStatusBadge(entry.status)}
+                          {isSelected ? (
+                            <CheckSquare className="w-5 h-5 text-primary" />
+                          ) : (
+                            <Square className="w-5 h-5" />
+                          )}
+                        </button>
+
+                        <div className="flex-1 space-y-3">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <div className="w-9 h-9 rounded-full bg-surface-raised border border-border flex items-center justify-center font-bold text-xs text-fg">
+                              {entry.profiles?.full_name?.charAt(0) || "S"}
+                            </div>
+                            <div>
+                              <div className="font-semibold text-sm text-fg">
+                                {entry.profiles?.full_name || "Unknown Student"}
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-muted-fg">
+                                <Calendar className="w-3.5 h-3.5" />
+                                <span>
+                                  {new Date(entry.date).toLocaleDateString([], {
+                                    weekday: "short",
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  })}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="ml-auto">
+                              <StatusPill status="pending" />
                             </div>
                           </div>
-                        </Stack>
 
-                        <div className="text-[15px] text-slate-600 leading-relaxed whitespace-pre-wrap mt-6 bg-slate-50/80 p-6 rounded-2xl border border-slate-100 group-hover:bg-white transition-colors group-hover:shadow-inner">
-                          {entry.activities_enhanced || entry.activities_raw}
+                          <div className="text-sm text-fg leading-relaxed whitespace-pre-wrap bg-surface-sunken/60 p-4 rounded-xl border border-border">
+                            {entry.activities_enhanced || entry.activities_raw}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex flex-col gap-3 ml-6 pt-2">
-                      <Button
-                        variant="solid"
-                        className="w-36 h-12 bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-100 rounded-xl border-none font-bold"
-                        onClick={() => handleUpdateStatus(entry.id, "approved")}
-                        isLoading={updatingId === entry.id}
-                        disabled={updatingId !== null || isBulkApproving}
-                      >
-                        <FiCheckCircle className="mr-2 inline" size={18} />{" "}
-                        Approve
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-36 h-12 border-rose-100 text-rose-600 hover:bg-rose-50 rounded-xl font-bold"
-                        onClick={() => handleUpdateStatus(entry.id, "flagged")}
-                        isLoading={updatingId === entry.id}
-                        disabled={updatingId !== null || isBulkApproving}
-                      >
-                        <FiXCircle className="mr-2 inline" size={18} /> Flag Issue
-                      </Button>
+                      <div className="flex flex-row md:flex-col gap-2 shrink-0 md:w-36 pt-1">
+                        <Button
+                          size="sm"
+                          className="flex-1 md:w-full gap-2"
+                          onClick={() => handleApprove(entry.id)}
+                          isLoading={updatingId === entry.id}
+                          disabled={updatingId !== null || isBulkApproving}
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 md:w-full gap-2 text-danger-fg hover:bg-danger-subtle"
+                          onClick={() => openFlagModal(entry.id)}
+                          isLoading={updatingId === entry.id}
+                          disabled={updatingId !== null || isBulkApproving}
+                        >
+                          <AlertCircle className="w-4 h-4" />
+                          Flag Issue
+                        </Button>
+                      </div>
                     </div>
-                  </Stack>
+                  </CardContent>
                 </Card>
               );
             })}
-          </Stack>
-        </div>
-
-        {/* Review History Section */}
-        {historyEntries.length > 0 && (
-          <div>
-            <Typography
-              variant="h5"
-              weight="bold"
-              className="mb-6 text-slate-400 uppercase tracking-widest text-xs"
-            >
-              Review History
-            </Typography>
-            <Stack spacing={3}>
-              {historyEntries.map((entry) => (
-                <Card
-                  key={entry.id}
-                  className="p-6 bg-white/40 border border-slate-50 opacity-80 hover:opacity-100 transition-all rounded-2xl"
-                >
-                  <Stack direction="row" justify="between" align="center">
-                    <div className="flex-1">
-                      <Stack direction="row" align="center" spacing={4}>
-                        <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 text-sm font-bold">
-                          {entry.profiles?.full_name?.charAt(0) || "S"}
-                        </div>
-                        <div>
-                          <Typography
-                            variant="body1"
-                            weight="bold"
-                            className="text-slate-700"
-                          >
-                            {entry.profiles?.full_name || "Unknown Student"}
-                            <span className="font-medium text-slate-400 ml-4">
-                              {entry.date}
-                            </span>
-                          </Typography>
-                          {entry.feedback_notes && (
-                            <Typography variant="caption" color="muted" className="italic block mt-1">
-                              Note: {entry.feedback_notes}
-                            </Typography>
-                          )}
-                        </div>
-                        <div className="ml-auto">
-                          {getStatusBadge(entry.status)}
-                        </div>
-                      </Stack>
-                    </div>
-                  </Stack>
-                </Card>
-              ))}
-            </Stack>
           </div>
         )}
-      </Stack>
+      </div>
+
+      {/* Review History Section */}
+      {historyEntries.length > 0 && (
+        <div className="space-y-4 pt-4">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted-fg">
+            Review History ({historyEntries.length})
+          </div>
+          <div className="space-y-3">
+            {historyEntries.map((entry) => (
+              <Card
+                key={entry.id}
+                className="opacity-90 hover:opacity-100 transition-opacity"
+              >
+                <CardContent className="p-4 sm:p-5">
+                  <div className="flex items-start sm:items-center justify-between gap-4 flex-wrap">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-surface-sunken flex items-center justify-center text-xs font-bold text-muted-fg">
+                        {entry.profiles?.full_name?.charAt(0) || "S"}
+                      </div>
+                      <div>
+                        <span className="font-medium text-sm text-fg">
+                          {entry.profiles?.full_name || "Unknown Student"}
+                        </span>
+                        <span className="text-xs text-muted-fg ml-3">
+                          {entry.date}
+                        </span>
+                        {entry.feedback_notes && (
+                          <p className="text-xs text-danger-fg mt-1 italic">
+                            Feedback: &quot;{entry.feedback_notes}&quot;
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="shrink-0">
+                      <StatusPill
+                        status={
+                          entry.status === "approved"
+                            ? "approved"
+                            : "needs_revision"
+                        }
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Revision Request Modal */}
+      <Modal
+        isOpen={flagModalOpen}
+        onClose={() => setFlagModalOpen(false)}
+        title="Request Entry Revision"
+      >
+        <p className="text-xs text-muted-fg mb-4">
+          Provide feedback explaining why this logbook entry requires student correction.
+        </p>
+        <form onSubmit={handleConfirmFlag} className="space-y-4">
+
+          <Textarea
+            label="Revision Guidance & Notes"
+            placeholder="Explain specifically what needs additional detail, documentation, or technical elaboration..."
+            value={flagFeedback}
+            onChange={(e) => setFlagFeedback(e.target.value)}
+            rows={4}
+            required
+            autoFocus
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setFlagModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="outline"
+              className="text-danger-fg hover:bg-danger-subtle"
+              isLoading={submittingFlag}
+            >
+              Send Revision Request
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
+
 

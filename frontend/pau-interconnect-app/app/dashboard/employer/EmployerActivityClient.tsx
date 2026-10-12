@@ -50,7 +50,7 @@ export function EmployerActivityClient({
 
   if (filteredItems.length === 0 && searchQuery) {
     return (
-      <div className="p-12 text-center bg-slate-50/50 rounded-[40px] border border-dashed border-slate-200">
+      <div className="p-8 text-center bg-surface-sunken rounded-2xl border border-dashed border-border">
         <Typography variant="body2" color="muted">
           No matches for &quot;{searchQuery}&quot;
         </Typography>
@@ -60,7 +60,7 @@ export function EmployerActivityClient({
 
   if (initialItems.length === 0) {
     return (
-      <div className="p-16 text-center">
+      <div className="p-12 text-center">
         <Typography variant="body2" color="muted">
           {type === "applicants"
             ? "No candidate leads yet."
@@ -71,7 +71,7 @@ export function EmployerActivityClient({
   }
 
   return (
-    <div className="divide-y divide-slate-50">
+    <div className="divide-y divide-border">
       {filteredItems.map((item) => (
         <Link
           key={item.id}
@@ -82,33 +82,33 @@ export function EmployerActivityClient({
           }
           className="block group"
         >
-          <div className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
-            <div className="flex items-center gap-5">
+          <div className="p-5 flex items-center justify-between hover:bg-surface-sunken transition-colors">
+            <div className="flex items-center gap-4">
               <div
                 className={cx(
-                  "w-12 h-12 rounded-2xl flex items-center justify-center transition-colors",
+                  "w-11 h-11 rounded-xl flex items-center justify-center transition-colors",
                   type === "applicants"
-                    ? "bg-slate-50 text-slate-400 group-hover:bg-brand/5 group-hover:text-brand"
-                    : "bg-indigo-50/50 text-indigo-400 group-hover:bg-indigo-100 group-hover:text-indigo-600",
+                    ? "bg-surface-sunken text-fg-muted group-hover:bg-brand-subtle group-hover:text-brand"
+                    : "bg-brand-subtle text-brand group-hover:bg-brand group-hover:text-fg-inverse",
                 )}
               >
                 {type === "applicants" ? (
-                  <User className="w-6 h-6" />
+                  <User className="w-5 h-5" />
                 ) : (
-                  <Clock className="w-6 h-6" />
+                  <Clock className="w-5 h-5" />
                 )}
               </div>
               <div>
                 <Typography
-                  variant="h6"
+                  variant="body1"
                   weight="bold"
-                  className="text-slate-900 group-hover:text-brand transition-colors"
+                  className="text-fg group-hover:text-brand transition-colors"
                 >
                   {item.profiles?.full_name}
                 </Typography>
                 <Typography
                   variant="caption"
-                  className="text-slate-500 font-medium"
+                  className="text-fg-muted font-medium"
                 >
                   {type === "applicants"
                     ? `${item.internships?.role} • ${item.match_score || 0}% Match Score${
@@ -121,9 +121,9 @@ export function EmployerActivityClient({
               </div>
             </div>
             {type === "applicants" ? (
-              <ChevronRight className="text-slate-300 group-hover:text-brand transition-colors" />
+              <ChevronRight className="text-fg-subtle group-hover:text-brand transition-colors w-5 h-5" />
             ) : (
-              <div className="px-4 py-2 rounded-xl bg-slate-50 text-slate-500 text-[11px] font-bold uppercase tracking-wider group-hover:bg-brand group-hover:text-white transition-all">
+              <div className="px-3.5 py-1.5 rounded-lg bg-surface-sunken text-fg-muted text-[11px] font-bold uppercase tracking-wider group-hover:bg-brand group-hover:text-fg-inverse transition-all">
                 Approve
               </div>
             )}

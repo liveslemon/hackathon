@@ -1,41 +1,28 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import { supabaseFetch } from "@/lib/supabase-fetch";
+import { getSupabaseServer } from "@/lib/supabase-server";
 import AnalyticsView from "../AnalyticsView";
+import DashboardShellWrapper from "../employer/DashboardShellWrapper";
 
 export default async function AnalyticsPage() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      global: { fetch: supabaseFetch },
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
-          });
-        },
-      },
-    },
-  );
+  const supabase = await getSupabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const { data, error } = await supabase.from("internships").select("category");
+  const [internshipsRes, profileRes, applicationsRes] = await Promise.all([
+    supabase.from("internships").select("category"),
+    user
+      ? supabase.from("profiles").select("*").eq("id", user.id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase
+      .from("applied_internships")
+      .select("id", { count: "exact", head: true }),
+  ]);
 
-  if (error) {
-    console.error("Error fetching internships:", error);
-    return null;
-  }
-
-  const { count: applicationCount } = await supabase
-    .from("applied_internships")
-    .select("id", { count: "exact", head: true });
+  const data = internshipsRes.data || [];
+  const applicationCount = applicationsRes.count || 0;
 
   const counts: Record<string, number> = {};
-  (data || []).forEach((item) => {
+  data.forEach((item) => {
     const category = item.category || "General";
     counts[category] = (counts[category] || 0) + 1;
   });
@@ -45,18 +32,21 @@ export default async function AnalyticsPage() {
     value,
   }));
 
-  const totalInternships = (data || []).length;
-  const totalApplications = applicationCount || 0;
+  const totalInternships = data.length;
+  const totalApplications = applicationCount;
   const avgApplications =
     totalInternships > 0
       ? (totalApplications / totalInternships).toFixed(1)
       : "0.0";
 
   return (
-    <AnalyticsView
-      categories={categoryArray}
-      totalApplications={totalApplications}
-      avgApplications={avgApplications}
-    />
+    <DashboardShellWrapper userProfile={profileRes.data}>
+      <AnalyticsView
+        categories={categoryArray}
+        totalApplications={totalApplications}
+        avgApplications={avgApplications}
+      />
+    </DashboardShellWrapper>
   );
 }
+
