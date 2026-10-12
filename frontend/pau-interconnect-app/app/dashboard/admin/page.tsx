@@ -97,7 +97,7 @@ export default async function AdminDashboardPage({
   }
 
   return (
-    <AdminClient>
+    <AdminClient userId={user.id}>
       <Suspense
         fallback={
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
