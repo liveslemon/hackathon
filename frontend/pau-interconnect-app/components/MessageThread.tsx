@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { cx } from "@/utils/cx";
 import { Button } from "@/components/ui";
+import { Send, Check, CheckCheck } from "lucide-react";
 
 interface Message {
   id: string;
@@ -43,7 +44,6 @@ export function MessageThread({
     });
   }, [fetchMessages]);
 
-  // Polling fallback every 6 seconds to ensure reliable messaging
   useEffect(() => {
     const interval = setInterval(() => {
       fetchMessages();
@@ -51,7 +51,6 @@ export function MessageThread({
     return () => clearInterval(interval);
   }, [fetchMessages]);
 
-  // Supabase Realtime subscription
   useEffect(() => {
     const channel = supabase
       .channel(`messages:${conversationId}`)
@@ -103,7 +102,7 @@ export function MessageThread({
         });
         setTimeout(() => {
           bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-        }, 50);
+        }, 100);
       }
     } catch (err) {
       console.error("Failed to send message:", err);
@@ -112,12 +111,23 @@ export function MessageThread({
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      void sendMessage();
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[300px]">
+    <div className="flex flex-col h-[520px] rounded-3xl border border-border bg-surface overflow-hidden shadow-sm">
+      {/* Messages Scroll Area */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 bg-surface-sunken/30">
         {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full min-h-[260px] text-slate-400 text-sm italic">
-            No messages yet. Send a message to start the conversation.
+          <div className="h-full flex flex-col items-center justify-center text-center text-fg-muted p-4">
+            <p className="text-sm font-semibold text-fg">No messages yet</p>
+            <p className="text-xs text-fg-muted mt-1">
+              Start the conversation by typing below.
+            </p>
           </div>
         ) : (
           messages.map((msg) => {
@@ -126,24 +136,37 @@ export function MessageThread({
               <div
                 key={msg.id}
                 className={cx(
-                  "w-max max-w-[75%] p-3.5 rounded-2xl text-sm leading-relaxed",
-                  isMe
-                    ? "ml-auto bg-brand text-white rounded-tr-sm"
-                    : "mr-auto bg-slate-100 text-slate-800 rounded-tl-sm",
+                  "flex flex-col max-w-[80%] md:max-w-[70%]",
+                  isMe ? "ml-auto items-end" : "mr-auto items-start",
                 )}
               >
-                <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                <span
+                <div
                   className={cx(
-                    "block text-[10px] mt-1 text-right",
-                    isMe ? "text-white/70" : "text-slate-400",
+                    "px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm",
+                    isMe
+                      ? "bg-brand text-brand-fg rounded-br-xs"
+                      : "bg-surface border border-border text-fg rounded-bl-xs",
                   )}
                 >
-                  {new Date(msg.created_at).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
+                  <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                </div>
+                <div className="flex items-center gap-1 mt-1 px-1 text-[10px] text-fg-subtle">
+                  <span>
+                    {new Date(msg.created_at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                  {isMe && (
+                    <span>
+                      {msg.is_read ? (
+                        <CheckCheck className="w-3 h-3 text-brand" />
+                      ) : (
+                        <Check className="w-3 h-3 text-fg-subtle" />
+                      )}
+                    </span>
+                  )}
+                </div>
               </div>
             );
           })
@@ -151,24 +174,28 @@ export function MessageThread({
         <div ref={bottomRef} />
       </div>
 
-      <div className="border-t p-3 bg-slate-50 flex gap-2 items-center">
+      {/* Composer */}
+      <div className="p-3 md:p-4 border-t border-border bg-surface flex items-center gap-2">
         <input
+          type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              sendMessage();
-            }
-          }}
-          maxLength={5000}
+          onKeyDown={handleKeyDown}
           placeholder="Type a message..."
-          className="flex-1 px-4 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+          disabled={sending}
+          className="flex-1 bg-surface-sunken border border-border rounded-xl px-4 py-2 text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring/20 focus-visible:border-brand min-h-[42px]"
         />
-        <Button onClick={sendMessage} size="sm" isLoading={sending} disabled={!newMessage.trim()}>
-          Send
+        <Button
+          onClick={sendMessage}
+          disabled={!newMessage.trim() || sending}
+          isLoading={sending}
+          size="sm"
+          className="min-h-[42px] px-4 rounded-xl"
+        >
+          <Send className="w-4 h-4" />
         </Button>
       </div>
     </div>
   );
 }
+export default MessageThread;

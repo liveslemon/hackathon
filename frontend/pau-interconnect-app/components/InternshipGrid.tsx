@@ -214,18 +214,18 @@ const InternshipGrid = ({
   return (
     <Stack spacing={8}>
       {/* Header Bar */}
-      <div className="bg-white rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
+      <div className="bg-surface rounded-2xl p-5 md:p-6 border border-border shadow-sm text-fg">
         {/* Title Row */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
-              <Briefcase className="w-[18px] h-[18px] text-indigo-600" />
+            <div className="w-10 h-10 bg-brand-subtle rounded-xl flex items-center justify-center">
+              <Briefcase className="w-[18px] h-[18px] text-brand" />
             </div>
             <div>
-              <h2 className="text-[17px] font-semibold text-slate-800 leading-tight">
+              <h2 className="text-[17px] font-semibold text-fg leading-tight">
                 Internships
               </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-fg-muted mt-0.5">
                 {totalItems} opportunities available
               </p>
             </div>
@@ -235,10 +235,10 @@ const InternshipGrid = ({
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={cx(
-                "flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-all border",
+                "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all border cursor-pointer min-h-[40px]",
                 showFilters
-                  ? "bg-indigo-50 text-indigo-600 border-indigo-100"
-                  : "bg-white text-slate-500 border-slate-150 hover:border-slate-300",
+                  ? "bg-brand-subtle text-brand border-brand/20 font-semibold"
+                  : "bg-surface text-fg-muted border-border hover:border-border-strong",
               )}
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />

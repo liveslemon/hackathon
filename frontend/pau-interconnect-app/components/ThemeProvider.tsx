@@ -1,6 +1,11 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useCallback,
+  useSyncExternalStore,
+} from "react";
 import {
   ThemeProvider as NextThemesProvider,
   useTheme as useNextTheme,
@@ -34,8 +39,8 @@ export function ThemeProvider({
   return (
     <NextThemesProvider
       attribute="class"
-      defaultTheme="system"
-      enableSystem
+      defaultTheme="light"
+      enableSystem={true}
       disableTransitionOnChange
       {...props}
     >
@@ -44,15 +49,20 @@ export function ThemeProvider({
   );
 }
 
+// Client-only mount detection without cascading useEffect renders
+const emptySubscribe = () => () => {};
+function useIsMounted(): boolean {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
+}
+
 export function useTheme(): CustomThemeContextType {
   const nextThemesContext = useNextTheme();
   const fallbackContext = useContext(FallbackThemeContext);
-
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useIsMounted();
 
   const toggleTheme = useCallback(() => {
     const current =
@@ -68,7 +78,6 @@ export function useTheme(): CustomThemeContextType {
     }
   }, [nextThemesContext, fallbackContext]);
 
-  // If next-themes context is available:
   if (
     nextThemesContext.theme !== undefined ||
     nextThemesContext.resolvedTheme !== undefined
@@ -82,7 +91,6 @@ export function useTheme(): CustomThemeContextType {
     };
   }
 
-  // Graceful fallback if invoked outside a next-themes provider
   return {
     ...fallbackContext,
     toggleTheme,

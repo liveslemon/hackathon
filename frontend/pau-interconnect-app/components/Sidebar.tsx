@@ -128,13 +128,13 @@ const Sidebar = ({
       onMouseLeave={() => setIsHovered(false)}
       aria-label="Sidebar navigation"
       className={cx(
-        "flex flex-col h-full bg-white border-r border-slate-100 transition-all duration-[400ms] ease-in-out overflow-hidden",
+        "flex flex-col h-full bg-surface border-r border-border transition-all duration-[400ms] ease-in-out overflow-hidden shadow-sm",
         isExpanded ? "w-72" : "w-20",
         className,
       )}
     >
       {/* Sidebar Header */}
-      <div className="py-6 px-5 flex items-center h-20 shrink-0 transition-all duration-[400ms] ease-in-out relative">
+      <div className="py-6 px-5 flex items-center h-20 shrink-0 transition-all duration-[400ms] ease-in-out relative border-b border-border/50">
         <div
           className="flex items-center gap-3 cursor-pointer group shrink-0"
           onClick={() =>
@@ -147,7 +147,7 @@ const Sidebar = ({
             )
           }
         >
-          <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center p-2 shadow-sm group-hover:scale-105 transition-transform shrink-0">
+          <div className="w-10 h-10 bg-brand rounded-xl flex items-center justify-center p-2 shadow-sm group-hover:scale-105 transition-transform shrink-0">
             <Image
               src="/favicon.ico"
               alt="PAU Logo"
@@ -162,7 +162,7 @@ const Sidebar = ({
               isExpanded ? "opacity-100 max-w-[200px]" : "opacity-0 max-w-0",
             )}
           >
-            <span className="text-[15px] font-bold text-slate-800 tracking-tight whitespace-nowrap ml-1">
+            <span className="text-[15px] font-bold text-fg tracking-tight whitespace-nowrap ml-1">
               InterConnect
             </span>
           </div>
@@ -178,10 +178,10 @@ const Sidebar = ({
             onClick={onTogglePin}
             aria-label={isPinned ? "Unpin sidebar" : "Pin sidebar"}
             className={cx(
-              "p-2 rounded-lg transition-all duration-200 hidden lg:flex items-center justify-center",
+              "p-2 rounded-xl transition-all duration-200 hidden lg:flex items-center justify-center cursor-pointer min-w-[36px] min-h-[36px]",
               isPinned
-                ? "bg-slate-100 text-slate-600"
-                : "text-slate-300 hover:text-slate-500 hover:bg-slate-50",
+                ? "bg-surface-sunken text-fg font-semibold"
+                : "text-fg-subtle hover:text-fg hover:bg-surface-sunken",
             )}
             title={isPinned ? "Unpin sidebar" : "Pin sidebar"}
           >
@@ -195,9 +195,9 @@ const Sidebar = ({
             <button
               onClick={onClose}
               aria-label="Close sidebar"
-              className="lg:hidden p-2 text-slate-400 hover:text-slate-600 transition-colors"
+              className="lg:hidden p-2 text-fg-muted hover:text-fg rounded-xl hover:bg-surface-sunken transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center cursor-pointer"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           )}
         </div>
@@ -213,12 +213,12 @@ const Sidebar = ({
                 isExpanded ? "opacity-100 max-w-[200px]" : "opacity-0 max-w-0",
               )}
             >
-              <span className="text-[10px] font-semibold text-slate-300 uppercase tracking-widest whitespace-nowrap">
+              <span className="text-[10px] font-semibold text-fg-subtle uppercase tracking-widest whitespace-nowrap">
                 Dashboard
               </span>
             </div>
           </div>
-          <nav className="space-y-0.5">
+          <nav className="space-y-1">
             {dashboardItems.map((item) => {
               const isActive =
                 pathname === item.href ||
@@ -238,109 +238,98 @@ const Sidebar = ({
                   aria-label={item.label}
                   aria-current={isActive ? "page" : undefined}
                   className={cx(
-                    "w-full flex items-center rounded-xl text-[13px] font-medium transition-all duration-200 group relative overflow-hidden h-11 px-5",
+                    "w-full flex items-center rounded-xl text-[13px] font-medium transition-all duration-200 group relative overflow-hidden h-11 px-5 cursor-pointer min-h-[44px]",
                     !isExpanded && "pl-[18px]",
                     isActive
-                      ? "bg-slate-50 text-slate-800"
-                      : "text-slate-400 hover:bg-slate-50/50 hover:text-slate-600",
+                      ? "bg-brand-subtle text-brand font-semibold shadow-sm"
+                      : "text-fg-muted hover:bg-surface-sunken hover:text-fg",
                   )}
                 >
                   <Icon
                     className={cx(
                       "w-[18px] h-[18px] transition-colors shrink-0",
-                      isActive ? "text-indigo-600" : "text-slate-350",
+                      isActive
+                        ? "text-brand"
+                        : "text-fg-subtle group-hover:text-fg",
                     )}
                   />
                   <div
                     className={cx(
-                      "transition-all duration-[400ms] ease-in-out overflow-hidden flex items-center ml-3",
+                      "transition-all duration-[400ms] ease-in-out overflow-hidden flex items-center",
                       isExpanded
-                        ? "opacity-100 max-w-[200px]"
-                        : "opacity-0 max-w-0",
+                        ? "opacity-100 max-w-[200px] ml-3.5"
+                        : "opacity-0 max-w-0 ml-0",
                     )}
                   >
-                    <span className="truncate whitespace-nowrap">
-                      {item.label}
-                    </span>
+                    <span className="whitespace-nowrap">{item.label}</span>
                   </div>
-                  {!isExpanded && isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-indigo-600 rounded-r-full" />
-                  )}
                 </button>
               );
             })}
           </nav>
         </div>
 
-        {/* Account Section - Pushed to Bottom */}
-        <div className="mt-auto space-y-8">
-          <div>
-            <div className="px-5 mb-3 h-4 flex items-center">
-              <div
-                className={cx(
-                  "transition-all duration-[400ms] ease-in-out overflow-hidden flex items-center",
-                  isExpanded
-                    ? "opacity-100 max-w-[200px]"
-                    : "opacity-0 max-w-0",
-                )}
-              >
-                <span className="text-[10px] font-semibold text-slate-300 uppercase tracking-widest whitespace-nowrap">
-                  Account
-                </span>
-              </div>
+        {/* Account Section */}
+        <div>
+          <div className="px-5 mb-3 h-4 flex items-center">
+            <div
+              className={cx(
+                "transition-all duration-[400ms] ease-in-out overflow-hidden flex items-center",
+                isExpanded ? "opacity-100 max-w-[200px]" : "opacity-0 max-w-0",
+              )}
+            >
+              <span className="text-[10px] font-semibold text-fg-subtle uppercase tracking-widest whitespace-nowrap">
+                Account
+              </span>
             </div>
-            <nav className="space-y-0.5">
-              {accountItems.map((item) => {
-                const isActive =
-                  pathname === item.href ||
-                  (pathname?.startsWith(item.href + "/") ?? false);
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.href}
-                    onClick={() => {
-                      if (item.disabled) return;
-                      router.push(item.href);
-                      if (onClose) onClose();
-                    }}
-                    title={!isExpanded ? item.label : undefined}
-                    aria-label={item.label}
-                    aria-current={isActive ? "page" : undefined}
+          </div>
+          <nav className="space-y-1">
+            {accountItems.map((item) => {
+              const isActive = pathname === item.href;
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.href}
+                  disabled={item.disabled}
+                  onClick={() => {
+                    if (item.disabled) return;
+                    router.push(item.href);
+                    if (onClose) onClose();
+                  }}
+                  title={!isExpanded ? item.label : undefined}
+                  aria-label={item.label}
+                  aria-current={isActive ? "page" : undefined}
+                  className={cx(
+                    "w-full flex items-center rounded-xl text-[13px] font-medium transition-all duration-200 group relative overflow-hidden h-11 px-5 cursor-pointer min-h-[44px]",
+                    !isExpanded && "pl-[18px]",
+                    isActive
+                      ? "bg-brand-subtle text-brand font-semibold shadow-sm"
+                      : "text-fg-muted hover:bg-surface-sunken hover:text-fg",
+                    item.disabled && "opacity-40 cursor-not-allowed hover:bg-transparent",
+                  )}
+                >
+                  <Icon
                     className={cx(
-                      "w-full flex items-center rounded-xl text-[13px] font-medium transition-all duration-200 group relative overflow-hidden h-11 px-5",
-                      !isExpanded && "pl-[18px]",
-                      item.disabled ? "opacity-40 cursor-not-allowed" : "",
+                      "w-[18px] h-[18px] transition-colors shrink-0",
                       isActive
-                        ? "bg-slate-50 text-slate-800"
-                        : "text-slate-400 hover:bg-slate-50/50 hover:text-slate-600",
+                        ? "text-brand"
+                        : "text-fg-subtle group-hover:text-fg",
+                    )}
+                  />
+                  <div
+                    className={cx(
+                      "transition-all duration-[400ms] ease-in-out overflow-hidden flex items-center",
+                      isExpanded
+                        ? "opacity-100 max-w-[200px] ml-3.5"
+                        : "opacity-0 max-w-0 ml-0",
                     )}
                   >
-                    <Icon
-                      className={cx(
-                        "w-[18px] h-[18px] transition-colors shrink-0",
-                        isActive ? "text-indigo-600" : "text-slate-350",
-                      )}
-                    />
-                    <div
-                      className={cx(
-                        "transition-all duration-[400ms] ease-in-out overflow-hidden flex items-center ml-3",
-                        isExpanded
-                          ? "opacity-100 max-w-[200px]"
-                          : "opacity-0 max-w-0",
-                      )}
-                    >
-                      <span className="truncate whitespace-nowrap">
-                        {item.label}
-                      </span>
-                    </div>
-                    {!isExpanded && isActive && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-indigo-600 rounded-r-full" />
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
+                    <span className="whitespace-nowrap">{item.label}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </nav>
         </div>
       </div>
     </aside>

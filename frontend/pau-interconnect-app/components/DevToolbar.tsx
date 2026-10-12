@@ -17,8 +17,6 @@ import {
 } from "@/lib/role-guard";
 const STORAGE_KEY = "dev-toolbar-open-v2";
 
-// Map each role to a predefined real account in the database.
-// You can set these in .env.local to avoid hardcoding credentials in source control.
 const PREDEFINED_ACCOUNTS: Record<
   AppRole,
   { email?: string; password?: string }
@@ -123,7 +121,6 @@ function DevToolbarContent() {
     try {
       updateMode("real");
 
-      // Clear any mock dev mode cookie to ensure pure real authentication
       if (typeof document !== "undefined") {
         document.cookie = clearDevModeRoleCookie();
       }
@@ -135,7 +132,6 @@ function DevToolbarContent() {
         );
       }
 
-      // Perform actual Supabase authentication
       const { data: authData, error } = await supabase.auth.signInWithPassword({
         email: account.email,
         password: account.password,
@@ -147,7 +143,6 @@ function DevToolbarContent() {
 
       const user = authData.user;
 
-      // Load their real profile to determine the exact dashboard path
       const { role: actualRole, isAdmin } = await getUserRoleProfile(
         supabase,
         user?.id ?? "",
@@ -183,7 +178,6 @@ function DevToolbarContent() {
         document.cookie = setDevModeRoleCookie(role);
       }
 
-      // Ensure there is no stale authenticated session while in mock mode.
       await supabase.auth.signOut();
       await refreshActiveUser();
 
@@ -235,7 +229,7 @@ function DevToolbarContent() {
       <button
         type="button"
         onClick={() => setToolbarOpen(true)}
-        className="fixed bottom-4 right-4 z-9999 rounded-full border border-slate-200 bg-white/95 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600 shadow-xl backdrop-blur-md"
+        className="fixed bottom-4 right-4 z-9999 rounded-full border border-border bg-surface-raised/95 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-fg shadow-xl backdrop-blur-md cursor-pointer hover:bg-surface"
       >
         Dev Mode
       </button>
@@ -243,30 +237,30 @@ function DevToolbarContent() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-9999 w-72 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-2xl backdrop-blur-md">
-      <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+    <div className="fixed bottom-4 right-4 z-9999 w-72 rounded-2xl border border-border bg-surface-raised/95 p-4 shadow-2xl backdrop-blur-md text-fg">
+      <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.2em] text-fg-muted">
         <span>Dev Auth Switcher</span>
         <button
           type="button"
           onClick={() => setToolbarOpen(false)}
-          className="rounded-md border border-slate-200 px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.12em] text-slate-500 hover:bg-slate-50"
+          className="rounded-lg border border-border px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.12em] text-fg-muted hover:bg-surface-sunken cursor-pointer"
         >
           Hide
         </button>
       </div>
-      <p className="mb-3 text-xs text-slate-500">
+      <p className="mb-3 text-xs text-fg-muted">
         Keep role switching inside one explicit mode: real auth or mock role.
       </p>
 
-      <div className="mb-3 grid grid-cols-2 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-1">
+      <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl border border-border bg-surface-sunken p-1">
         <button
           type="button"
           disabled={isBusy}
           onClick={() => updateMode("real")}
-          className={`rounded-md px-2 py-1.5 text-xs font-semibold transition-colors ${
+          className={`rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
             mode === "real"
-              ? "bg-white text-slate-800 shadow-sm"
-              : "text-slate-500 hover:text-slate-700"
+              ? "bg-surface text-brand shadow-sm font-bold"
+              : "text-fg-muted hover:text-fg"
           }`}
         >
           Real Auth
@@ -275,24 +269,24 @@ function DevToolbarContent() {
           type="button"
           disabled={isBusy}
           onClick={() => updateMode("mock")}
-          className={`rounded-md px-2 py-1.5 text-xs font-semibold transition-colors ${
+          className={`rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
             mode === "mock"
-              ? "bg-white text-slate-800 shadow-sm"
-              : "text-slate-500 hover:text-slate-700"
+              ? "bg-surface text-brand shadow-sm font-bold"
+              : "text-fg-muted hover:text-fg"
           }`}
         >
           Mock Role
         </button>
       </div>
 
-      <p className="mb-2 text-[11px] text-slate-500">
-        Mode: <span className="font-semibold text-slate-700">{mode}</span>
+      <p className="mb-1 text-[11px] text-fg-muted">
+        Mode: <span className="font-semibold text-fg">{mode}</span>
       </p>
-      <p className="mb-3 text-[11px] text-slate-500">
-        Session: {activeEmail ? activeEmail : "signed out"}
+      <p className="mb-1 text-[11px] text-fg-muted">
+        Session: <span className="text-fg">{activeEmail ? activeEmail : "signed out"}</span>
       </p>
-      <p className="mb-3 text-[11px] text-slate-500">
-        Role: {activeRole ? activeRole : "n/a"}
+      <p className="mb-3 text-[11px] text-fg-muted">
+        Role: <span className="text-fg font-semibold">{activeRole ? activeRole : "n/a"}</span>
       </p>
 
       <div className="flex flex-col gap-2">
@@ -303,7 +297,7 @@ function DevToolbarContent() {
               ? handleLogin("student")
               : handleMockSwitch("student")
           }
-          className="w-full rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-left text-sm transition-colors hover:bg-brand hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full rounded-xl border border-border bg-surface-sunken px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-brand hover:text-brand-fg disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
         >
           {loading === "student" || actingRole === "student"
             ? "Switching..."
@@ -318,7 +312,7 @@ function DevToolbarContent() {
               ? handleLogin("employer")
               : handleMockSwitch("employer")
           }
-          className="w-full rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-left text-sm transition-colors hover:bg-brand hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full rounded-xl border border-border bg-surface-sunken px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-brand hover:text-brand-fg disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
         >
           {loading === "employer" || actingRole === "employer"
             ? "Switching..."
@@ -331,7 +325,7 @@ function DevToolbarContent() {
           onClick={() =>
             mode === "real" ? handleLogin("admin") : handleMockSwitch("admin")
           }
-          className="w-full rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-left text-sm transition-colors hover:bg-brand hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full rounded-xl border border-border bg-surface-sunken px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-brand hover:text-brand-fg disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
         >
           {loading === "admin" || actingRole === "admin"
             ? "Switching..."
@@ -342,14 +336,14 @@ function DevToolbarContent() {
         <button
           disabled={isBusy}
           onClick={handleSignOut}
-          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-red-50 hover:text-red-600"
+          className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-left text-sm font-medium text-fg-muted transition-colors hover:border-danger/30 hover:bg-danger-subtle hover:text-danger cursor-pointer"
         >
           {isSigningOut ? "Signing out..." : "Sign Out"}
         </button>
       </div>
 
       {message && (
-        <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+        <p className="mt-3 rounded-xl border border-warning/30 bg-warning-subtle px-3 py-2 text-xs text-warning-fg">
           {message}
         </p>
       )}

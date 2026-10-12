@@ -29,7 +29,6 @@ export const Modal: React.FC<ModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    // Store active element to restore focus when closing
     previouslyFocusedElementRef.current = document.activeElement as HTMLElement | null;
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -39,7 +38,6 @@ export const Modal: React.FC<ModalProps> = ({
         return;
       }
 
-      // Focus Trap
       if (e.key === "Tab" && modalRef.current) {
         const focusableSelectors =
           'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -72,7 +70,6 @@ export const Modal: React.FC<ModalProps> = ({
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", handleKeyDown);
 
-    // Initial focus into modal
     const timer = setTimeout(() => {
       if (modalRef.current) {
         const focusableSelectors =
@@ -90,7 +87,6 @@ export const Modal: React.FC<ModalProps> = ({
       clearTimeout(timer);
       document.body.style.overflow = "unset";
       window.removeEventListener("keydown", handleKeyDown);
-      // Restore previous focus
       if (previouslyFocusedElementRef.current && typeof previouslyFocusedElementRef.current.focus === "function") {
         previouslyFocusedElementRef.current.focus();
       }
@@ -116,7 +112,7 @@ export const Modal: React.FC<ModalProps> = ({
     >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
+        className="fixed inset-0 bg-overlay backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -124,14 +120,14 @@ export const Modal: React.FC<ModalProps> = ({
       {/* Modal Content */}
       <div
         className={cx(
-          "relative bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh] md:max-h-[85vh] focus:outline-none",
+          "relative bg-surface-raised text-fg w-full rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden border border-border animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh] md:max-h-[85vh] focus:outline-none",
           sizes[size],
         )}
         ref={modalRef}
         tabIndex={-1}
       >
         {/* Header */}
-        <div className="px-6 py-5 md:px-8 md:py-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/60 dark:bg-slate-800/40">
+        <div className="px-6 py-5 md:px-8 md:py-6 border-b border-border flex justify-between items-center bg-surface-sunken/40">
           <div id={titleId}>
             {title && (
               <Typography variant="h4" weight="bold">
@@ -143,7 +139,7 @@ export const Modal: React.FC<ModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Close modal"
-            className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand cursor-pointer"
+            className="p-2 rounded-xl hover:bg-surface-sunken text-fg-muted hover:text-fg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring cursor-pointer"
           >
             <svg
               className="w-5 h-5"
@@ -167,7 +163,7 @@ export const Modal: React.FC<ModalProps> = ({
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 md:px-8 md:py-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 flex justify-end gap-3">
+          <div className="px-6 py-4 md:px-8 md:py-5 border-t border-border bg-surface-sunken/40 flex justify-end gap-3">
             {footer}
           </div>
         )}

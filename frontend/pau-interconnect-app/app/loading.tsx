@@ -2,7 +2,7 @@ import { Skeleton, Container, Stack } from "@/components/ui";
 
 export default function RootLoading() {
   return (
-    <div className="min-h-screen bg-slate-50/60 dark:bg-slate-950/60 py-12">
+    <div className="min-h-screen bg-background py-12">
       <Container maxWidth="xl">
         <Stack spacing={8}>
           <div className="flex justify-between items-center">

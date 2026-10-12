@@ -9,11 +9,15 @@ import {
   Textarea,
   Modal,
   Card,
-  Badge,
-  Typography,
+  StatusPill,
+  EmptyState,
+  StatCard,
+  Tabs,
+  ProgressBar,
 } from "@/components/ui";
+import { STATUS_STYLE_MAP } from "@/components/ui/StatusPill";
 
-describe("UI Kit Components", () => {
+describe("UI Kit Components & Design System", () => {
   let container: HTMLDivElement;
 
   beforeEach(() => {
@@ -161,7 +165,6 @@ describe("UI Kit Components", () => {
       expect(dialog).not.toBeNull();
       expect(dialog?.getAttribute("aria-modal")).toBe("true");
 
-      // Press Escape
       await act(async () => {
         window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
       });
@@ -195,26 +198,120 @@ describe("UI Kit Components", () => {
     });
   });
 
-  describe("Badge & Typography", () => {
-    it("renders badge and typography with semantic tags", async () => {
-      const badgeRef = createRef<HTMLSpanElement>();
-      const typoRef = createRef<HTMLHeadingElement>();
+  describe("StatusPill Color Map", () => {
+    it("covers all key application, logbook, and internship lifecycle statuses", async () => {
+      const requiredStatuses = [
+        "applied",
+        "reviewed",
+        "interview",
+        "shortlisted",
+        "offered",
+        "accepted",
+        "rejected",
+        "withdrawn",
+        "pending",
+        "draft",
+        "submitted",
+        "approved",
+        "needs_revision",
+        "open",
+        "closed",
+        "active",
+        "completed",
+      ];
+
+      for (const status of requiredStatuses) {
+        expect(STATUS_STYLE_MAP[status]).toBeDefined();
+        expect(STATUS_STYLE_MAP[status].label).toBeTruthy();
+        expect(STATUS_STYLE_MAP[status].bgClass).toBeTruthy();
+        expect(STATUS_STYLE_MAP[status].textClass).toBeTruthy();
+        expect(STATUS_STYLE_MAP[status].icon).toBeDefined();
+      }
+    });
+
+    it("renders StatusPill correctly", async () => {
+      const root = createRoot(container);
+
+      await act(async () => {
+        root.render(React.createElement(StatusPill, { status: "offered" }));
+      });
+
+      expect(container.textContent).toContain("Offered");
+    });
+  });
+
+  describe("Foundational UI Additions", () => {
+    it("renders EmptyState with actions", async () => {
+      const root = createRoot(container);
+      const onAction = vi.fn();
+
+      await act(async () => {
+        root.render(
+          React.createElement(EmptyState, {
+            title: "No Data",
+            description: "No items found",
+            action: { label: "Create", onClick: onAction },
+          }),
+        );
+      });
+
+      expect(container.textContent).toContain("No Data");
+      expect(container.textContent).toContain("No items found");
+      const button = container.querySelector("button");
+      expect(button?.textContent).toBe("Create");
+    });
+
+    it("renders StatCard with trend indicator", async () => {
       const root = createRoot(container);
 
       await act(async () => {
         root.render(
-          React.createElement(
-            "div",
-            null,
-            React.createElement(Badge, { ref: badgeRef, variant: "success" }, "Active"),
-            React.createElement(Typography, { ref: typoRef, variant: "h2" }, "Dashboard"),
-          ),
+          React.createElement(StatCard, {
+            label: "Total Match",
+            value: "95%",
+            change: { value: "+5%", trend: "up" },
+          }),
         );
       });
 
-      expect(badgeRef.current?.tagName).toBe("SPAN");
-      expect(typoRef.current?.tagName).toBe("H2");
-      expect(typoRef.current?.textContent).toBe("Dashboard");
+      expect(container.textContent).toContain("Total Match");
+      expect(container.textContent).toContain("95%");
+      expect(container.textContent).toContain("+5%");
+    });
+
+    it("renders ProgressBar with ARIA values", async () => {
+      const root = createRoot(container);
+
+      await act(async () => {
+        root.render(
+          React.createElement(ProgressBar, { value: 65, max: 100 }),
+        );
+      });
+
+      const bar = container.querySelector('[role="progressbar"]');
+      expect(bar?.getAttribute("aria-valuenow")).toBe("65");
+      expect(bar?.getAttribute("aria-valuemax")).toBe("100");
+    });
+
+    it("renders Tabs with tablist and tab roles", async () => {
+      const root = createRoot(container);
+
+      await act(async () => {
+        root.render(
+          React.createElement(Tabs, {
+            tabs: [
+              { id: "tab1", label: "First Tab" },
+              { id: "tab2", label: "Second Tab" },
+            ],
+          }),
+        );
+      });
+
+      const tablist = container.querySelector('[role="tablist"]');
+      expect(tablist).not.toBeNull();
+      const tabs = container.querySelectorAll('[role="tab"]');
+      expect(tabs.length).toBe(2);
+      expect(tabs[0].getAttribute("aria-selected")).toBe("true");
     });
   });
 });
