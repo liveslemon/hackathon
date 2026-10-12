@@ -2,7 +2,7 @@ import React from "react";
 import { cx } from "@/utils/cx";
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
   onClick?: () => void;
   hoverable?: boolean;

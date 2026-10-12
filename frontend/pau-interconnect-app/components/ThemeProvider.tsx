@@ -1,43 +1,91 @@
 "use client";
-import { createContext, useContext, useEffect, useState } from "react";
 
-type Theme = "light" | "dark";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import {
+  ThemeProvider as NextThemesProvider,
+  useTheme as useNextTheme,
+} from "next-themes";
 
-interface ThemeContextType {
-  theme: Theme;
+export type Theme = "light" | "dark" | "system";
+
+export interface CustomThemeContextType {
+  theme: string | undefined;
+  resolvedTheme: string | undefined;
+  setTheme: (theme: string) => void;
   toggleTheme: () => void;
+  mounted: boolean;
+  themes: string[];
+  systemTheme?: "dark" | "light";
 }
 
-const ThemeContext = createContext<ThemeContextType>({
+const FallbackThemeContext = createContext<CustomThemeContextType>({
   theme: "light",
+  resolvedTheme: "light",
+  setTheme: () => {},
   toggleTheme: () => {},
+  mounted: false,
+  themes: ["light", "dark", "system"],
 });
 
-export const useTheme = () => useContext(ThemeContext);
-
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "light";
-    const saved = localStorage.getItem("theme") as Theme | null;
-    const systemDark = window.matchMedia(
-      "(prefers-color-scheme: dark)",
-    ).matches;
-    return saved || (systemDark ? "dark" : "light");
-  });
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }, [theme]);
-
-  const toggleTheme = () => {
-    const next = theme === "light" ? "dark" : "light";
-    setTheme(next);
-    localStorage.setItem("theme", next);
-    document.documentElement.classList.toggle("dark", next === "dark");
-  };
-
+export function ThemeProvider({
+  children,
+  ...props
+}: React.ComponentProps<typeof NextThemesProvider>) {
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+      {...props}
+    >
       {children}
-    </ThemeContext.Provider>
+    </NextThemesProvider>
   );
+}
+
+export function useTheme(): CustomThemeContextType {
+  const nextThemesContext = useNextTheme();
+  const fallbackContext = useContext(FallbackThemeContext);
+
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    const current =
+      nextThemesContext.resolvedTheme ||
+      nextThemesContext.theme ||
+      fallbackContext.resolvedTheme ||
+      "light";
+    const next = current === "dark" ? "light" : "dark";
+    if (nextThemesContext.setTheme) {
+      nextThemesContext.setTheme(next);
+    } else {
+      fallbackContext.setTheme(next);
+    }
+  }, [nextThemesContext, fallbackContext]);
+
+  // If next-themes context is available:
+  if (
+    nextThemesContext.theme !== undefined ||
+    nextThemesContext.resolvedTheme !== undefined
+  ) {
+    return {
+      ...nextThemesContext,
+      theme: mounted ? nextThemesContext.theme : "light",
+      resolvedTheme: mounted ? nextThemesContext.resolvedTheme : "light",
+      toggleTheme,
+      mounted,
+    };
+  }
+
+  // Graceful fallback if invoked outside a next-themes provider
+  return {
+    ...fallbackContext,
+    toggleTheme,
+    mounted,
+  };
 }

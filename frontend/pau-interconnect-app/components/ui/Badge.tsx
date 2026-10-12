@@ -2,7 +2,7 @@ import React from "react";
 import { cx } from "@/utils/cx";
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   variant?:
     | "primary"
     | "secondary"

@@ -14,7 +14,7 @@ export interface TypographyProps extends React.HTMLAttributes<HTMLElement> {
     | "body1"
     | "body2"
     | "caption";
-  children: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
   as?: React.ElementType;
   weight?: "normal" | "medium" | "semibold" | "bold" | "extrabold";
