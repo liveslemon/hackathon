@@ -1,6 +1,7 @@
 "use client";
 import React, { useMemo } from "react";
-import { Typography, Card, CardContent } from "@/components/ui";
+import Link from "next/link";
+import { Typography, Card, CardContent, Button } from "@/components/ui";
 import {
   TrendingUp,
   Users,
@@ -8,6 +9,8 @@ import {
   Target,
   Eye,
   CheckCircle,
+  Briefcase,
+  Plus,
 } from "lucide-react";
 
 interface AnalyticsProps {
@@ -89,7 +92,7 @@ export function EmployerAnalyticsClient({
         return {
           ...posting,
           applicationCount: postingApps.length,
-          acceptedCount: postingApps.filter((a) => a.status === "accepted")
+          acceptedCount: postingApps.filter((a) => a.status === "accepted" || a.stage === "accepted")
             .length,
           avgScore:
             postingApps.length > 0
@@ -120,6 +123,40 @@ export function EmployerAnalyticsClient({
       .reverse()
       .map(([date, count]) => ({ date, count }));
   }, [applications]);
+
+  if (internships.length === 0) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <Typography variant="h2" weight="bold">
+            Recruitment Analytics
+          </Typography>
+          <Typography variant="body1" color="muted">
+            Track your hiring performance
+          </Typography>
+        </div>
+
+        <div className="text-center py-20 px-6 bg-white rounded-[32px] border border-dashed border-slate-200 shadow-sm max-w-2xl mx-auto space-y-4">
+          <div className="w-16 h-16 bg-brand/5 text-brand rounded-2xl flex items-center justify-center mx-auto">
+            <Briefcase size={32} />
+          </div>
+          <Typography variant="h3" weight="bold" className="text-slate-900">
+            No recruitment data yet
+          </Typography>
+          <Typography variant="body2" color="muted" className="max-w-md mx-auto leading-relaxed">
+            Once you publish an internship posting, you will see view metrics, candidate match rates, recruitment pipeline funnels, and time-to-fill analytics here.
+          </Typography>
+          <div className="pt-2">
+            <Link href="/dashboard/post">
+              <Button leftIcon={<Plus size={18} />}>
+                Post Your First Internship
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

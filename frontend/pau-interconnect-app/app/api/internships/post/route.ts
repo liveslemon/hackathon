@@ -20,11 +20,17 @@ export async function POST(req: Request) {
     .single();
 
   if (profile?.role !== "employer") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Forbidden: Only employers can post internships" }, { status: 403 });
   }
 
   // Validate input
-  const body = await req.json();
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
   const parsed = postInternshipSchema.safeParse(body);
 
   if (!parsed.success) {
@@ -44,31 +50,46 @@ export async function POST(req: Request) {
     description,
     requirements,
     tags,
+    location,
+    duration,
+    stipend,
+    required_skills,
+    slots,
     deadline,
     link,
     status,
   } = parsed.data;
-  
+
   const finalStatus = status || "active";
 
+  const parsedSkills = Array.isArray(required_skills)
+    ? required_skills
+    : required_skills
+      ? required_skills.split(",").map((s) => s.trim()).filter(Boolean)
+      : [];
+
+  const parsedInterests = tags
+    ? tags.split(",").map((t) => t.trim()).filter(Boolean)
+    : [];
 
   const { data, error } = await supabase
     .from("internships")
     .insert([
       {
         employer_id: user.id,
-        company: profile.company_name,
+        poster_id: user.id,
+        company: profile.company_name || "Company",
         role,
         field,
         category,
         description,
         requirements,
-        interests: tags
-          ? tags
-              .split(",")
-              .map((t) => t.trim())
-              .filter(Boolean)
-          : [],
+        interests: parsedInterests,
+        location: location || null,
+        duration: duration || null,
+        stipend: stipend || null,
+        required_skills: parsedSkills,
+        slots: slots || 1,
         deadline: deadline ? new Date(deadline).toISOString() : null,
         recruiter_link: link || null,
         status: finalStatus,
@@ -81,7 +102,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-if (finalStatus === "active") {
+  if (finalStatus === "active") {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
@@ -91,9 +112,9 @@ if (finalStatus === "active") {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${session.access_token}`
+            "Authorization": `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ internship_id: data.id })
+          body: JSON.stringify({ internship_id: data.id }),
         }).catch((e) => console.error("Trigger analysis failed asynchronously:", e));
       }
     } catch (err) {
