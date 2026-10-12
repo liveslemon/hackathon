@@ -9,6 +9,8 @@ const STAGES = [
   { key: "interview", label: "Interview", color: "bg-amber-50" },
   { key: "offered", label: "Offered", color: "bg-green-50" },
   { key: "accepted", label: "Accepted", color: "bg-emerald-50" },
+  // Students withdraw themselves; employers can't move these applications.
+  { key: "withdrawn", label: "Withdrawn", color: "bg-slate-50", final: true },
 ];
 
 const getNextStage = (current: string) => {
@@ -17,7 +19,9 @@ const getNextStage = (current: string) => {
   if (
     currentIndex === -1 ||
     currentIndex >= STAGES.length - 1 ||
-    current === "offered"
+    current === "offered" ||
+    STAGES[currentIndex].final ||
+    STAGES[currentIndex + 1].final
   )
     return null;
   return STAGES[currentIndex + 1].key;
@@ -52,6 +56,7 @@ export function PipelineView({
                 <ApplicantStageCard
                   key={applicant.id}
                   applicant={applicant}
+                  readOnly={stage.final}
                   onAdvance={() => {
                     const next = getNextStage(stage.key);
                     if (next) onStageChange(applicant.id, next);
@@ -69,10 +74,12 @@ export function PipelineView({
 
 function ApplicantStageCard({
   applicant,
+  readOnly,
   onAdvance,
   onReject,
 }: {
   applicant: any;
+  readOnly?: boolean;
   onAdvance: () => void;
   onReject: () => void;
 }) {
@@ -89,20 +96,22 @@ function ApplicantStageCard({
           {applicant.match_score || 0}% match
         </span>
       </div>
-      <div className="flex gap-1 mt-2">
-        <button
-          onClick={onAdvance}
-          className="text-xs text-green-600 hover:underline"
-        >
-          Advance →
-        </button>
-        <button
-          onClick={onReject}
-          className="text-xs text-red-500 hover:underline"
-        >
-          Reject
-        </button>
-      </div>
+      {!readOnly && (
+        <div className="flex gap-1 mt-2">
+          <button
+            onClick={onAdvance}
+            className="text-xs text-green-600 hover:underline"
+          >
+            Advance →
+          </button>
+          <button
+            onClick={onReject}
+            className="text-xs text-red-500 hover:underline"
+          >
+            Reject
+          </button>
+        </div>
+      )}
     </div>
   );
 }
