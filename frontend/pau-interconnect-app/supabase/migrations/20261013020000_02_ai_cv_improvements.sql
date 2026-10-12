@@ -57,6 +57,9 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 -- Updated match_internships vector similarity search
 -- Filters active internships and handles cosine similarity
+-- Drop first: the existing function returns varchar columns, and Postgres can't
+-- change a function's return type with CREATE OR REPLACE.
+DROP FUNCTION IF EXISTS public.match_internships(vector, float, int);
 CREATE OR REPLACE FUNCTION public.match_internships (
   query_embedding vector(1024),
   match_threshold float DEFAULT 0.3,
