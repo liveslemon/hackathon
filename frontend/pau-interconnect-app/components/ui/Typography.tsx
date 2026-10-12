@@ -18,7 +18,7 @@ export interface TypographyProps extends React.HTMLAttributes<HTMLElement> {
   className?: string;
   as?: React.ElementType;
   weight?: "normal" | "medium" | "semibold" | "bold" | "extrabold";
-  color?: "primary" | "secondary" | "white" | "muted" | "error";
+  color?: "primary" | "secondary" | "white" | "muted" | "subtle" | "error" | "success" | "warning";
 }
 
 const variants = {
@@ -32,7 +32,7 @@ const variants = {
   subtitle2: "text-xs md:text-base font-semibold",
   body1: "text-base leading-relaxed",
   body2: "text-sm leading-relaxed",
-  caption: "text-xs uppercase tracking-wider",
+  caption: "text-xs uppercase tracking-wider font-semibold",
 };
 
 const weights = {
@@ -44,11 +44,14 @@ const weights = {
 };
 
 const colors = {
-  primary: "text-slate-900 dark:text-slate-100",
-  secondary: "text-brand dark:text-brand-light",
-  white: "text-white",
-  muted: "text-slate-500 dark:text-slate-400",
-  error: "text-red-600 dark:text-red-400",
+  primary: "text-fg",
+  secondary: "text-brand",
+  white: "text-fg-inverse",
+  muted: "text-fg-muted",
+  subtle: "text-fg-subtle",
+  error: "text-danger",
+  success: "text-success",
+  warning: "text-warning",
 };
 
 export const Typography = React.forwardRef<HTMLElement, TypographyProps>(

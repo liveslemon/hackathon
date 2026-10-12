@@ -14,7 +14,7 @@ export const Divider = React.forwardRef<HTMLDivElement, DividerProps>(
         role="separator"
         aria-orientation={orientation}
         className={cx(
-          "bg-slate-200 dark:bg-slate-800 shadow-sm",
+          "bg-border shrink-0",
           orientation === "horizontal" ? "h-[1px] w-full" : "w-[1px] h-full",
           className,
         )}

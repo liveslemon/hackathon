@@ -43,7 +43,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         {label && (
           <label
             htmlFor={selectId}
-            className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5 ml-1 select-none"
+            className="block text-xs md:text-sm font-semibold text-fg mb-1.5 ml-1 select-none"
           >
             {label}
           </label>
@@ -55,27 +55,27 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             aria-invalid={Boolean(error)}
             aria-describedby={describedBy}
             className={cx(
-              "w-full py-2.5 px-4 pr-10 rounded-xl border transition-all duration-200 appearance-none bg-white dark:bg-slate-900 focus:outline-none focus-visible:ring-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base",
+              "w-full py-2.5 px-4 pr-10 rounded-xl border transition-all duration-200 appearance-none bg-surface text-fg focus:outline-none focus-visible:ring-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base min-h-[42px]",
               error
-                ? "border-red-500 text-red-900 dark:text-red-200 focus-visible:ring-red-500/20 focus-visible:border-red-500"
-                : "border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus-visible:border-brand focus-visible:ring-brand/20",
+                ? "border-danger text-danger focus-visible:ring-danger/20 focus-visible:border-danger"
+                : "border-border hover:border-border-strong focus-visible:border-brand focus-visible:ring-focus-ring/20",
               className,
             )}
             {...props}
           >
             {placeholder && (
-              <option value="" disabled hidden>
+              <option value="" disabled hidden className="bg-surface text-fg-muted">
                 {placeholder}
               </option>
             )}
             {(options || []).map((option) => (
-              <option key={option.value} value={option.value}>
+              <option key={option.value} value={option.value} className="bg-surface text-fg py-2">
                 {option.label}
               </option>
             ))}
           </select>
           <div
-            className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 dark:text-slate-500"
+            className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-fg-subtle"
             aria-hidden="true"
           >
             <svg
@@ -99,8 +99,8 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             className={cx(
               "mt-1.5 text-xs ml-1",
               error
-                ? "text-red-600 dark:text-red-400 font-medium"
-                : "text-slate-500 dark:text-slate-400",
+                ? "text-danger font-medium"
+                : "text-fg-muted",
             )}
           >
             {error || helperText}

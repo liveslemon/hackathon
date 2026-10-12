@@ -2,57 +2,253 @@
 
 @variant dark (&:where(.dark, .dark *));
 
-/* ========================================
-   THEME: CSS Variables
-   ======================================== */
+/* ==========================================================================
+   PAU InterConnect Semantic Design Tokens
+   Designed for Pan-Atlantic University: Brand Indigo & Violet,
+   Slate Neutrals, Generous Radii, Tuned Elevation & WCAG Contrast.
+   ========================================================================== */
+
 :root {
-  /* Refined Brand Palette: Solid & Sophisticated */
-  --brand: #4f46e5; /* Tailwind Indigo 600 */
-  --brand-secondary: #7c3aed; /* Tailwind Violet 600 */
-  --background: #ffffff;
-  --background-subtle: #f9fafb;
-  --foreground: #0f172a;
-  --foreground-muted: #64748b;
-  
-  /* Radii standard: Modern & Structured */
-  --radius-xl: 12px;
-  --radius-2xl: 16px;
+  color-scheme: light;
+
+  /* --- Brand Tokens --- */
+  --brand: #4f46e5;                 /* Indigo 600 */
+  --brand-hover: #4338ca;           /* Indigo 700 */
+  --brand-subtle: #eef2ff;          /* Indigo 50 */
+  --brand-fg: #ffffff;
+  --brand-secondary: #7c3aed;       /* Violet 600 */
+  --brand-secondary-hover: #6d28d9; /* Violet 700 */
+  --brand-secondary-subtle: #f5f3ff;/* Violet 50 */
+
+  /* --- Surfaces & Elevation --- */
+  --background: #f8fafc;            /* Slate 50 canvas */
+  --surface: #ffffff;               /* Clean white card surface */
+  --surface-raised: #ffffff;        /* Modals, menus, popovers */
+  --surface-sunken: #f1f5f9;        /* Recessed wells, tags, secondary areas */
+  --overlay: rgba(15, 23, 42, 0.45);/* Slate 900 / 45% */
+
+  /* --- Text & Content --- */
+  --fg: #0f172a;                    /* Slate 900 (14.2:1 contrast on surface) */
+  --fg-muted: #475569;              /* Slate 600 (5.8:1 contrast on surface) */
+  --fg-subtle: #94a3b8;             /* Slate 400 (3.2:1 non-text/icons) */
+  --fg-inverse: #ffffff;
+
+  /* --- Borders & Outlines --- */
+  --border: #e2e8f0;                /* Slate 200 */
+  --border-strong: #cbd5e1;         /* Slate 300 */
+  --focus-ring: #4f46e5;            /* Indigo 600 */
+
+  /* --- Status Palette (Semantic Light) --- */
+  --status-success: #16a34a;        /* Emerald 600 */
+  --status-success-subtle: #ecfdf5; /* Emerald 50 */
+  --status-success-fg: #15803d;     /* Emerald 700 */
+
+  --status-warning: #d97706;        /* Amber 600 */
+  --status-warning-subtle: #fffbeb; /* Amber 50 */
+  --status-warning-fg: #b45309;     /* Amber 700 */
+
+  --status-danger: #dc2626;         /* Red 600 */
+  --status-danger-subtle: #fef2f2;  /* Red 50 */
+  --status-danger-fg: #b91c1c;      /* Red 700 */
+
+  --status-info: #0284c7;           /* Sky 600 */
+  --status-info-subtle: #f0f9ff;    /* Sky 50 */
+  --status-info-fg: #0369a1;        /* Sky 700 */
+
+  /* --- Shadows (Soft, layered, modern) --- */
+  --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.03);
+  --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+
+  /* --- Radii Scale --- */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-3xl: 32px;
+  --radius-full: 9999px;
+
+  /* --- Chart & Data Visualization --- */
+  --chart-1: #4f46e5;
+  --chart-2: #7c3aed;
+  --chart-3: #0284c7;
+  --chart-4: #10b981;
+  --chart-5: #f59e0b;
 }
 
 .dark {
-  --brand: #6366f1;
-  --brand-secondary: #8b5cf6;
-  --background: #090d16;
-  --background-subtle: #0f172a;
-  --foreground: #f8fafc;
-  --foreground-muted: #94a3b8;
+  color-scheme: dark;
+
+  /* --- Brand Tokens (Tuned for dark backgrounds) --- */
+  --brand: #6366f1;                 /* Indigo 500 */
+  --brand-hover: #818cf8;           /* Indigo 400 */
+  --brand-subtle: rgba(99, 102, 241, 0.15);
+  --brand-fg: #ffffff;
+  --brand-secondary: #8b5cf6;       /* Violet 500 */
+  --brand-secondary-hover: #a78bfa; /* Violet 400 */
+  --brand-secondary-subtle: rgba(139, 92, 246, 0.15);
+
+  /* --- Surfaces & Elevation Steps --- */
+  --background: #090d16;            /* Deep canvas base */
+  --surface: #111827;               /* Elevated Card Surface */
+  --surface-raised: #1f2937;        /* Modals, Floating Menus */
+  --surface-sunken: #0b111e;        /* Inset inputs, wells, pills */
+  --overlay: rgba(3, 7, 18, 0.75);  /* Deep dark scrim */
+
+  /* --- Text & Content --- */
+  --fg: #f8fafc;                    /* Slate 50 (15.5:1 contrast on surface) */
+  --fg-muted: #94a3b8;              /* Slate 400 (5.6:1 contrast on surface) */
+  --fg-subtle: #64748b;             /* Slate 500 (3.2:1 UI non-text) */
+  --fg-inverse: #0f172a;
+
+  /* --- Borders & Outlines --- */
+  --border: #1e293b;                /* Slate 800 */
+  --border-strong: #334155;         /* Slate 700 */
+  --focus-ring: #818cf8;            /* Indigo 400 */
+
+  /* --- Status Palette (Desaturated Dark) --- */
+  --status-success: #34d399;        /* Emerald 400 */
+  --status-success-subtle: rgba(52, 211, 153, 0.15);
+  --status-success-fg: #6ee7b7;     /* Emerald 300 */
+
+  --status-warning: #fbbf24;        /* Amber 400 */
+  --status-warning-subtle: rgba(251, 191, 36, 0.15);
+  --status-warning-fg: #fde68a;     /* Amber 200 */
+
+  --status-danger: #f87171;         /* Red 400 */
+  --status-danger-subtle: rgba(248, 113, 113, 0.15);
+  --status-danger-fg: #fca5a5;      /* Red 300 */
+
+  --status-info: #38bdf8;           /* Sky 400 */
+  --status-info-subtle: rgba(56, 189, 248, 0.15);
+  --status-info-fg: #7dd3fc;        /* Sky 300 */
+
+  /* --- Dark Shadows (Deepened ambient depth) --- */
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 8px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 20px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 30px -5px rgba(0, 0, 0, 0.7), 0 8px 12px -6px rgba(0, 0, 0, 0.6);
+
+  /* --- Chart & Data Visualization in Dark Mode --- */
+  --chart-1: #6366f1;
+  --chart-2: #8b5cf6;
+  --chart-3: #38bdf8;
+  --chart-4: #34d399;
+  --chart-5: #fbbf24;
 }
 
-/* ========================================
-   Register colors with Tailwind v4
-   ======================================== */
+/* ==========================================================================
+   Tailwind CSS v4 Inline Theme Registration
+   Exposes semantic utility tokens directly to Tailwind compiler
+   ========================================================================== */
 @theme inline {
   --color-brand: var(--brand);
-  --color-brand-dark: #4338ca;
-  --color-brand-light: #818cf8;
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-subtle: var(--brand-subtle);
+  --color-brand-fg: var(--brand-fg);
   --color-brand-secondary: var(--brand-secondary);
-  --color-brand-secondary-dark: #6d28d9;
-  --color-brand-secondary-light: #a78bfa;
+  --color-brand-secondary-hover: var(--brand-secondary-hover);
+  --color-brand-secondary-subtle: var(--brand-secondary-subtle);
+
   --color-background: var(--background);
-  --color-background-subtle: var(--background-subtle);
-  --color-foreground: var(--foreground);
-  --color-foreground-muted: var(--foreground-muted);
-  
-  /* Update font stack */
-  --font-sans: "Inter", "Geist Sans", system-ui, -apple-system, sans-serif;
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-overlay: var(--overlay);
+
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-fg-inverse: var(--fg-inverse);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-focus-ring: var(--focus-ring);
+
+  --color-success: var(--status-success);
+  --color-success-subtle: var(--status-success-subtle);
+  --color-success-fg: var(--status-success-fg);
+
+  --color-warning: var(--status-warning);
+  --color-warning-subtle: var(--status-warning-subtle);
+  --color-warning-fg: var(--status-warning-fg);
+
+  --color-danger: var(--status-danger);
+  --color-danger-subtle: var(--status-danger-subtle);
+  --color-danger-fg: var(--status-danger-fg);
+
+  --color-info: var(--status-info);
+  --color-info-subtle: var(--status-info-subtle);
+  --color-info-fg: var(--status-info-fg);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --font-sans: "Inter", "Geist Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ==========================================================================
+   Base Styles & Scrollbar / Autofill System
+   ========================================================================== */
+html {
+  color-scheme: light dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background-color: var(--background);
+  color: var(--fg);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Form autofill styling respecting current theme */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--fg);
+  -webkit-box-shadow: 0 0 0px 1000px var(--surface) inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Standard scrollbar-color */
+* {
+  scrollbar-color: var(--border-strong) transparent;
+  scrollbar-width: thin;
+}
+
+/* WebKit scrollbar fallback */
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 9999px;
+  }
+}
+
+/* Motion accessibility: respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Accessibility: Skip to Content */
@@ -62,16 +258,20 @@ body {
   left: 50%;
   transform: translateX(-50%);
   background: var(--brand);
-  color: white;
-  padding: 0.5rem 1rem;
+  color: var(--brand-fg);
+  padding: 0.5rem 1.25rem;
   border-radius: var(--radius-xl);
   z-index: 99999;
   text-decoration: none;
   font-weight: 600;
+  box-shadow: var(--shadow-lg);
+  transition: top 0.15s ease-in-out;
 }
 
 .skip-to-content:focus {
   top: 1rem;
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 /* Print Styles for SIWES Logbook & Reports */

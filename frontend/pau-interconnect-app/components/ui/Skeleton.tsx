@@ -13,12 +13,14 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
         ref={ref}
         aria-hidden="true"
         className={cx(
-          "animate-pulse bg-slate-200/80 dark:bg-slate-700/60",
+          "animate-pulse bg-surface-sunken/80 border border-border/40",
           circle ? "rounded-full" : "rounded-xl",
           className,
         )}
         {...props}
-      />
+      >
+        <span className="sr-only">Loading...</span>
+      </div>
     );
   },
 );
