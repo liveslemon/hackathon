@@ -81,20 +81,35 @@ const Login = () => {
       }
 
       const { user } = authData;
-      const userName = user?.user_metadata?.name || user?.email;
 
-      setSnackbarMessage(`Welcome back, ${userName}!`);
-      setSnackbarSeverity("success");
-      setSnackbarOpen(true);
-
-      // Finish successfully
+      // Verify Student role
       const { role, isAdmin } = await getUserRoleProfile(
         supabase,
         user?.id ?? "",
       );
+
+      if (role !== "student" && !isAdmin) {
+        await supabase.auth.signOut();
+        await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+        setSnackbarMessage(
+          role === "employer"
+            ? "This account is registered as an Employer. Please sign in via the Employer Portal."
+            : "This account is not registered as a Student.",
+        );
+        setSnackbarSeverity("error");
+        setSnackbarOpen(true);
+        setIsLoading(false);
+        return;
+      }
+
+      const userName = user?.user_metadata?.name || user?.email;
+      setSnackbarMessage(`Welcome back, ${userName}!`);
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+
       // Back to the page that sent them here (e.g. an email link), if any.
       const destination =
-        role === "student" ? (getNextPath() ?? getDashboardPathForRole(role, isAdmin)) : getDashboardPathForRole(role, isAdmin);
+        getNextPath("student", isAdmin) ?? getDashboardPathForRole(role, isAdmin);
       setTimeout(() => {
         router.push(destination);
       }, 800);
@@ -149,14 +164,25 @@ const Login = () => {
               {...register("email")}
             />
 
-            <Input
-              id="password"
-              label="Password"
-              type="password"
-              placeholder="••••••••"
-              error={errors.password?.message}
-              {...register("password")}
-            />
+            <div>
+              <Input
+                id="password"
+                label="Password"
+                type="password"
+                placeholder="••••••••"
+                error={errors.password?.message}
+                {...register("password")}
+              />
+              <div className="flex justify-end mt-1.5">
+                <button
+                  type="button"
+                  onClick={() => router.push("/login/forgot-password")}
+                  className="text-xs text-brand hover:underline font-medium"
+                >
+                  Forgot password?
+                </button>
+              </div>
+            </div>
 
             <Button
               type="submit"
