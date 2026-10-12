@@ -121,12 +121,25 @@ export default function LogbookPrintView() {
     ? entries.filter((e) => e.status === "approved")
     : entries;
 
-  // Group into calendar weeks (Mon-Sun). Week 1 is the week of the first
-  // entry, so numbering matches the SIWES "Week N" convention.
+  // Group into continuous calendar weeks (Mon-Sun) from first week to last week.
+  // Empty weeks are preserved so the SIWES logbook accounts for all weeks.
   const groupEntriesByWeek = () => {
     if (visibleEntries.length === 0) return [];
 
-    const firstMonday = mondayOf(localDate(visibleEntries[0].date));
+    const firstEntryDate = localDate(visibleEntries[0].date);
+    const lastEntryDate = localDate(visibleEntries[visibleEntries.length - 1].date);
+    const firstMonday = mondayOf(
+      placement?.started_at ? localDate(placement.started_at) : firstEntryDate,
+    );
+    const lastMonday = mondayOf(
+      placement?.ended_at ? localDate(placement.ended_at) : lastEntryDate,
+    );
+
+    const totalWeeks = Math.max(
+      1,
+      Math.round((lastMonday.getTime() - firstMonday.getTime()) / (7 * DAY_MS)) + 1,
+    );
+
     const weeks: {
       weekNumber: number;
       startDate: string;
@@ -134,41 +147,42 @@ export default function LogbookPrintView() {
       days: LogbookEntry[];
     }[] = [];
 
+    // Initialize all continuous weeks
+    for (let w = 1; w <= totalWeeks; w++) {
+      const wStart = new Date(firstMonday.getTime() + (w - 1) * 7 * DAY_MS);
+      const wEnd = new Date(wStart);
+      wEnd.setDate(wStart.getDate() + 6);
+
+      weeks.push({
+        weekNumber: w,
+        startDate: wStart.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        }),
+        endDate: wEnd.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }),
+        days: [],
+      });
+    }
+
+    // Populate entries into corresponding week bucket
     visibleEntries.forEach((entry) => {
       const entryMonday = mondayOf(localDate(entry.date));
-      const weekNumber =
-        Math.round((entryMonday.getTime() - firstMonday.getTime()) / (7 * DAY_MS)) + 1;
-
-      let week = weeks.find((w) => w.weekNumber === weekNumber);
-      if (!week) {
-        const wStart = entryMonday;
-        const wEnd = new Date(wStart);
-        wEnd.setDate(wStart.getDate() + 6);
-
-        week = {
-          weekNumber,
-          startDate: wStart.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          }),
-          endDate: wEnd.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          }),
-          days: [],
-        };
-        weeks.push(week);
+      const weekIndex = Math.round(
+        (entryMonday.getTime() - firstMonday.getTime()) / (7 * DAY_MS),
+      );
+      if (weekIndex >= 0 && weekIndex < weeks.length) {
+        weeks[weekIndex].days.push(entry);
       }
-      week.days.push(entry);
     });
 
     return weeks;
   };
 
   const weeklyData = groupEntriesByWeek();
-
-  // Auto-print triggered manually by button for cleaner experience
 
   if (loading) {
     return (
@@ -179,6 +193,12 @@ export default function LogbookPrintView() {
       </div>
     );
   }
+
+  const handleDownloadCsv = () => {
+    if (!user) return;
+    const url = `/api/reports/logbook?format=csv&student=${user.id}`;
+    window.open(url, "_blank");
+  };
 
   return (
     <div className="bg-white text-black min-h-screen p-8 max-w-4xl mx-auto font-serif print:p-0 print:m-0">
@@ -255,49 +275,55 @@ export default function LogbookPrintView() {
               </div>
 
               <div className="border-2 border-black">
-                {week.days.map((day, idx) => (
-                  <div
-                    key={day.id}
-                    className={idx !== 0 ? "border-t-2 border-black" : ""}
-                  >
-                    <div className="flex border-b border-black bg-slate-50">
-                      <div className="w-40 border-r border-black p-2 font-bold text-xs uppercase shrink-0">
-                        {localDate(day.date).toLocaleDateString([], {
-                          weekday: "long",
-                        })}
-                        <br />
-                        <span className="font-normal opacity-60 font-sans">
-                          {day.date}
-                        </span>
-                      </div>
-                      <div className="p-2 text-[10px] font-bold text-slate-400 uppercase flex items-center flex-1">
-                        Daily Progress Report
-                      </div>
-                      <div
-                        className={
-                          "p-2 text-[10px] font-bold uppercase flex items-center border-l border-black " +
-                          (day.status === "approved"
-                            ? "text-emerald-700 print:text-black"
-                            : "text-amber-700 print:text-black")
-                        }
-                      >
-                        {STATUS_LABEL[day.status] ?? day.status?.toUpperCase()}
-                        {day.status === "approved" && day.reviewed_at
-                          ? ` · ${new Date(day.reviewed_at).toLocaleDateString()}`
-                          : ""}
-                      </div>
-                    </div>
-                    <div className="p-4 text-sm leading-relaxed min-h-[80px] whitespace-pre-line">
-                      {day.activities_enhanced || day.activities_raw}
-                    </div>
-                    {day.feedback_notes && (
-                      <div className="px-4 pb-3 text-xs italic">
-                        <strong className="not-italic">Supervisor feedback:</strong>{" "}
-                        {day.feedback_notes}
-                      </div>
-                    )}
+                {week.days.length === 0 ? (
+                  <div className="p-6 text-center text-sm text-slate-500 italic">
+                    No entries logged for this week.
                   </div>
-                ))}
+                ) : (
+                  week.days.map((day, idx) => (
+                    <div
+                      key={day.id}
+                      className={idx !== 0 ? "border-t-2 border-black" : ""}
+                    >
+                      <div className="flex border-b border-black bg-slate-50">
+                        <div className="w-40 border-r border-black p-2 font-bold text-xs uppercase shrink-0">
+                          {localDate(day.date).toLocaleDateString([], {
+                            weekday: "long",
+                          })}
+                          <br />
+                          <span className="font-normal opacity-60 font-sans">
+                            {day.date}
+                          </span>
+                        </div>
+                        <div className="p-2 text-[10px] font-bold text-slate-400 uppercase flex items-center flex-1">
+                          Daily Progress Report
+                        </div>
+                        <div
+                          className={
+                            "p-2 text-[10px] font-bold uppercase flex items-center border-l border-black " +
+                            (day.status === "approved"
+                              ? "text-emerald-700 print:text-black"
+                              : "text-amber-700 print:text-black")
+                          }
+                        >
+                          {STATUS_LABEL[day.status] ?? day.status?.toUpperCase()}
+                          {day.status === "approved" && day.reviewed_at
+                            ? ` · ${new Date(day.reviewed_at).toLocaleDateString()}`
+                            : ""}
+                        </div>
+                      </div>
+                      <div className="p-4 text-sm leading-relaxed min-h-[80px] whitespace-pre-line">
+                        {day.activities_enhanced || day.activities_raw}
+                      </div>
+                      {day.feedback_notes && (
+                        <div className="px-4 pb-3 text-xs italic">
+                          <strong className="not-italic">Supervisor feedback:</strong>{" "}
+                          {day.feedback_notes}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-4 border-2 border-black border-t-0 p-4 bg-slate-50/50">
@@ -334,12 +360,20 @@ export default function LogbookPrintView() {
           />
           Only include entries approved by my supervisor
         </label>
-        <button
-          onClick={() => window.print()}
-          className="bg-black text-white px-10 py-3 rounded-full font-bold hover:scale-105 transition-transform shadow-lg"
-        >
-          Print Logbook / Export PDF
-        </button>
+        <div className="flex justify-center gap-4">
+          <button
+            onClick={() => window.print()}
+            className="bg-black text-white px-8 py-3 rounded-full font-bold hover:scale-105 transition-transform shadow-lg text-sm"
+          >
+            Print Logbook / Export PDF
+          </button>
+          <button
+            onClick={handleDownloadCsv}
+            className="bg-white text-black border-2 border-black px-8 py-3 rounded-full font-bold hover:bg-slate-50 transition-colors shadow-lg text-sm"
+          >
+            Export CSV
+          </button>
+        </div>
       </div>
     </div>
   );

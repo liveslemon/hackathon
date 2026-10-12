@@ -18,13 +18,29 @@ export async function POST(
   const { id } = await params;
   const { data: application } = await supabase
     .from("applied_internships")
-    .select("id, user_id, placement_status")
+    .select("id, user_id, placement_status, internship_id, internships(employer_id, poster_id)")
     .eq("id", id)
     .maybeSingle();
 
   if (!application) {
     return NextResponse.json({ error: "Placement not found" }, { status: 404 });
   }
+
+  // Authorization: Only the student or supervising employer can mark placement complete
+  const isStudent = application.user_id === user.id;
+  const internship = Array.isArray(application.internships)
+    ? application.internships[0]
+    : application.internships;
+  const isEmployer =
+    internship?.employer_id === user.id || internship?.poster_id === user.id;
+
+  if (!isStudent && !isEmployer) {
+    return NextResponse.json(
+      { error: "Forbidden: Not authorized to complete this placement" },
+      { status: 403 },
+    );
+  }
+
   if (application.placement_status !== "active") {
     return NextResponse.json(
       { error: "This internship placement isn't active." },
@@ -34,7 +50,10 @@ export async function POST(
 
   const { error } = await supabase
     .from("applied_internships")
-    .update({ placement_status: "completed" })
+    .update({
+      placement_status: "completed",
+      ended_at: new Date().toISOString(),
+    })
     .eq("id", id);
 
   if (error) {
@@ -42,3 +61,4 @@ export async function POST(
   }
   return NextResponse.json({ completed: true });
 }
+

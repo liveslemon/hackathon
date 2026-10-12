@@ -55,3 +55,11 @@ export function placementLabel(p: Placement): string {
       : `${fmt(p.started_at)} – ${fmt(p.ended_at)}`;
   return `${p.role ?? "Internship"} · ${p.company ?? ""} (${range})`;
 }
+
+export function getActivePlacement(placements: Placement[]): Placement | null {
+  return placements.find((p) => p.placement_status === "active") ?? null;
+}
+
+export function hasActivePlacement(placements: Placement[]): boolean {
+  return placements.some((p) => p.placement_status === "active");
+}

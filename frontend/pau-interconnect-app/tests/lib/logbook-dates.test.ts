@@ -12,12 +12,26 @@ describe("todayInLagos", () => {
     expect(todayInLagos(new Date("2026-10-10T23:30:00Z"))).toBe("2026-10-11");
     expect(todayInLagos(new Date("2026-10-10T22:30:00Z"))).toBe("2026-10-10");
   });
+
+  it("handles exact midnight boundary correctly at UTC+1", () => {
+    // Exactly 23:00:00Z turns into 00:00:00 Lagos time on the next day
+    expect(todayInLagos(new Date("2026-10-10T22:59:59.999Z"))).toBe("2026-10-10");
+    expect(todayInLagos(new Date("2026-10-10T23:00:00.000Z"))).toBe("2026-10-11");
+    expect(todayInLagos(new Date("2026-12-31T23:00:00.000Z"))).toBe("2027-01-01");
+  });
 });
 
 describe("backfill window", () => {
   it("covers today and the previous 6 days", () => {
     expect(earliestBackfillDate("2026-10-11")).toBe("2026-10-05");
     expect(daysAgo("2026-10-05", "2026-10-11")).toBe(6);
+    expect(daysAgo("2026-10-11", "2026-10-11")).toBe(0);
+    expect(daysAgo("2026-10-04", "2026-10-11")).toBe(7);
+  });
+
+  it("calculates negative days for future dates", () => {
+    expect(daysAgo("2026-10-12", "2026-10-11")).toBe(-1);
+    expect(daysAgo("2026-10-20", "2026-10-11")).toBe(-9);
   });
 });
 
@@ -31,8 +45,14 @@ describe("canEditEntry", () => {
   });
   it("locks approved entries even if recent", () => {
     expect(canEditEntry({ date: today, status: "approved" }, today, today)).toBe(false);
+    expect(canEditEntry({ date: "2026-10-10", status: "approved" }, "2026-10-10", today)).toBe(false);
   });
-  it("always lets students correct entries returned by their supervisor", () => {
+  it("always lets students correct past entries returned by supervisor", () => {
     expect(canEditEntry({ date: "2026-09-01", status: "flagged" }, "2026-09-01", today)).toBe(true);
   });
+  it("strictly rejects future dates even if entry object claims flagged status", () => {
+    expect(canEditEntry({ date: "2026-10-15", status: "flagged" }, "2026-10-15", today)).toBe(false);
+    expect(canEditEntry({ date: "2026-10-12", status: "pending" }, "2026-10-12", today)).toBe(false);
+  });
 });
+
