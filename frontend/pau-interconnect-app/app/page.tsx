@@ -669,7 +669,7 @@ export default function LandingPage() {
                   size="lg"
                   variant="outline"
                   href="/login/employer"
-                  className="w-full sm:w-auto border-white/40 text-white hover:bg-white/10 font-semibold"
+                  className="w-full sm:w-auto border-surface/40 text-surface hover:bg-surface/20 font-semibold"
                 >
                   <Building2 className="w-4 h-4 mr-2" />
                   Partner as Employer
