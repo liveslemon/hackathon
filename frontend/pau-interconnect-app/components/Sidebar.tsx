@@ -96,27 +96,37 @@ const Sidebar = ({
       ? adminItems
       : studentItems;
 
-  const accountItems = [
-    {
-      label: isEmployer ? "Company Public Page" : "Profile",
-      icon: User,
-      href: isEmployer ? `/companies/${userProfile?.id}` : "/profile",
-      disabled: isEmployer && !userProfile?.id,
-    },
-    {
-      label: "Settings",
-      icon: Settings,
-      href: isEmployer
-        ? "/dashboard/employer/settings"
-        : "/dashboard/student/settings",
-      disabled: false,
-    },
-  ];
+  const accountItems = isAdmin
+    ? [
+        {
+          label: "Profile",
+          icon: User,
+          href: "/profile",
+          disabled: false,
+        },
+      ]
+    : [
+        {
+          label: isEmployer ? "Company Public Page" : "Profile",
+          icon: User,
+          href: isEmployer ? `/companies/${userProfile?.id}` : "/profile",
+          disabled: isEmployer && !userProfile?.id,
+        },
+        {
+          label: "Settings",
+          icon: Settings,
+          href: isEmployer
+            ? "/dashboard/employer/settings"
+            : "/dashboard/student/settings",
+          disabled: false,
+        },
+      ];
 
   return (
     <aside
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      aria-label="Sidebar navigation"
       className={cx(
         "flex flex-col h-full bg-white border-r border-slate-100 transition-all duration-[400ms] ease-in-out overflow-hidden",
         isExpanded ? "w-72" : "w-20",
@@ -129,7 +139,11 @@ const Sidebar = ({
           className="flex items-center gap-3 cursor-pointer group shrink-0"
           onClick={() =>
             router.push(
-              isEmployer ? "/dashboard/employer" : "/dashboard/student",
+              isAdmin
+                ? "/dashboard/admin"
+                : isEmployer
+                  ? "/dashboard/employer"
+                  : "/dashboard/student",
             )
           }
         >
@@ -162,6 +176,7 @@ const Sidebar = ({
         >
           <button
             onClick={onTogglePin}
+            aria-label={isPinned ? "Unpin sidebar" : "Pin sidebar"}
             className={cx(
               "p-2 rounded-lg transition-all duration-200 hidden lg:flex items-center justify-center",
               isPinned
@@ -179,6 +194,7 @@ const Sidebar = ({
           {onClose && (
             <button
               onClick={onClose}
+              aria-label="Close sidebar"
               className="lg:hidden p-2 text-slate-400 hover:text-slate-600 transition-colors"
             >
               <X className="w-4 h-4" />
@@ -204,7 +220,12 @@ const Sidebar = ({
           </div>
           <nav className="space-y-0.5">
             {dashboardItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive =
+                pathname === item.href ||
+                (item.href !== "/dashboard/student" &&
+                  item.href !== "/dashboard/employer" &&
+                  item.href !== "/dashboard/admin" &&
+                  (pathname?.startsWith(item.href + "/") ?? false));
               const Icon = item.icon;
               return (
                 <button
@@ -214,6 +235,8 @@ const Sidebar = ({
                     if (onClose) onClose();
                   }}
                   title={!isExpanded ? item.label : undefined}
+                  aria-label={item.label}
+                  aria-current={isActive ? "page" : undefined}
                   className={cx(
                     "w-full flex items-center rounded-xl text-[13px] font-medium transition-all duration-200 group relative overflow-hidden h-11 px-5",
                     !isExpanded && "pl-[18px]",
@@ -268,7 +291,9 @@ const Sidebar = ({
             </div>
             <nav className="space-y-0.5">
               {accountItems.map((item) => {
-                const isActive = pathname === item.href;
+                const isActive =
+                  pathname === item.href ||
+                  (pathname?.startsWith(item.href + "/") ?? false);
                 const Icon = item.icon;
                 return (
                   <button
@@ -279,6 +304,8 @@ const Sidebar = ({
                       if (onClose) onClose();
                     }}
                     title={!isExpanded ? item.label : undefined}
+                    aria-label={item.label}
+                    aria-current={isActive ? "page" : undefined}
                     className={cx(
                       "w-full flex items-center rounded-xl text-[13px] font-medium transition-all duration-200 group relative overflow-hidden h-11 px-5",
                       !isExpanded && "pl-[18px]",
