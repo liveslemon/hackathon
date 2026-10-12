@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { BookOpen, CheckCircle2, AlertTriangle, X } from "lucide-react";
 import Link from "next/link";
+import { todayInLagos } from "@/lib/logbook-dates";
 
 interface LogbookWidgetClientProps {
   isMissing: boolean;
@@ -16,7 +17,7 @@ export default function LogbookWidgetClient({
   const [isVisible, setIsVisible] = useState(() => {
     if (typeof window === "undefined") return true;
     try {
-      const todayStr = new Date().toISOString().split("T")[0];
+      const todayStr = todayInLagos();
       const dismissed = localStorage.getItem(
         `logbook_reminder_dismissed_${todayStr}`,
       );
@@ -28,7 +29,7 @@ export default function LogbookWidgetClient({
 
   const handleDismiss = () => {
     try {
-      const todayStr = new Date().toISOString().split("T")[0];
+      const todayStr = todayInLagos();
       localStorage.setItem(`logbook_reminder_dismissed_${todayStr}`, "true");
     } catch (e) {
       console.warn("Failed to set localStorage:", e);

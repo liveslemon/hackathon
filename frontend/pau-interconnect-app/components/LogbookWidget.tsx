@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { supabaseFetch } from "@/lib/supabase-fetch";
+import { todayInLagos } from "@/lib/logbook-dates";
 import LogbookWidgetClient from "./LogbookWidgetClient";
 
 async function getSupabase() {
@@ -24,19 +25,19 @@ export default async function LogbookWidget({ userId }: { userId: string }) {
   let todayStatus: string | null = null;
 
   try {
-    // 1. Check if student has an accepted internship
+    // 1. Check if student has an active internship placement
     const { data: applied } = await supabase
       .from("applied_internships")
-      .select("status")
+      .select("status, placement_status")
       .eq("user_id", userId)
-      .eq("status", "accepted")
+      .or("placement_status.eq.active,status.eq.accepted")
       .limit(1)
       .maybeSingle();
 
     if (applied) {
       hasStarted = true;
-      // 2. Check today's logbook entry
-      const todayStr = new Date().toISOString().split("T")[0];
+      // 2. Check today's logbook entry in Lagos timezone
+      const todayStr = todayInLagos();
       const { data: entry } = await supabase
         .from("logbook_entries")
         .select("status")
