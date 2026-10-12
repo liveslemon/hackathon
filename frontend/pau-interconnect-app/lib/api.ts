@@ -12,7 +12,9 @@ const BACKEND_URL = getBackendUrl();
  * passed through this.
  */
 export function backendUrl(path: string): string {
-  return `${BACKEND_URL}${path}`;
+  const base = getBackendUrl();
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return `${base}${normalized}`;
 }
 
 function toErrorMessage(error: unknown): string {
@@ -82,11 +84,14 @@ export async function authenticatedFetch<TResponse = unknown>(
     headers["Content-Type"] = "application/json";
   }
 
+  const base = getBackendUrl();
+  const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+
   const url = endpoint.startsWith("http")
     ? endpoint
     : isLocalApi
       ? endpoint
-      : `${BACKEND_URL}${endpoint}`;
+      : `${base}${normalizedEndpoint}`;
 
   let attempts = 0;
   while (attempts < 2) {
