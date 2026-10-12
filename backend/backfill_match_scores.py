@@ -8,7 +8,7 @@ import logging
 from typing import List, Dict, Any
 
 from core.db import supabase
-from services.job_queue import enqueue, JobKind
+from services.job_queue import USER_RESCORE, enqueue
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("backfill_match_scores")
@@ -23,7 +23,9 @@ def get_eligible_students(batch_size: int = BATCH_SIZE, offset: int = 0) -> List
     """
     res = (
         supabase.table("profiles")
-        .select("id, role, skills, course, experience, projects, embedding")
+        .select("id, role, skills, course, experience, projects, cv_text")
+        .eq("role", "student")
+        .order("id")
         .range(offset, offset + batch_size - 1)
         .execute()
     )
@@ -32,7 +34,7 @@ def get_eligible_students(batch_size: int = BATCH_SIZE, offset: int = 0) -> List
 
 def has_profile_signal(student: Dict[str, Any]) -> bool:
     """Determine if student has sufficient signal to score."""
-    if student.get("embedding"):
+    if (student.get("cv_text") or "").strip():
         return True
     skills = student.get("skills")
     if skills and (isinstance(skills, list) and len(skills) > 0 or isinstance(skills, str) and skills.strip()):
@@ -65,9 +67,9 @@ def run_backfill(limit: int = None, dry_run: bool = False):
             if has_profile_signal(student):
                 if not dry_run:
                     job = enqueue(
-                        kind=JobKind.USER_RESCORE,
-                        subject=user_id,
                         user_id=user_id,
+                        kind=USER_RESCORE,
+                        source="backfill",
                         priority=1,  # Lower priority for backfill so live requests take precedence
                         payload={"trigger": "backfill"},
                     )

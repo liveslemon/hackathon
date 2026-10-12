@@ -108,13 +108,15 @@ export async function POST(req: Request) {
       if (session) {
         const { getBackendUrl } = await import("@/lib/env");
         const backendUrl = getBackendUrl();
-        fetch(`${backendUrl}/api/analyze-new-internship`, {
+        // Await (with a timeout) so the serverless function isn't frozen before the request is sent.
+        await fetch(`${backendUrl}/api/analyze-new-internship`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({ internship_id: data.id }),
+          signal: AbortSignal.timeout(5000),
         }).catch((e) => console.error("Trigger analysis failed asynchronously:", e));
       }
     } catch (err) {

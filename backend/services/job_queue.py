@@ -299,6 +299,16 @@ def _claim_next() -> dict | None:
     return None
 
 
+def _cleanup_stale_matches() -> None:
+    """Drop match rows for internships that are closed, drafts or past their deadline (service role only)."""
+    try:
+        res = supabase.rpc("cleanup_stale_match_results", {}).execute()
+        if res.data:
+            logger.info(f"[JobQueue] Removed {res.data} match rows for closed/expired internships")
+    except Exception as e:
+        logger.error(f"[JobQueue] Stale match cleanup failed: {e}")
+
+
 def _recover_stale() -> None:
     """Re-queue jobs left in 'processing' by a crashed process; fail ones exceeding MAX_ATTEMPTS."""
     from services.cv_analysis_service import fail_cv_analysis
@@ -348,6 +358,11 @@ def _recover_stale() -> None:
             logger.info(f"[JobQueue] Re-queued interrupted job {job['id']} (attempt {attempts})")
     except Exception as e:
         logger.error(f"[JobQueue] Stale job recovery failed: {e}")
+
+
+def _attempts_after_pause(job: dict) -> int:
+    """Claiming a job counts an attempt. A quota/credit pause isn't a failure, so hand that attempt back."""
+    return max(0, (job.get("attempts") or 1) - 1)
 
 
 async def _run(job: dict) -> None:
@@ -408,7 +423,7 @@ async def _run(job: dict) -> None:
             postpone_to = _llm_pause_until.isoformat()
             await asyncio.to_thread(
                 lambda: supabase.table("cv_processing_jobs")
-                .update({"status": "queued", "retry_at": postpone_to, "updated_at": _now_iso()})
+                .update({"status": "queued", "retry_at": postpone_to, "attempts": _attempts_after_pause(job), "updated_at": _now_iso()})
                 .eq("id", job_id)
                 .execute()
             )
@@ -428,7 +443,7 @@ async def _run(job: dict) -> None:
                     postpone_to = _llm_pause_until.isoformat()
                     await asyncio.to_thread(
                         lambda: supabase.table("cv_processing_jobs")
-                        .update({"status": "queued", "retry_at": postpone_to, "updated_at": _now_iso()})
+                        .update({"status": "queued", "retry_at": postpone_to, "attempts": _attempts_after_pause(job), "updated_at": _now_iso()})
                         .eq("id", job_id)
                         .execute()
                     )
@@ -481,7 +496,7 @@ async def _run(job: dict) -> None:
                 postpone_to = _llm_pause_until.isoformat()
                 await asyncio.to_thread(
                     lambda: supabase.table("cv_processing_jobs")
-                    .update({"status": "queued", "retry_at": postpone_to, "updated_at": _now_iso()})
+                    .update({"status": "queued", "retry_at": postpone_to, "attempts": _attempts_after_pause(job), "updated_at": _now_iso()})
                     .eq("id", job_id)
                     .execute()
                 )
@@ -503,6 +518,7 @@ async def worker_loop() -> None:
         try:
             if polls % STALE_CHECK_EVERY == 0:
                 await asyncio.to_thread(_recover_stale)
+                await asyncio.to_thread(_cleanup_stale_matches)
             polls += 1
 
             job = await asyncio.to_thread(_claim_next)

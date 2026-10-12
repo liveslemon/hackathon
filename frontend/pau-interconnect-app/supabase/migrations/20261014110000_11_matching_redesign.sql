@@ -146,7 +146,7 @@ CREATE OR REPLACE FUNCTION public.match_all_students_for_internship (
 )
 RETURNS TABLE (
   id uuid,
-  skills text[],
+  skills jsonb,
   cv_text text,
   cv_structured jsonb,
   course text,
@@ -177,7 +177,7 @@ BEGIN
   WHERE profiles.role = 'student'
     AND (
       profiles.cv_text IS NOT NULL
-      OR (profiles.skills IS NOT NULL AND array_length(profiles.skills, 1) > 0)
+      OR (jsonb_typeof(profiles.skills) = 'array' AND jsonb_array_length(profiles.skills) > 0)
     )
     AND (
       p_query_embedding IS NULL
@@ -207,3 +207,15 @@ BEGIN
   RETURN v_deleted;
 END;
 $$;
+
+-- 7. These functions are for the backend (service role) only. Functions in public are executable by
+--    anon/authenticated through PostgREST by default; match_all_students_for_internship returns CV text and
+--    claim_next_cv_job would let any user grab queue jobs.
+REVOKE ALL ON FUNCTION public.claim_next_cv_job(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.match_all_open_internships_for_student(uuid, vector, float, int) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.match_all_students_for_internship(uuid, vector, float, int) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.cleanup_stale_match_results() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.claim_next_cv_job(text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.match_all_open_internships_for_student(uuid, vector, float, int) TO service_role;
+GRANT EXECUTE ON FUNCTION public.match_all_students_for_internship(uuid, vector, float, int) TO service_role;
+GRANT EXECUTE ON FUNCTION public.cleanup_stale_match_results() TO service_role;
