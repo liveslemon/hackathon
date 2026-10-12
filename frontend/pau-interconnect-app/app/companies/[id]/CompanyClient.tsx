@@ -45,8 +45,8 @@ export default function CompanyClient({
               className="object-cover"
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-r from-primary/20 via-primary/10 to-transparent relative">
-              <div className="absolute inset-0 bg-radial from-primary/10 to-transparent opacity-50" />
+            <div className="w-full h-full bg-gradient-to-r from-brand/20 via-brand/10 to-transparent relative">
+              <div className="absolute inset-0 bg-radial from-brand/10 to-transparent opacity-50" />
             </div>
           )}
         </div>
@@ -90,7 +90,7 @@ export default function CompanyClient({
                       }
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center gap-1.5 hover:text-primary transition-colors bg-primary/10 text-primary px-3.5 py-1.5 rounded-full text-xs font-semibold"
+                      className="flex items-center gap-1.5 hover:text-brand transition-colors bg-brand/10 text-brand px-3.5 py-1.5 rounded-full text-xs font-semibold"
                     >
                       <Globe className="w-3.5 h-3.5" /> Website
                     </a>
@@ -147,7 +147,7 @@ export default function CompanyClient({
                 Company Overview
               </Typography>
               <div className="flex items-center gap-3 text-fg-muted text-sm">
-                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                <div className="w-9 h-9 rounded-full bg-brand/10 flex items-center justify-center text-brand shrink-0">
                   <Building className="w-4 h-4" />
                 </div>
                 <span className="font-medium">
@@ -161,7 +161,7 @@ export default function CompanyClient({
                 <span className="font-medium">Verified Employer Partner</span>
               </div>
               <div className="flex items-center gap-3 text-fg-muted text-sm">
-                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                <div className="w-9 h-9 rounded-full bg-brand/10 flex items-center justify-center text-brand shrink-0">
                   <Briefcase className="w-4 h-4" />
                 </div>
                 <span className="font-medium">

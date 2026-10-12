@@ -277,12 +277,12 @@ export default function PostInternshipView() {
           {/* Section 1: Role Overview */}
           <Card>
             <CardHeader>
-              <div className="flex items-center gap-2 text-primary font-medium text-xs">
+              <div className="flex items-center gap-2 text-brand font-medium text-xs">
                 <Briefcase className="w-4 h-4" />
                 <span>SECTION 1</span>
               </div>
               <h3 className="text-base font-semibold text-fg">Role Identity & Track</h3>
-              <p className="text-xs text-muted-fg">
+              <p className="text-xs text-fg-muted">
                 Define the primary position title and disciplinary discipline.
               </p>
             </CardHeader>
@@ -342,12 +342,12 @@ export default function PostInternshipView() {
           {/* Section 2: Logistics & Compensation */}
           <Card>
             <CardHeader>
-              <div className="flex items-center gap-2 text-primary font-medium text-xs">
+              <div className="flex items-center gap-2 text-brand font-medium text-xs">
                 <MapPin className="w-4 h-4" />
                 <span>SECTION 2</span>
               </div>
               <h3 className="text-base font-semibold text-fg">Location & Compensation</h3>
-              <p className="text-xs text-muted-fg">
+              <p className="text-xs text-fg-muted">
                 Specify physical premises, duration, and monthly remuneration.
               </p>
             </CardHeader>
@@ -419,12 +419,12 @@ export default function PostInternshipView() {
           {/* Section 3: Narrative & Requirements */}
           <Card>
             <CardHeader>
-              <div className="flex items-center gap-2 text-primary font-medium text-xs">
+              <div className="flex items-center gap-2 text-brand font-medium text-xs">
                 <FileText className="w-4 h-4" />
                 <span>SECTION 3</span>
               </div>
               <h3 className="text-base font-semibold text-fg">Role Description & Requirements</h3>
-              <p className="text-xs text-muted-fg">
+              <p className="text-xs text-fg-muted">
                 Detailed overview of expectations and student qualifications.
               </p>
             </CardHeader>
@@ -468,12 +468,12 @@ export default function PostInternshipView() {
           {/* Section 4: Skills & Matching Keywords */}
           <Card>
             <CardHeader>
-              <div className="flex items-center gap-2 text-primary font-medium text-xs">
+              <div className="flex items-center gap-2 text-brand font-medium text-xs">
                 <Sparkles className="w-4 h-4" />
                 <span>SECTION 4</span>
               </div>
               <h3 className="text-base font-semibold text-fg">Matching Keywords & Interests</h3>
-              <p className="text-xs text-muted-fg">
+              <p className="text-xs text-fg-muted">
                 Tags power PAU InterConnect AI matching algorithms to surface relevant student profiles.
               </p>
             </CardHeader>
@@ -488,8 +488,8 @@ export default function PostInternshipView() {
                       onClick={() => toggleInterest(option)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
                         isSelected
-                          ? "bg-primary text-primary-fg border-primary shadow-xs"
-                          : "bg-surface-raised text-muted-fg border-border hover:bg-canvas hover:text-fg"
+                          ? "bg-brand text-brand-fg border-brand shadow-xs"
+                          : "bg-surface-raised text-fg-muted border-border hover:bg-background hover:text-fg"
                       }`}
                     >
                       {isSelected ? `✓ ${option}` : `+ ${option}`}
@@ -503,12 +503,12 @@ export default function PostInternshipView() {
           {/* Section 5: Timeline & Recruiter Link */}
           <Card>
             <CardHeader>
-              <div className="flex items-center gap-2 text-primary font-medium text-xs">
+              <div className="flex items-center gap-2 text-brand font-medium text-xs">
                 <Calendar className="w-4 h-4" />
                 <span>SECTION 5</span>
               </div>
               <h3 className="text-base font-semibold text-fg">Application Timeline & Routing</h3>
-              <p className="text-xs text-muted-fg">
+              <p className="text-xs text-fg-muted">
                 Application closure deadline and direct or external application routing.
               </p>
             </CardHeader>
@@ -573,48 +573,48 @@ export default function PostInternshipView() {
         <div className="lg:col-span-5 sticky top-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm font-semibold text-fg">
-              <Eye className="w-4 h-4 text-primary" />
+              <Eye className="w-4 h-4 text-brand" />
               <span>Live Student Preview</span>
             </div>
-            <span className="text-xs text-muted-fg font-medium">Card View</span>
+            <span className="text-xs text-fg-muted font-medium">Card View</span>
           </div>
 
           <div className="border border-border bg-surface rounded-xl p-5 shadow-xs space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
-                <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+                <span className="text-xs font-semibold uppercase tracking-wider text-brand">
                   {formData.field || "Academic Track"}
                 </span>
                 <h3 className="font-semibold text-base text-fg leading-snug">
                   {formData.role || "Role Title Preview"}
                 </h3>
-                <p className="text-xs text-muted-fg font-medium">Your Company</p>
+                <p className="text-xs text-fg-muted font-medium">Your Company</p>
               </div>
               <Badge variant="neutral" className="shrink-0 text-xs">
                 {formData.category}
               </Badge>
             </div>
 
-            <p className="text-xs text-muted-fg line-clamp-3">
+            <p className="text-xs text-fg-muted line-clamp-3">
               {formData.description ||
                 "Role description preview will appear here as you type. Provide clear expectations and responsibilities for student applicants."}
             </p>
 
-            <div className="grid grid-cols-2 gap-2 text-xs text-muted-fg pt-1">
+            <div className="grid grid-cols-2 gap-2 text-xs text-fg-muted pt-1">
               <div className="flex items-center gap-1.5 truncate">
-                <MapPin className="w-3.5 h-3.5 shrink-0 text-muted-fg" />
+                <MapPin className="w-3.5 h-3.5 shrink-0 text-fg-muted" />
                 <span className="truncate">{formData.location || "Location pending"}</span>
               </div>
               <div className="flex items-center gap-1.5 truncate">
-                <Clock className="w-3.5 h-3.5 shrink-0 text-muted-fg" />
+                <Clock className="w-3.5 h-3.5 shrink-0 text-fg-muted" />
                 <span className="truncate">{formData.duration || "Duration TBD"}</span>
               </div>
               <div className="flex items-center gap-1.5 truncate">
-                <DollarSign className="w-3.5 h-3.5 shrink-0 text-muted-fg" />
+                <DollarSign className="w-3.5 h-3.5 shrink-0 text-fg-muted" />
                 <span className="truncate">{formData.stipend || "Stipend competitive"}</span>
               </div>
               <div className="flex items-center gap-1.5 truncate">
-                <Calendar className="w-3.5 h-3.5 shrink-0 text-muted-fg" />
+                <Calendar className="w-3.5 h-3.5 shrink-0 text-fg-muted" />
                 <span className="truncate">
                   {deadline ? `Deadline: ${deadline}` : "Open rolling"}
                 </span>
@@ -632,7 +632,7 @@ export default function PostInternshipView() {
                   </span>
                 ))}
                 {interests.length > 4 && (
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium text-muted-fg">
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium text-fg-muted">
                     +{interests.length - 4} more
                   </span>
                 )}
@@ -640,7 +640,7 @@ export default function PostInternshipView() {
             )}
 
             <div className="border-t border-border pt-4 flex items-center justify-between">
-              <span className="text-xs text-muted-fg">
+              <span className="text-xs text-fg-muted">
                 {formData.slots || "1"} slot{formData.slots === "1" ? "" : "s"} open
               </span>
               <Button size="sm" variant="outline" className="pointer-events-none text-xs">
@@ -649,7 +649,7 @@ export default function PostInternshipView() {
             </div>
           </div>
 
-          <div className="p-4 rounded-xl border border-border bg-surface-raised/40 text-xs text-muted-fg space-y-2">
+          <div className="p-4 rounded-xl border border-border bg-surface-raised/40 text-xs text-fg-muted space-y-2">
             <div className="font-semibold text-fg flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-success-fg" />
               <span>Posting Checklist</span>
@@ -669,16 +669,16 @@ export default function PostInternshipView() {
         onClose={() => setTemplateModalOpen(false)}
         title="Saved Templates"
       >
-        <p className="text-xs text-muted-fg mb-4">Select a template to quickly prefill role details.</p>
+        <p className="text-xs text-fg-muted mb-4">Select a template to quickly prefill role details.</p>
         <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
           {templates.map((t) => (
             <div
               key={t.id}
-              className="p-3.5 rounded-lg border border-border bg-surface hover:bg-canvas transition-colors flex items-center justify-between gap-3"
+              className="p-3.5 rounded-lg border border-border bg-surface hover:bg-background transition-colors flex items-center justify-between gap-3"
             >
               <div className="space-y-1">
                 <div className="font-medium text-sm text-fg">{t.name}</div>
-                <div className="text-xs text-muted-fg">
+                <div className="text-xs text-fg-muted">
                   {t.role || "Untitled"} &bull; {t.category || "Any"} &bull; {t.field || "Any field"}
                 </div>
               </div>
@@ -700,7 +700,7 @@ export default function PostInternshipView() {
         onClose={() => setSaveTemplateModalOpen(false)}
         title="Save Current Form as Template"
       >
-        <p className="text-xs text-muted-fg mb-4">Templates allow you to rapidly reuse role titles, requirements, and keywords for recurring recruiting cycles.</p>
+        <p className="text-xs text-fg-muted mb-4">Templates allow you to rapidly reuse role titles, requirements, and keywords for recurring recruiting cycles.</p>
         <form onSubmit={handleSaveAsTemplate} className="space-y-4">
           <Input
             label="Template Name"

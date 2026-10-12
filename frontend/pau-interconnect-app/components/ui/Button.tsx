@@ -51,9 +51,9 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         secondary:
           "bg-brand-secondary text-white hover:bg-brand-secondary-hover shadow-sm active:translate-y-[0.5px]",
         danger:
-          "bg-danger text-white hover:opacity-90 shadow-sm active:translate-y-[0.5px]",
+          "bg-danger text-on-danger hover:opacity-90 shadow-sm active:translate-y-[0.5px]",
         success:
-          "bg-success text-white hover:opacity-90 shadow-sm active:translate-y-[0.5px]",
+          "bg-success text-on-success hover:opacity-90 shadow-sm active:translate-y-[0.5px]",
       },
       outline: {
         primary:

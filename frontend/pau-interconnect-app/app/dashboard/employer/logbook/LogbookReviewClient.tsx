@@ -208,7 +208,7 @@ export default function LogbookReviewClient({
               >
                 {selectedIds.size === pendingEntries.length ? (
                   <>
-                    <CheckSquare className="w-4 h-4 text-primary" /> Deselect All
+                    <CheckSquare className="w-4 h-4 text-brand" /> Deselect All
                   </>
                 ) : (
                   <>
@@ -256,7 +256,7 @@ export default function LogbookReviewClient({
                   key={entry.id}
                   className={`transition-all border ${
                     isSelected
-                      ? "ring-2 ring-primary border-primary bg-primary-subtle/20"
+                      ? "ring-2 ring-brand border-brand bg-brand-subtle/20"
                       : "hover:border-border-strong"
                   }`}
                 >
@@ -266,11 +266,11 @@ export default function LogbookReviewClient({
                         <button
                           type="button"
                           onClick={() => toggleSelect(entry.id)}
-                          className="mt-1 text-muted-fg hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+                          className="mt-1 text-fg-muted hover:text-brand transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded"
                           aria-label={isSelected ? "Deselect entry" : "Select entry"}
                         >
                           {isSelected ? (
-                            <CheckSquare className="w-5 h-5 text-primary" />
+                            <CheckSquare className="w-5 h-5 text-brand" />
                           ) : (
                             <Square className="w-5 h-5" />
                           )}
@@ -285,7 +285,7 @@ export default function LogbookReviewClient({
                               <div className="font-semibold text-sm text-fg">
                                 {entry.profiles?.full_name || "Unknown Student"}
                               </div>
-                              <div className="flex items-center gap-2 text-xs text-muted-fg">
+                              <div className="flex items-center gap-2 text-xs text-fg-muted">
                                 <Calendar className="w-3.5 h-3.5" />
                                 <span>
                                   {new Date(entry.date).toLocaleDateString([], {
@@ -343,7 +343,7 @@ export default function LogbookReviewClient({
       {/* Review History Section */}
       {historyEntries.length > 0 && (
         <div className="space-y-4 pt-4">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-fg">
+          <div className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
             Review History ({historyEntries.length})
           </div>
           <div className="space-y-3">
@@ -355,14 +355,14 @@ export default function LogbookReviewClient({
                 <CardContent className="p-4 sm:p-5">
                   <div className="flex items-start sm:items-center justify-between gap-4 flex-wrap">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-surface-sunken flex items-center justify-center text-xs font-bold text-muted-fg">
+                      <div className="w-8 h-8 rounded-full bg-surface-sunken flex items-center justify-center text-xs font-bold text-fg-muted">
                         {entry.profiles?.full_name?.charAt(0) || "S"}
                       </div>
                       <div>
                         <span className="font-medium text-sm text-fg">
                           {entry.profiles?.full_name || "Unknown Student"}
                         </span>
-                        <span className="text-xs text-muted-fg ml-3">
+                        <span className="text-xs text-fg-muted ml-3">
                           {entry.date}
                         </span>
                         {entry.feedback_notes && (
@@ -395,7 +395,7 @@ export default function LogbookReviewClient({
         onClose={() => setFlagModalOpen(false)}
         title="Request Entry Revision"
       >
-        <p className="text-xs text-muted-fg mb-4">
+        <p className="text-xs text-fg-muted mb-4">
           Provide feedback explaining why this logbook entry requires student correction.
         </p>
         <form onSubmit={handleConfirmFlag} className="space-y-4">

@@ -94,6 +94,20 @@ When migrating older templates, substitute old hardcoded classes with the new se
 
 ---
 
+### Text on solid status fills
+
+Never put `text-white` on `bg-success`, `bg-danger`, `bg-warning` or `bg-info`. In dark mode those fills are light, and white
+text drops to about 2:1. Use the matching on-colour token, which is white in light mode and dark ink in dark mode:
+
+| Fill | Text | Light | Dark |
+|---|---|---|---|
+| `bg-success` | `text-on-success` | 5.0:1 | 9.7:1 |
+| `bg-danger` | `text-on-danger` | 4.8:1 | 6.8:1 |
+| `bg-warning` | `text-on-warning` | 5.0:1 | 11.2:1 |
+| `bg-info` | `text-on-info` | 5.9:1 | 8.7:1 |
+
+---
+
 ## 4. Component Usage Guide
 
 All components live in `@/components/ui` and are exported from `@/components/ui/index.ts`.

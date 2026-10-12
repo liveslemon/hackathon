@@ -122,47 +122,47 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
     accepted: {
       label: "Accepted",
       icon: CheckCircle,
-      color: "text-emerald-600 bg-emerald-50 border-emerald-100",
+      color: "text-success-fg bg-success-subtle border-success/20",
     },
     offered: {
       label: "Offered",
       icon: CheckCircle,
-      color: "text-emerald-600 bg-emerald-50 border-emerald-100",
+      color: "text-success-fg bg-success-subtle border-success/20",
     },
     interview: {
       label: "Interview",
       icon: Loader2,
-      color: "text-blue-600 bg-blue-50 border-blue-100",
+      color: "text-info-fg bg-info-subtle border-info/20",
     },
     shortlisted: {
       label: "Shortlisted",
       icon: CheckCircle,
-      color: "text-purple-600 bg-purple-50 border-purple-100",
+      color: "text-brand-secondary bg-brand-secondary-subtle border-brand-secondary/20",
     },
     reviewed: {
       label: "Reviewed",
       icon: Loader2,
-      color: "text-indigo-600 bg-indigo-50 border-indigo-100",
+      color: "text-brand bg-brand-subtle border-brand/20",
     },
     pending: {
       label: "Pending",
       icon: Loader2,
-      color: "text-amber-600 bg-amber-50 border-amber-100",
+      color: "text-warning-fg bg-warning-subtle border-warning/20",
     },
     applied: {
       label: "Applied",
       icon: Loader2,
-      color: "text-blue-600 bg-blue-50 border-blue-100",
+      color: "text-info-fg bg-info-subtle border-info/20",
     },
     rejected: {
       label: "Denied",
       icon: XCircle,
-      color: "text-red-500 bg-red-50 border-red-100",
+      color: "text-danger-fg bg-danger-subtle border-danger/20",
     },
     withdrawn: {
       label: "Withdrawn",
       icon: XCircle,
-      color: "text-slate-500 bg-slate-50 border-slate-200",
+      color: "text-fg-muted bg-surface-sunken border-border",
     },
   };
 
@@ -178,7 +178,7 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
       ? {
           label: displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1),
           icon: Loader2,
-          color: "text-purple-600 bg-purple-50 border-purple-100",
+          color: "text-brand-secondary bg-brand-secondary-subtle border-brand-secondary/20",
         }
       : null);
 
@@ -260,8 +260,8 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
           className={cx(
             "absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-all backdrop-blur-sm",
             isSaved
-              ? "bg-red-500 text-white shadow-sm"
-              : "bg-white/80 text-slate-500 hover:bg-white hover:text-red-500",
+              ? "bg-danger text-on-danger shadow-sm"
+              : "bg-surface/80 text-fg-muted hover:bg-surface hover:text-danger-fg",
           )}
         >
           <Heart className={cx("w-3.5 h-3.5", isSaved && "fill-current")} />
@@ -337,7 +337,7 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
           ) : (
             <Link
               href={`/internships/${internship.id}`}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 text-white text-[11px] font-semibold hover:bg-slate-700 transition-colors"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-fg text-fg-inverse text-[11px] font-semibold hover:opacity-90 transition-colors"
             >
               Apply
               <ArrowUpRight className="w-3 h-3" />
@@ -351,7 +351,7 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
           <button
             onClick={handleAcceptOffer}
             disabled={isAccepting}
-            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold text-on-success bg-success hover:opacity-90 disabled:opacity-50 transition-colors"
           >
             {isAccepting ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />

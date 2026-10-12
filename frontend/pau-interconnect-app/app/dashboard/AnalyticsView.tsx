@@ -58,12 +58,12 @@ export default function AnalyticsView({
       {/* Category Breakdown */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2 text-primary font-medium text-xs">
+          <div className="flex items-center gap-2 text-brand font-medium text-xs">
             <Layers className="w-4 h-4" />
             <span>DISTRIBUTION</span>
           </div>
           <h3 className="text-base font-semibold text-fg">Internships by Category</h3>
-          <p className="text-xs text-muted-fg">
+          <p className="text-xs text-fg-muted">
             Relative proportion of work models and placement disciplines.
           </p>
         </CardHeader>
@@ -98,7 +98,7 @@ export default function AnalyticsView({
                   <div key={idx} className="space-y-2">
                     <div className="flex justify-between items-center text-sm font-medium">
                       <span className="text-fg">{cat.label || "General"}</span>
-                      <span className="text-muted-fg font-mono">
+                      <span className="text-fg-muted font-mono">
                         {cat.value || 0} ({percentage}%)
                       </span>
                     </div>

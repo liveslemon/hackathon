@@ -50,7 +50,7 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-slate-100 h-14 flex items-center">
+      <header className="sticky top-0 z-50 bg-surface/90 backdrop-blur-sm border-b border-border h-14 flex items-center">
         <div className="max-w-7xl w-full mx-auto px-4 md:px-6 flex justify-between items-center">
           <div
             className="flex items-center gap-3 cursor-pointer group"
@@ -64,7 +64,7 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
               )
             }
           >
-            <div className="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center p-1.5 group-hover:scale-105 transition-transform">
+            <div className="w-8 h-8 bg-fg rounded-lg flex items-center justify-center p-1.5 group-hover:scale-105 transition-transform">
               <Image
                 src="/favicon.ico"
                 alt="PAU Logo"
@@ -74,12 +74,12 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
               />
             </div>
             <div className="hidden sm:block">
-              <p className="text-sm font-semibold text-slate-800 leading-none">
+              <p className="text-sm font-semibold text-fg leading-none">
                 InterConnect
               </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <p className="text-[11px] text-fg-subtle mt-0.5">
                 Hi,{" "}
-                <span className="font-semibold text-slate-600">
+                <span className="font-semibold text-fg-muted">
                   {displayName}
                 </span>
               </p>
@@ -87,13 +87,13 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
           </div>
 
           <div className="flex items-center gap-1">
-            <div className="flex items-center gap-0.5 bg-slate-50 p-0.5 rounded-lg border border-slate-100">
+            <div className="flex items-center gap-0.5 bg-surface-sunken p-0.5 rounded-lg border border-border">
               {!isEmployer && (
                 <>
                   <button
                     onClick={() => router.push("/my-internships")}
                     aria-label="My Internships"
-                    className="w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-600 hover:bg-white transition-all"
+                    className="w-8 h-8 flex items-center justify-center rounded-md text-fg-subtle hover:text-fg-muted hover:bg-surface transition-all"
                     title="My Internships"
                   >
                     <Briefcase className="w-4 h-4" />
@@ -101,7 +101,7 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
                   <button
                     onClick={() => router.push("/dashboard/student/logbook")}
                     aria-label="Logbook"
-                    className="w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-600 hover:bg-white transition-all"
+                    className="w-8 h-8 flex items-center justify-center rounded-md text-fg-subtle hover:text-fg-muted hover:bg-surface transition-all"
                     title="Logbook"
                   >
                     <BookOpen className="w-4 h-4" />
@@ -109,7 +109,7 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
                   <button
                     onClick={() => router.push("/profile")}
                     aria-label="Profile"
-                    className="w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-600 hover:bg-white transition-all"
+                    className="w-8 h-8 flex items-center justify-center rounded-md text-fg-subtle hover:text-fg-muted hover:bg-surface transition-all"
                     title="Profile"
                   >
                     <User className="w-4 h-4" />
@@ -120,11 +120,11 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
                 onClick={handleLogout}
                 disabled={isLoggingOut}
                 aria-label="Sign Out"
-                className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${isLoggingOut ? "opacity-50 cursor-not-allowed text-red-400" : "text-slate-400 hover:text-red-500 hover:bg-red-50"}`}
+                className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${isLoggingOut ? "opacity-50 cursor-not-allowed text-danger-fg" : "text-fg-subtle hover:text-danger-fg hover:bg-danger-subtle"}`}
                 title="Logout"
               >
                 {isLoggingOut ? (
-                  <div className="w-4 h-4 rounded-full border-2 border-red-400 border-t-transparent animate-spin" />
+                  <div className="w-4 h-4 rounded-full border-2 border-danger-fg border-t-transparent animate-spin" />
                 ) : (
                   <LogOut className="w-4 h-4" />
                 )}
@@ -137,8 +137,8 @@ const DashboardHeader = ({ userProfile }: DashboardHeaderProps) => {
           <div
             className={`fixed top-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg shadow-lg animate-in slide-in-from-top-4 duration-300 z-[100] text-sm font-medium ${
               notificationSeverity === "success"
-                ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                : "bg-slate-50 text-slate-700 border border-slate-200"
+                ? "bg-success-subtle text-success-fg border border-success/20"
+                : "bg-surface-sunken text-fg border border-border"
             }`}
           >
             {notificationMessage}

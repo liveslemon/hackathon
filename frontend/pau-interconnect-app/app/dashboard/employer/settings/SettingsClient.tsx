@@ -316,12 +316,12 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
         {/* Brand Identity & Visual Assets */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-2 text-primary font-medium text-xs">
+            <div className="flex items-center gap-2 text-brand font-medium text-xs">
               <Building2 className="w-4 h-4" />
               <span>BRANDING & ASSETS</span>
             </div>
             <h3 className="text-base font-semibold text-fg">Organization Identity</h3>
-            <p className="text-xs text-muted-fg">
+            <p className="text-xs text-fg-muted">
               Upload high-resolution company emblems and banner artwork shown to students.
             </p>
           </CardHeader>
@@ -379,7 +379,7 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
                       />
                     </div>
                   ) : (
-                    <div className="w-14 h-14 rounded-xl bg-surface-sunken flex items-center justify-center border border-border shrink-0 text-muted-fg">
+                    <div className="w-14 h-14 rounded-xl bg-surface-sunken flex items-center justify-center border border-border shrink-0 text-fg-muted">
                       <Building2 className="w-6 h-6" />
                     </div>
                   )}
@@ -405,7 +405,7 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
                         Choose Logo
                       </Button>
                     </label>
-                    <p className="text-xs text-muted-fg mt-1">
+                    <p className="text-xs text-fg-muted mt-1">
                       Square PNG or JPG recommended. Max 2MB.
                     </p>
                   </div>
@@ -430,7 +430,7 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
                       />
                     </div>
                   ) : (
-                    <div className="w-24 h-14 rounded-xl bg-surface-sunken flex items-center justify-center border border-border shrink-0 text-muted-fg">
+                    <div className="w-24 h-14 rounded-xl bg-surface-sunken flex items-center justify-center border border-border shrink-0 text-fg-muted">
                       <Building2 className="w-6 h-6" />
                     </div>
                   )}
@@ -456,7 +456,7 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
                         Choose Banner
                       </Button>
                     </label>
-                    <p className="text-xs text-muted-fg mt-1">
+                    <p className="text-xs text-fg-muted mt-1">
                       Wide banner (approx 3:1). Max 2MB.
                     </p>
                   </div>
@@ -516,67 +516,67 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
         {/* Email Notification Preferences */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-2 text-primary font-medium text-xs">
+            <div className="flex items-center gap-2 text-brand font-medium text-xs">
               <Bell className="w-4 h-4" />
               <span>NOTIFICATIONS</span>
             </div>
             <h3 className="text-base font-semibold text-fg">Email Notification Preferences</h3>
-            <p className="text-xs text-muted-fg">
+            <p className="text-xs text-fg-muted">
               Configure automated notifications dispatched to your verified employer address.
             </p>
           </CardHeader>
 
           <CardContent className="space-y-4">
-            <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border border-border hover:bg-canvas/50 transition-colors">
+            <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border border-border hover:bg-background/50 transition-colors">
               <input
                 type="checkbox"
                 checked={notificationPrefs.email_new_applicant}
                 onChange={() => handleNotificationToggle("email_new_applicant")}
-                className="mt-0.5 rounded text-primary focus:ring-primary border-border"
+                className="mt-0.5 rounded text-brand focus:ring-brand border-border"
               />
               <div className="space-y-0.5">
                 <span className="text-sm font-medium text-fg">
                   New Applicant Alerts
                 </span>
-                <p className="text-xs text-muted-fg">
+                <p className="text-xs text-fg-muted">
                   Receive real-time notifications when a PAU student applies to an active opening.
                 </p>
               </div>
             </label>
 
-            <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border border-border hover:bg-canvas/50 transition-colors">
+            <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border border-border hover:bg-background/50 transition-colors">
               <input
                 type="checkbox"
                 checked={notificationPrefs.email_logbook_submitted}
                 onChange={() =>
                   handleNotificationToggle("email_logbook_submitted")
                 }
-                className="mt-0.5 rounded text-primary focus:ring-primary border-border"
+                className="mt-0.5 rounded text-brand focus:ring-brand border-border"
               />
               <div className="space-y-0.5">
                 <span className="text-sm font-medium text-fg">
                   SIWES Logbook Submissions
                 </span>
-                <p className="text-xs text-muted-fg">
+                <p className="text-xs text-fg-muted">
                   Receive an email alert whenever an intern submits a logbook activity for employer sign-off.
                 </p>
               </div>
             </label>
 
-            <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border border-border hover:bg-canvas/50 transition-colors">
+            <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border border-border hover:bg-background/50 transition-colors">
               <input
                 type="checkbox"
                 checked={notificationPrefs.email_deadline_reminder}
                 onChange={() =>
                   handleNotificationToggle("email_deadline_reminder")
                 }
-                className="mt-0.5 rounded text-primary focus:ring-primary border-border"
+                className="mt-0.5 rounded text-brand focus:ring-brand border-border"
               />
               <div className="space-y-0.5">
                 <span className="text-sm font-medium text-fg">
                   Application Deadline Reminders
                 </span>
-                <p className="text-xs text-muted-fg">
+                <p className="text-xs text-fg-muted">
                   Receive a prompt 3 days before any of your active internship deadlines expire.
                 </p>
               </div>

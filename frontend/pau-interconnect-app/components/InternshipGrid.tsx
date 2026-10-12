@@ -258,7 +258,7 @@ const InternshipGrid = ({
                   { value: "deadline", label: "Deadline" },
                   { value: "company", label: "A → Z" },
                 ]}
-                className="bg-slate-50 border-slate-150 rounded-lg text-xs font-medium text-slate-600 h-9"
+                className="bg-surface-sunken border-border rounded-lg text-xs font-medium text-fg-muted h-9"
               />
             </div>
           </div>
@@ -283,8 +283,8 @@ const InternshipGrid = ({
                 className={cx(
                   "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all",
                   isActive
-                    ? "bg-indigo-600 text-white shadow-sm"
-                    : "bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700",
+                    ? "bg-brand text-brand-fg shadow-sm"
+                    : "bg-surface-sunken text-fg-muted hover:bg-surface-sunken hover:text-fg",
                 )}
               >
                 <Icon className="w-3 h-3" />
@@ -296,8 +296,8 @@ const InternshipGrid = ({
 
         {/* Interest pills */}
         {availableFilters.length > 1 && (
-          <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-slate-50">
-            <span className="text-[10px] text-slate-300 font-semibold uppercase tracking-wider mr-1">
+          <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-border">
+            <span className="text-[10px] text-fg-subtle font-semibold uppercase tracking-wider mr-1">
               Your interests
             </span>
             {availableFilters.map((filter) => (
@@ -311,8 +311,8 @@ const InternshipGrid = ({
                 className={cx(
                   "px-3 py-1 rounded-md text-[11px] font-semibold transition-all",
                   selectedInterest === filter
-                    ? "bg-slate-800 text-white"
-                    : "text-slate-400 hover:text-slate-600 hover:bg-slate-50",
+                    ? "bg-fg text-fg-inverse"
+                    : "text-fg-subtle hover:text-fg-muted hover:bg-surface-sunken",
                 )}
               >
                 {filter}
@@ -323,9 +323,9 @@ const InternshipGrid = ({
 
         {/* Expandable Advanced Filters */}
         {showFilters && (
-          <div className="flex flex-wrap items-center gap-3 pt-4 mt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex flex-wrap items-center gap-3 pt-4 mt-4 border-t border-border animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="w-full sm:w-[150px]">
-              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 block">
+              <label className="text-[10px] font-semibold text-fg-subtle uppercase tracking-wider mb-1 block">
                 Status
               </label>
               <Select
@@ -341,11 +341,11 @@ const InternshipGrid = ({
                   { value: "Accepted", label: "Approved" },
                   { value: "Rejected", label: "Denied" },
                 ]}
-                className="bg-slate-50 border-slate-150 rounded-lg text-xs font-medium text-slate-600 h-9"
+                className="bg-surface-sunken border-border rounded-lg text-xs font-medium text-fg-muted h-9"
               />
             </div>
             <div className="w-full sm:w-[150px]">
-              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 block">
+              <label className="text-[10px] font-semibold text-fg-subtle uppercase tracking-wider mb-1 block">
                 Match %
               </label>
               <Select
@@ -360,7 +360,7 @@ const InternshipGrid = ({
                   { value: "70", label: "70%+" },
                   { value: "40", label: "40%+" },
                 ]}
-                className="bg-slate-50 border-slate-150 rounded-lg text-xs font-medium text-slate-600 h-9"
+                className="bg-surface-sunken border-border rounded-lg text-xs font-medium text-fg-muted h-9"
               />
             </div>
           </div>
@@ -381,13 +381,13 @@ const InternshipGrid = ({
           ))
         ) : (
           <div className="col-span-full py-16 text-center">
-            <div className="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="w-6 h-6 text-slate-300" />
+            <div className="w-14 h-14 bg-surface-sunken rounded-full flex items-center justify-center mx-auto mb-4">
+              <Search className="w-6 h-6 text-fg-subtle" />
             </div>
-            <p className="text-sm font-medium text-slate-400">
+            <p className="text-sm font-medium text-fg-subtle">
               No internships match your filters
             </p>
-            <p className="text-xs text-slate-300 mt-1">
+            <p className="text-xs text-fg-subtle mt-1">
               Try broadening your search criteria
             </p>
           </div>
@@ -397,7 +397,7 @@ const InternshipGrid = ({
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-fg-subtle">
             {startIndex + 1}–{Math.min(startIndex + itemsPerPage, totalItems)}{" "}
             of {totalItems}
           </p>
@@ -409,7 +409,7 @@ const InternshipGrid = ({
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
               disabled={currentPage === 1}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-fg-subtle hover:bg-surface-sunken disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -424,8 +424,8 @@ const InternshipGrid = ({
                 className={cx(
                   "w-8 h-8 rounded-lg text-xs font-semibold transition-all",
                   currentPage === page
-                    ? "bg-slate-800 text-white"
-                    : "text-slate-400 hover:bg-slate-100 hover:text-slate-600",
+                    ? "bg-fg text-fg-inverse"
+                    : "text-fg-subtle hover:bg-surface-sunken hover:text-fg-muted",
                 )}
               >
                 {page}
@@ -438,7 +438,7 @@ const InternshipGrid = ({
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
               disabled={currentPage === totalPages}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-fg-subtle hover:bg-surface-sunken disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

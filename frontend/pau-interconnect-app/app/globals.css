@@ -39,11 +39,11 @@
   --focus-ring: #4f46e5;            /* Indigo 600 */
 
   /* --- Status Palette (Semantic Light) --- */
-  --status-success: #16a34a;        /* Emerald 600 */
+  --status-success: #15803d;        /* Emerald 600 */
   --status-success-subtle: #ecfdf5; /* Emerald 50 */
   --status-success-fg: #15803d;     /* Emerald 700 */
 
-  --status-warning: #d97706;        /* Amber 600 */
+  --status-warning: #b45309;        /* Amber 600 */
   --status-warning-subtle: #fffbeb; /* Amber 50 */
   --status-warning-fg: #b45309;     /* Amber 700 */
 
@@ -51,7 +51,7 @@
   --status-danger-subtle: #fef2f2;  /* Red 50 */
   --status-danger-fg: #b91c1c;      /* Red 700 */
 
-  --status-info: #0284c7;           /* Sky 600 */
+  --status-info: #0369a1;           /* Sky 600 */
   --status-info-subtle: #f0f9ff;    /* Sky 50 */
   --status-info-fg: #0369a1;        /* Sky 700 */
 
@@ -76,6 +76,11 @@
   --chart-3: #0284c7;
   --chart-4: #10b981;
   --chart-5: #f59e0b;
+  /* Text on solid status fills (buttons, badges) */
+  --on-success: #ffffff;
+  --on-danger: #ffffff;
+  --on-warning: #ffffff;
+  --on-info: #ffffff;
 }
 
 .dark {
@@ -137,6 +142,11 @@
   --chart-3: #38bdf8;
   --chart-4: #34d399;
   --chart-5: #fbbf24;
+  /* Text on solid status fills: dark status colours are light, so use dark ink */
+  --on-success: #0b1220;
+  --on-danger: #0b1220;
+  --on-warning: #0b1220;
+  --on-info: #0b1220;
 }
 
 /* ==========================================================================
@@ -176,6 +186,10 @@
   --color-warning-fg: var(--status-warning-fg);
 
   --color-danger: var(--status-danger);
+  --color-on-success: var(--on-success);
+  --color-on-danger: var(--on-danger);
+  --color-on-warning: var(--on-warning);
+  --color-on-info: var(--on-info);
   --color-danger-subtle: var(--status-danger-subtle);
   --color-danger-fg: var(--status-danger-fg);
 

@@ -76,12 +76,12 @@ export default function ReportsClient({ interns }: { interns: InternRecord[] }) 
       {/* Export Configuration Card */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2 text-primary font-medium text-xs">
+          <div className="flex items-center gap-2 text-brand font-medium text-xs">
             <FileSpreadsheet className="w-4 h-4" />
             <span>EXPORT CONTROLS</span>
           </div>
           <h3 className="text-base font-semibold text-fg">Report Scope & Date Filter</h3>
-          <p className="text-xs text-muted-fg">
+          <p className="text-xs text-fg-muted">
             Filter by individual student intern or export combined compliance archives.
           </p>
         </CardHeader>
@@ -139,11 +139,11 @@ export default function ReportsClient({ interns }: { interns: InternRecord[] }) 
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-base font-semibold text-fg">Active Intern Summary</h3>
-              <p className="text-xs text-muted-fg">
+              <p className="text-xs text-fg-muted">
                 Overview of current student placements enrolled under your organization.
               </p>
             </div>
-            <span className="text-xs text-muted-fg font-medium">
+            <span className="text-xs text-fg-muted font-medium">
               {interns.length} Active Placement{interns.length === 1 ? "" : "s"}
             </span>
           </div>
@@ -162,7 +162,7 @@ export default function ReportsClient({ interns }: { interns: InternRecord[] }) 
               <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-border text-left text-muted-fg font-medium">
+                    <tr className="border-b border-border text-left text-fg-muted font-medium">
                       <th className="pb-3 text-xs font-semibold uppercase tracking-wider">Student Name</th>
                       <th className="pb-3 text-xs font-semibold uppercase tracking-wider">Discipline / Level</th>
                       <th className="pb-3 text-xs font-semibold uppercase tracking-wider">Role Title</th>
@@ -172,11 +172,11 @@ export default function ReportsClient({ interns }: { interns: InternRecord[] }) 
                   </thead>
                   <tbody className="divide-y divide-border">
                     {interns.map((intern) => (
-                      <tr key={intern.student_id} className="hover:bg-canvas/50 transition-colors">
+                      <tr key={intern.student_id} className="hover:bg-background/50 transition-colors">
                         <td className="py-3.5 font-medium text-fg">
                           {intern.profiles?.full_name || "Student"}
                         </td>
-                        <td className="py-3.5 text-muted-fg text-xs">
+                        <td className="py-3.5 text-fg-muted text-xs">
                           {intern.profiles?.course || "General Track"}{" "}
                           {intern.profiles?.level ? `(${intern.profiles.level}L)` : ""}
                         </td>
@@ -190,11 +190,11 @@ export default function ReportsClient({ interns }: { interns: InternRecord[] }) 
                           <div className="inline-flex items-center gap-2">
                             <div className="w-24 h-2 bg-surface-sunken rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-primary rounded-full"
+                                className="h-full bg-brand rounded-full"
                                 style={{ width: "75%" }}
                               />
                             </div>
-                            <span className="text-xs text-muted-fg font-mono">75%</span>
+                            <span className="text-xs text-fg-muted font-mono">75%</span>
                           </div>
                         </td>
                       </tr>
@@ -215,23 +215,23 @@ export default function ReportsClient({ interns }: { interns: InternRecord[] }) 
                         <div className="font-semibold text-sm text-fg">
                           {intern.profiles?.full_name || "Student"}
                         </div>
-                        <div className="text-xs text-muted-fg">
+                        <div className="text-xs text-fg-muted">
                           {intern.profiles?.course || "General Track"}
                         </div>
                       </div>
                       <StatusPill status="accepted" />
                     </div>
                     <div className="text-xs text-fg">
-                      <span className="text-muted-fg">Role:</span> {intern.internships?.role || "Intern"}
+                      <span className="text-fg-muted">Role:</span> {intern.internships?.role || "Intern"}
                     </div>
                     <div className="pt-2 flex items-center gap-2">
                       <div className="flex-1 h-2 bg-surface-sunken rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-primary rounded-full"
+                          className="h-full bg-brand rounded-full"
                           style={{ width: "75%" }}
                         />
                       </div>
-                      <span className="text-xs text-muted-fg font-mono">75%</span>
+                      <span className="text-xs text-fg-muted font-mono">75%</span>
                     </div>
                   </div>
                 ))}

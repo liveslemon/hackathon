@@ -266,7 +266,7 @@ export function EmployerAnalyticsClient({
         <Card className="lg:col-span-7">
           <CardHeader>
             <h3 className="font-semibold text-base text-fg">Applicant Velocity (Last 14 Days)</h3>
-            <p className="text-xs text-muted-fg">
+            <p className="text-xs text-fg-muted">
               Volume of student applications submitted across your active postings.
             </p>
           </CardHeader>
@@ -330,7 +330,7 @@ export function EmployerAnalyticsClient({
         <Card className="lg:col-span-5">
           <CardHeader>
             <h3 className="font-semibold text-base text-fg">Recruitment Pipeline Funnel</h3>
-            <p className="text-xs text-muted-fg">
+            <p className="text-xs text-fg-muted">
               Conversion rates across the candidate consideration stages.
             </p>
           </CardHeader>
@@ -344,13 +344,13 @@ export function EmployerAnalyticsClient({
                   <div key={stage.label} className="space-y-1">
                     <div className="flex items-center justify-between text-xs font-medium">
                       <span className="text-fg">{stage.label}</span>
-                      <span className="text-muted-fg">
+                      <span className="text-fg-muted">
                         {stage.count} <span className="text-[11px] opacity-75">({stage.pct})</span>
                       </span>
                     </div>
                     <div className="h-3 w-full bg-surface-sunken rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-primary transition-all duration-500 rounded-full"
+                        className="h-full bg-brand transition-all duration-500 rounded-full"
                         style={{ width: `${widthPercent}%` }}
                       />
                     </div>
@@ -366,7 +366,7 @@ export function EmployerAnalyticsClient({
       <Card>
         <CardHeader>
           <h3 className="font-semibold text-base text-fg">Role Performance Breakdown</h3>
-          <p className="text-xs text-muted-fg">
+          <p className="text-xs text-fg-muted">
             Comparison of view volumes, applicant yield, and candidate match quality per role.
           </p>
         </CardHeader>
@@ -375,7 +375,7 @@ export function EmployerAnalyticsClient({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border text-left text-muted-fg font-medium">
+                <tr className="border-b border-border text-left text-fg-muted font-medium">
                   <th className="pb-3 text-xs font-semibold uppercase tracking-wider">Role Title</th>
                   <th className="pb-3 text-xs font-semibold uppercase tracking-wider">Track</th>
                   <th className="pb-3 text-xs font-semibold uppercase tracking-wider text-right">Views</th>
@@ -387,14 +387,14 @@ export function EmployerAnalyticsClient({
               </thead>
               <tbody className="divide-y divide-border">
                 {postingPerformance.map((posting) => (
-                  <tr key={posting.id} className="hover:bg-canvas/50 transition-colors">
+                  <tr key={posting.id} className="hover:bg-background/50 transition-colors">
                     <td className="py-3.5 font-medium text-fg">
                       {posting.role}
                     </td>
-                    <td className="py-3.5 text-muted-fg">
+                    <td className="py-3.5 text-fg-muted">
                       {posting.field || "General"}
                     </td>
-                    <td className="py-3.5 text-right text-muted-fg font-mono">
+                    <td className="py-3.5 text-right text-fg-muted font-mono">
                       {posting.view_count || 0}
                     </td>
                     <td className="py-3.5 text-right font-medium text-fg font-mono">
@@ -409,7 +409,7 @@ export function EmployerAnalyticsClient({
                     <td className="py-3.5 text-right">
                       <Link
                         href={`/dashboard/employer/internships/${posting.id}`}
-                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+                        className="inline-flex items-center gap-1 text-xs text-brand hover:underline font-medium"
                       >
                         Review
                         <ArrowUpRight className="w-3 h-3" />

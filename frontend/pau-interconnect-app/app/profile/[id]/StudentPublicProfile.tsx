@@ -109,7 +109,7 @@ export default function StudentPublicProfile({
     <div className="space-y-6">
       {/* Hero / Header Card */}
       <Card className="overflow-hidden border border-border">
-        <div className="h-28 bg-gradient-to-r from-primary/15 via-primary/10 to-transparent border-b border-border" />
+        <div className="h-28 bg-gradient-to-r from-brand/15 via-brand/10 to-transparent border-b border-border" />
         <div className="px-6 md:px-10 pb-8 -mt-12">
           <div className="flex flex-col md:flex-row items-start gap-5">
             <div className="w-24 h-24 bg-surface rounded-2xl border-4 border-surface shadow-md flex items-center justify-center shrink-0 overflow-hidden">
@@ -129,7 +129,7 @@ export default function StudentPublicProfile({
               </h1>
               {profile.course && (
                 <p className="text-sm text-fg-muted mt-1 flex items-center gap-1.5 font-medium">
-                  <GraduationCap className="w-4 h-4 text-primary shrink-0" />
+                  <GraduationCap className="w-4 h-4 text-brand shrink-0" />
                   {profile.course}
                   {profile.level && ` · ${profile.level} Level`}
                 </p>
@@ -167,7 +167,7 @@ export default function StudentPublicProfile({
             {profile.email && (
               <a
                 href={`mailto:${profile.email}`}
-                className="flex items-center gap-1.5 text-sm text-fg-muted hover:text-primary transition-colors"
+                className="flex items-center gap-1.5 text-sm text-fg-muted hover:text-brand transition-colors"
               >
                 <Mail className="w-3.5 h-3.5" />
                 {profile.email}
@@ -195,7 +195,7 @@ export default function StudentPublicProfile({
                 href={portfolioLinks.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-fg-muted hover:text-primary transition-colors"
+                className="flex items-center gap-1.5 text-sm text-fg-muted hover:text-brand transition-colors"
               >
                 <Link2 className="w-3.5 h-3.5" />
                 LinkedIn
@@ -206,7 +206,7 @@ export default function StudentPublicProfile({
                 href={portfolioLinks.portfolio}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-fg-muted hover:text-primary transition-colors"
+                className="flex items-center gap-1.5 text-sm text-fg-muted hover:text-brand transition-colors"
               >
                 <Globe className="w-3.5 h-3.5" />
                 Portfolio
@@ -222,7 +222,7 @@ export default function StudentPublicProfile({
           {/* Academic Info */}
           <Card className="p-6 space-y-4 border border-border">
             <h2 className="text-sm font-bold text-fg flex items-center gap-2">
-              <GraduationCap className="w-4 h-4 text-primary" /> Academic Info
+              <GraduationCap className="w-4 h-4 text-brand" /> Academic Info
             </h2>
             <div className="space-y-3 text-sm">
               {profile.course && (
@@ -284,7 +284,7 @@ export default function StudentPublicProfile({
           {languages.length > 0 && (
             <Card className="p-6 space-y-4 border border-border">
               <h2 className="text-sm font-bold text-fg flex items-center gap-2">
-                <Languages className="w-4 h-4 text-primary" /> Languages
+                <Languages className="w-4 h-4 text-brand" /> Languages
               </h2>
               <div className="space-y-2">
                 {languages.map((lang, i) => (
@@ -303,11 +303,11 @@ export default function StudentPublicProfile({
           {hasCv && (
             <Card className="p-6 space-y-4 border border-border">
               <h2 className="text-sm font-bold text-fg flex items-center gap-2">
-                <FileText className="w-4 h-4 text-primary" /> Resume / CV
+                <FileText className="w-4 h-4 text-brand" /> Resume / CV
               </h2>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20 shrink-0">
-                  <FileText className="w-5 h-5 text-primary" />
+                <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center border border-brand/20 shrink-0">
+                  <FileText className="w-5 h-5 text-brand" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-fg">CV Available</p>
@@ -331,15 +331,15 @@ export default function StudentPublicProfile({
           {experience.length > 0 && (
             <Card className="p-6 md:p-8 space-y-5 border border-border">
               <h2 className="text-sm font-bold text-fg flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-primary" /> Work Experience
+                <Briefcase className="w-4 h-4 text-brand" /> Work Experience
               </h2>
               <div className="space-y-6">
                 {experience.map((exp, i) => (
                   <div
                     key={i}
-                    className="relative pl-5 border-l-2 border-primary/30"
+                    className="relative pl-5 border-l-2 border-brand/30"
                   >
-                    <div className="absolute -left-[7px] top-1 w-3 h-3 rounded-full bg-primary border-2 border-surface" />
+                    <div className="absolute -left-[7px] top-1 w-3 h-3 rounded-full bg-brand border-2 border-surface" />
                     <div className="space-y-1">
                       <p className="text-sm font-bold text-fg">
                         {exp.role || "Role"}
@@ -367,13 +367,13 @@ export default function StudentPublicProfile({
           {projects.length > 0 && (
             <Card className="p-6 md:p-8 space-y-5 border border-border">
               <h2 className="text-sm font-bold text-fg flex items-center gap-2">
-                <FolderOpen className="w-4 h-4 text-primary" /> Projects
+                <FolderOpen className="w-4 h-4 text-brand" /> Projects
               </h2>
               <div className="space-y-4">
                 {projects.map((proj, i) => (
                   <div
                     key={i}
-                    className="border border-border rounded-xl p-4 bg-surface-sunken/40 hover:border-primary/40 transition-colors"
+                    className="border border-border rounded-xl p-4 bg-surface-sunken/40 hover:border-brand/40 transition-colors"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
@@ -433,7 +433,7 @@ export default function StudentPublicProfile({
           {certifications.length > 0 && (
             <Card className="p-6 md:p-8 space-y-4 border border-border">
               <h2 className="text-sm font-bold text-fg flex items-center gap-2">
-                <Award className="w-4 h-4 text-primary" /> Certifications
+                <Award className="w-4 h-4 text-brand" /> Certifications
               </h2>
               <div className="space-y-3">
                 {certifications.map((cert, i) => (
@@ -455,7 +455,7 @@ export default function StudentPublicProfile({
                         href={cert.credential_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1"
+                        className="text-xs text-brand font-medium hover:underline inline-flex items-center gap-1"
                       >
                         Verify <ExternalLink className="w-3 h-3" />
                       </a>

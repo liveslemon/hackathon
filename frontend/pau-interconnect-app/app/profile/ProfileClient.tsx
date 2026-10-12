@@ -724,12 +724,12 @@ export default function ProfileClient({
         <div className="border-t border-border px-6 py-4 bg-surface-sunken">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
+              <Sparkles className="w-4 h-4 text-brand" />
               <span className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
                 Profile Completeness
               </span>
             </div>
-            <span className="text-xs font-bold text-primary">
+            <span className="text-xs font-bold text-brand">
               {profileStrength}%
             </span>
           </div>
@@ -793,7 +793,7 @@ export default function ProfileClient({
                 className={cx(
                   "flex items-center gap-2 py-3 px-4 border-b-2 text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer",
                   isActive
-                    ? "border-primary text-primary"
+                    ? "border-brand text-brand"
                     : "border-transparent text-fg-muted hover:text-fg hover:border-border",
                 )}
               >
@@ -812,7 +812,7 @@ export default function ProfileClient({
           <div className="space-y-6">
             <Card className="p-6 md:p-8 space-y-6 border border-border">
               <h2 className="text-base font-bold text-fg flex items-center gap-2">
-                <User className="w-4 h-4 text-primary" /> Personal Information
+                <User className="w-4 h-4 text-brand" /> Personal Information
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
@@ -873,7 +873,7 @@ export default function ProfileClient({
                 rows={3}
                 maxLength={300}
                 className={cx(
-                  "w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-fg placeholder:text-fg-subtle focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none transition-colors",
+                  "w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-fg placeholder:text-fg-subtle focus:outline-hidden focus:ring-2 focus:ring-brand/20 focus:border-brand resize-none transition-colors",
                   !isEditing && "opacity-80 bg-surface-sunken cursor-default",
                 )}
               />
@@ -884,7 +884,7 @@ export default function ProfileClient({
 
             <Card className="p-6 md:p-8 space-y-6 border border-border">
               <h2 className="text-base font-bold text-fg flex items-center gap-2">
-                <GraduationCap className="w-4 h-4 text-primary" /> Academic Information
+                <GraduationCap className="w-4 h-4 text-brand" /> Academic Information
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
@@ -898,7 +898,7 @@ export default function ProfileClient({
                         setProfile({ ...profile, course: e.target.value });
                         setHasUnsavedChanges(true);
                       }}
-                      className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                      className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-brand/20 focus:border-brand"
                     >
                       <option value="">Select course</option>
                       {courseOptions.map((c) => (
@@ -926,7 +926,7 @@ export default function ProfileClient({
                         setProfile({ ...profile, level: e.target.value });
                         setHasUnsavedChanges(true);
                       }}
-                      className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                      className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-brand/20 focus:border-brand"
                     >
                       <option value="">Select level</option>
                       {levelOptions.map((l) => (
@@ -987,13 +987,13 @@ export default function ProfileClient({
           <div className="space-y-6">
             <Card className="p-6 md:p-8 space-y-5 border border-border">
               <h2 className="text-base font-bold text-fg flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary" /> Technical & Soft Skills
+                <Sparkles className="w-4 h-4 text-brand" /> Technical & Soft Skills
               </h2>
               <div className="flex flex-wrap gap-2">
                 {skillsArray.map((skill, idx) => (
                   <span
                     key={`${skill}-${idx}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium border border-primary/20"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand/10 text-brand text-sm font-medium border border-brand/20"
                   >
                     {skill}
                     {isEditing && (
@@ -1052,7 +1052,7 @@ export default function ProfileClient({
                             key={skill}
                             type="button"
                             onClick={() => addSkill(skill)}
-                            className="px-2.5 py-1 rounded-full bg-surface-sunken text-fg-muted text-xs font-medium border border-border hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors cursor-pointer"
+                            className="px-2.5 py-1 rounded-full bg-surface-sunken text-fg-muted text-xs font-medium border border-border hover:bg-brand/10 hover:text-brand hover:border-brand/30 transition-colors cursor-pointer"
                           >
                             + {skill}
                           </button>
@@ -1083,8 +1083,8 @@ export default function ProfileClient({
                         className={cx(
                           "px-3.5 py-1.5 rounded-full text-sm font-medium transition-all border cursor-pointer",
                           selected
-                            ? "bg-primary/10 text-primary border-primary/30 font-semibold"
-                            : "bg-surface text-fg-muted border-border hover:border-primary/40",
+                            ? "bg-brand/10 text-brand border-brand/30 font-semibold"
+                            : "bg-surface text-fg-muted border-border hover:border-brand/40",
                           !isEditing && "opacity-75 cursor-default",
                         )}
                       >
@@ -1110,7 +1110,7 @@ export default function ProfileClient({
                         });
                         setHasUnsavedChanges(true);
                       }}
-                      className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                      className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-brand/20 focus:border-brand"
                     >
                       <option value="">Select</option>
                       {workTypeOptions.map((t) => (
@@ -1141,7 +1141,7 @@ export default function ProfileClient({
                         });
                         setHasUnsavedChanges(true);
                       }}
-                      className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                      className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-brand/20 focus:border-brand"
                     >
                       <option value="">Select</option>
                       {employmentTypeOptions.map((t) => (
@@ -1169,7 +1169,7 @@ export default function ProfileClient({
                         setProfile({ ...profile, availability: e.target.value });
                         setHasUnsavedChanges(true);
                       }}
-                      className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                      className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-brand/20 focus:border-brand"
                     >
                       <option value="">Select</option>
                       {availabilityOptions.map((t) => (
@@ -1198,7 +1198,7 @@ export default function ProfileClient({
             <Card className="p-6 md:p-8 space-y-4 border border-border">
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-bold text-fg flex items-center gap-2">
-                  <Briefcase className="w-4 h-4 text-primary" /> Work Experience
+                  <Briefcase className="w-4 h-4 text-brand" /> Work Experience
                 </h2>
                 {isEditing && (
                   <Button
@@ -1279,7 +1279,7 @@ export default function ProfileClient({
                     disabled={!isEditing}
                     rows={2}
                     className={cx(
-                      "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-subtle focus:outline-hidden focus:ring-2 focus:ring-primary/20 resize-none",
+                      "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-subtle focus:outline-hidden focus:ring-2 focus:ring-brand/20 resize-none",
                       !isEditing && "opacity-80 cursor-default",
                     )}
                   />
@@ -1291,7 +1291,7 @@ export default function ProfileClient({
             <Card className="p-6 md:p-8 space-y-4 border border-border">
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-bold text-fg flex items-center gap-2">
-                  <FolderOpen className="w-4 h-4 text-primary" /> Technical Projects
+                  <FolderOpen className="w-4 h-4 text-brand" /> Technical Projects
                 </h2>
                 {isEditing && (
                   <Button
@@ -1376,7 +1376,7 @@ export default function ProfileClient({
                     disabled={!isEditing}
                     rows={2}
                     className={cx(
-                      "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-subtle focus:outline-hidden focus:ring-2 focus:ring-primary/20 resize-none",
+                      "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-subtle focus:outline-hidden focus:ring-2 focus:ring-brand/20 resize-none",
                       !isEditing && "opacity-80 cursor-default",
                     )}
                   />
@@ -1393,7 +1393,7 @@ export default function ProfileClient({
             <Card className="p-6 md:p-8 space-y-4 border border-border">
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-bold text-fg flex items-center gap-2">
-                  <Award className="w-4 h-4 text-primary" /> Certifications & Licenses
+                  <Award className="w-4 h-4 text-brand" /> Certifications & Licenses
                 </h2>
                 {isEditing && (
                   <Button
@@ -1472,7 +1472,7 @@ export default function ProfileClient({
             <Card className="p-6 md:p-8 space-y-4 border border-border">
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-bold text-fg flex items-center gap-2">
-                  <Languages className="w-4 h-4 text-primary" /> Languages
+                  <Languages className="w-4 h-4 text-brand" /> Languages
                 </h2>
                 {isEditing && (
                   <Button
@@ -1504,7 +1504,7 @@ export default function ProfileClient({
                         onChange={(e) =>
                           updateLanguage(i, "proficiency", e.target.value)
                         }
-                        className="rounded-xl border border-border bg-surface px-3 py-2 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                        className="rounded-xl border border-border bg-surface px-3 py-2 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-brand/20"
                       >
                         <option value="Native">Native</option>
                         <option value="Fluent">Fluent</option>
@@ -1535,7 +1535,7 @@ export default function ProfileClient({
             {/* Portfolio Links */}
             <Card className="p-6 md:p-8 space-y-4 border border-border">
               <h2 className="text-base font-bold text-fg flex items-center gap-2">
-                <Globe className="w-4 h-4 text-primary" /> Portfolio & Web Links
+                <Globe className="w-4 h-4 text-brand" /> Portfolio & Web Links
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -1629,8 +1629,8 @@ export default function ProfileClient({
             <Card className="p-6 md:p-8 border border-border">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-xl border border-primary/20 flex items-center justify-center shrink-0">
-                    <FileText className="w-6 h-6 text-primary" />
+                  <div className="w-12 h-12 bg-brand/10 rounded-xl border border-brand/20 flex items-center justify-center shrink-0">
+                    <FileText className="w-6 h-6 text-brand" />
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-fg">
