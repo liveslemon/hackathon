@@ -268,12 +268,11 @@ export default function LogbookClient({
     setSaveError("");
     try {
       const result = await authenticatedFetch<{ entry?: LogbookEntry }>(
-        backendUrl("/api/logbook/entry"),
+        "/api/logbook/entry",
         {
           method: "POST",
           body: JSON.stringify({
             student_id: studentId,
-            employer_id: selectedPlacement?.company || "",
             application_id: placementId,
             date: targetDate,
             activities_raw: rawText,
@@ -320,7 +319,7 @@ export default function LogbookClient({
 
   if (!hasStarted) {
     return (
-      <DashboardShell userProfile={authProfile}>
+      <DashboardShell userProfile={initialProfile || authProfile}>
         <div className="max-w-4xl mx-auto px-4 sm:px-0 py-8">
           <PageHeader
             title="SIWES Logbook"
@@ -345,7 +344,7 @@ export default function LogbookClient({
   const isSelectedDateToday = activeDate === today;
 
   return (
-    <DashboardShell userProfile={authProfile}>
+    <DashboardShell userProfile={initialProfile || authProfile}>
       <div className="max-w-6xl mx-auto px-4 sm:px-0 py-6 md:py-8 space-y-8">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border">

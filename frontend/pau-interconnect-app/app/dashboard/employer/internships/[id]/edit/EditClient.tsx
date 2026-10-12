@@ -89,6 +89,9 @@ export default function EditInternshipClient({
             ? new Date(formData.deadline).toISOString()
             : null,
           recruiter_link: formData.link.trim() || null,
+          // Sent before the redesign too; the update route accepts both forms.
+          tags: formData.tags,
+          link: formData.link.trim(),
         }),
       });
 
@@ -137,12 +140,12 @@ export default function EditInternshipClient({
         {/* Core Information */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-2 text-primary font-medium text-sm">
+            <div className="flex items-center gap-2 text-brand font-medium text-sm">
               <Briefcase className="w-4 h-4" />
               <span>Core Role Details</span>
             </div>
             <h3 className="text-base font-semibold text-fg">Role Identity & Track</h3>
-            <p className="text-xs text-muted-fg">
+            <p className="text-xs text-fg-muted">
               Define the role title, primary academic/professional track, and work arrangement.
             </p>
           </CardHeader>
@@ -188,7 +191,7 @@ export default function EditInternshipClient({
         <Card>
           <CardHeader>
             <h3 className="text-base font-semibold text-fg">Description & Expectations</h3>
-            <p className="text-xs text-muted-fg">
+            <p className="text-xs text-fg-muted">
               Detail key responsibilities, daily work, and prerequisites for student candidates.
             </p>
           </CardHeader>
@@ -225,7 +228,7 @@ export default function EditInternshipClient({
         <Card>
           <CardHeader>
             <h3 className="text-base font-semibold text-fg">Logistics & Compensation</h3>
-            <p className="text-xs text-muted-fg">
+            <p className="text-xs text-fg-muted">
               Timeline, duration, stipend arrangement, and external application routing.
             </p>
           </CardHeader>
