@@ -92,16 +92,17 @@ def _build_profile_fill(structured: dict, current: dict) -> dict:
 
     raw_certs = structured.get("certifications")
     if isinstance(raw_certs, list) and raw_certs and not current.get("certifications"):
-        certs = [
-            {
-                "name": _text(c.get("name"), 100),
-                "issuer": _text(c.get("issuer"), 100),
-                "date": _text(c.get("date"), 20),
-                "credential_url": _text(c.get("credential_url") or c.get("url"), 500),
-            }
-            for c in raw_certs
-            if isinstance(c, dict) and _text(c.get("name"), 100)
-        ]
+        certs = []
+        for c in raw_certs:
+            if isinstance(c, dict) and _text(c.get("name"), 100):
+                certs.append({
+                    "name": _text(c.get("name"), 100),
+                    "issuer": _text(c.get("issuer"), 100),
+                    "date": _text(c.get("date"), 20),
+                    "credential_url": _text(c.get("credential_url") or c.get("url"), 500),
+                })
+            elif isinstance(c, str) and c.strip():
+                certs.append({"name": _text(c, 100), "issuer": "", "date": "", "credential_url": ""})
         if certs:
             update["certifications"] = certs
 
@@ -217,14 +218,17 @@ async def _rematch(user_id: str) -> int:
     text, structured = _matching_inputs(profile.data or {})
     if not text.strip():
         return 0
+
     # Matches from previous inputs would otherwise linger with stale scores.
     await asyncio.to_thread(
         lambda: supabase.table("match_results").delete().eq("user_id", user_id).execute()
     )
     if not await process_matches_in_background(user_id, text, [], structured):
         raise RuntimeError("Matching failed after retries")
+
+    # Fixed: match_results has no 'id' column; select 'user_id' with count='exact'
     count = await asyncio.to_thread(
-        lambda: supabase.table("match_results").select("id", count="exact").eq("user_id", user_id).execute()
+        lambda: supabase.table("match_results").select("user_id", count="exact").eq("user_id", user_id).execute()
     )
     return count.count or 0
 

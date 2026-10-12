@@ -30,29 +30,51 @@ _PROMPT = (
 
 
 def _render_pages(pdf_bytes: bytes, max_pages: int) -> list[str]:
-    import pypdfium2 as pdfium
+    """Render PDF pages to base64 JPEG images. Safely catches password/corrupt PDFs."""
+    if not pdf_bytes or len(pdf_bytes) < 10:
+        return []
 
-    pdf = pdfium.PdfDocument(pdf_bytes)
+    try:
+        import pypdfium2 as pdfium
+        pdf = pdfium.PdfDocument(pdf_bytes)
+    except Exception as e:
+        logger.warning(f"[OCR] Cannot open PDF for rendering (encrypted, corrupt, or invalid): {e}")
+        return []
+
     try:
         images = []
-        for index in range(min(len(pdf), max_pages)):
-            bitmap = pdf[index].render(scale=RENDER_SCALE)
-            buf = io.BytesIO()
-            bitmap.to_pil().convert("RGB").save(buf, format="JPEG", quality=80)
-            images.append(base64.b64encode(buf.getvalue()).decode())
+        page_count = min(len(pdf), max_pages)
+        for index in range(page_count):
+            try:
+                bitmap = pdf[index].render(scale=RENDER_SCALE)
+                buf = io.BytesIO()
+                bitmap.to_pil().convert("RGB").save(buf, format="JPEG", quality=80)
+                images.append(base64.b64encode(buf.getvalue()).decode())
+            except Exception as page_err:
+                logger.warning(f"[OCR] Failed to render page {index}: {page_err}")
+                continue
         return images
+    except Exception as e:
+        logger.warning(f"[OCR] Rendering failed: {e}")
+        return []
     finally:
-        pdf.close()
+        try:
+            pdf.close()
+        except Exception:
+            pass
 
 
 async def ocr_pdf(pdf_bytes: bytes) -> str:
-    """Best-effort text from a scanned PDF. Returns "" if OCR isn't available or fails."""
+    """Best-effort text from a scanned PDF. Returns \"\" if OCR isn't available or fails."""
     if not settings.GEMINI_API_KEY:
+        logger.info("[OCR] Skipping OCR fallback: GEMINI_API_KEY is not configured.")
         return ""
+
     try:
         images = await asyncio.to_thread(_render_pages, pdf_bytes, MAX_OCR_PAGES)
         if not images:
             return ""
+
         client = AsyncOpenAI(
             api_key=settings.GEMINI_API_KEY,
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
@@ -64,8 +86,9 @@ async def ocr_pdf(pdf_bytes: bytes) -> str:
             {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}}
             for img in images
         ]
+        gemini_model = getattr(settings, "GEMINI_MODEL", "") or "gemini-2.0-flash"
         response = await client.chat.completions.create(
-            model=settings.GEMINI_MODEL,
+            model=gemini_model,
             messages=[{"role": "user", "content": content}],
             max_tokens=4000,
             temperature=0,
