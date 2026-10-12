@@ -529,7 +529,7 @@ export default function OnboardingClient({
                     </Typography>
                     <Typography
                       variant="caption"
-                      className="text-fg-subtle leading-tight hidden md:block mt-0.5"
+                      className="text-fg-muted leading-tight hidden md:block mt-0.5"
                     >
                       {item.subtitle}
                     </Typography>
@@ -558,7 +558,7 @@ export default function OnboardingClient({
 
             <Typography variant="body2" color="muted">
               Having trouble?{" "}
-              <span className="text-brand font-semibold cursor-pointer hover:underline">Get Help</span>
+              <span className="text-brand dark:text-indigo-400 font-semibold cursor-pointer hover:underline">Get Help</span>
             </Typography>
           </div>
 
