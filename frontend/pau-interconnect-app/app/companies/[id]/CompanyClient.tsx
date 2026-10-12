@@ -1,18 +1,16 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Image from "next/image";
 import { Typography } from "@/components/ui";
-import { Globe, Users, Building, MapPin } from "lucide-react";
+import { Globe, Users, Building, Briefcase } from "lucide-react";
 import InternshipCard from "@/components/InternshipCard";
-import { getBackendUrl } from "@/lib/env";
-import type { Internship, Profile } from "@/types/domain";
+import type { Internship } from "@/types/domain";
 
-interface CompanyClientProps {
-  employerId: string;
-}
-
-interface CompanyProfile extends Partial<Profile> {
+export interface CompanyPublicProfile {
+  id: string;
+  role?: string | null;
   full_name?: string | null;
+  company_name?: string | null;
   company_banner_url?: string | null;
   company_logo_url?: string | null;
   company_description?: string | null;
@@ -21,56 +19,17 @@ interface CompanyProfile extends Partial<Profile> {
   culture?: string | null;
 }
 
-interface CompanyResponse {
-  company: CompanyProfile;
+interface CompanyClientProps {
+  company: CompanyPublicProfile;
   internships: Internship[];
 }
 
-interface InternshipCardItem {
-  id: string;
-  company: string;
-  role: string;
-  location: string;
-  deadline: string;
-  category: string;
-  matchPercentage?: number;
-  imageUrl?: string;
-  applicationStatus?: string;
-  poster_id?: string;
-}
-
-export default function CompanyClient({ employerId }: CompanyClientProps) {
-  const [data, setData] = useState<CompanyResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const res = await fetch(
-          `${getBackendUrl()}/api/companies/${employerId}`,
-        );
-        if (!res.ok) throw new Error("Failed to load company");
-        const json = (await res.json()) as CompanyResponse;
-        setData(json);
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : "Failed to load company");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [employerId]);
-
-  if (loading)
-    return (
-      <div className="p-12 text-center text-slate-500">Loading company...</div>
-    );
-  if (error)
-    return <div className="p-12 text-center text-red-500">{error}</div>;
-  if (!data) return null;
-
-  const { company, internships } = data;
+export default function CompanyClient({
+  company,
+  internships,
+}: CompanyClientProps) {
+  const companyName =
+    company.company_name || company.full_name || "Company";
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
@@ -80,7 +39,7 @@ export default function CompanyClient({ employerId }: CompanyClientProps) {
           {company.company_banner_url ? (
             <Image
               src={company.company_banner_url}
-              alt={`${company.full_name || "Company"} banner`}
+              alt={`${companyName} banner`}
               fill
               unoptimized
               className="object-cover"
@@ -98,7 +57,7 @@ export default function CompanyClient({ employerId }: CompanyClientProps) {
                 {company.company_logo_url ? (
                   <Image
                     src={company.company_logo_url}
-                    alt={company.full_name || "Company"}
+                    alt={companyName}
                     width={128}
                     height={128}
                     unoptimized
@@ -114,7 +73,7 @@ export default function CompanyClient({ employerId }: CompanyClientProps) {
                   weight="bold"
                   className="text-slate-900 tracking-tight"
                 >
-                  {company.full_name}
+                  {companyName}
                 </Typography>
                 <div className="flex items-center gap-4 mt-3 text-slate-500 text-sm font-medium">
                   {company.industry && (
@@ -203,9 +162,12 @@ export default function CompanyClient({ employerId }: CompanyClientProps) {
               </div>
               <div className="flex items-center gap-4 text-slate-600">
                 <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-                  <MapPin className="w-5 h-5" />
+                  <Briefcase className="w-5 h-5" />
                 </div>
-                <span className="font-medium">Global / Remote</span>
+                <span className="font-medium">
+                  {internships.length}{" "}
+                  {internships.length === 1 ? "Open Role" : "Open Roles"}
+                </span>
               </div>
             </div>
           </div>
@@ -223,18 +185,22 @@ export default function CompanyClient({ employerId }: CompanyClientProps) {
         </Typography>
         {internships.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-2xl border border-slate-100/60 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
-            <Typography variant="body1" className="text-slate-500">
+            <Briefcase className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <Typography variant="body1" className="text-slate-600 font-medium">
               No open roles at the moment.
             </Typography>
+            <p className="text-xs text-slate-400 mt-1">
+              This company currently has no active internship postings.
+            </p>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {internships.map((job) => {
-              const cardItem: InternshipCardItem = {
+              const cardItem = {
                 id: job.id,
-                company: job.company,
-                role: job.role,
-                location: job.location,
+                company: job.company || companyName,
+                role: job.role || "Intern",
+                location: job.location || "Lagos, Nigeria",
                 deadline: job.deadline ?? "",
                 category: job.category ?? job.field ?? "Internship",
                 matchPercentage:
