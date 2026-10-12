@@ -32,6 +32,7 @@ export const NOTIFICATION_OPT_OUT_MAP: Record<string, string[]> = {
   logbook_flagged: ["logbook_updates", "email_logbook_submitted"],
   logbook_reminder: ["logbook_updates", "email_logbook_submitted"],
   deadline_reminder: ["deadline_reminders", "email_deadline_reminder"],
+  new_match: ["new_match", "recommendations", "job_recommendations"],
 };
 
 /**

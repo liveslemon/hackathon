@@ -29,9 +29,37 @@ export default async function EmployerAnalyticsPage() {
   if (internshipIds.length > 0) {
     const { data } = await supabase
       .from("applied_internships")
-      .select("id, status, stage, match_score, created_at, internship_id")
+      .select("id, user_id, status, stage, match_score, created_at, internship_id")
       .in("internship_id", internshipIds);
-    applications = data || [];
+
+    const rawApps = data || [];
+    const userIds = rawApps.map((a) => a.user_id).filter(Boolean);
+
+    if (userIds.length > 0) {
+      const { data: matchRows } = await supabase
+        .from("match_results")
+        .select("user_id, internship_id, match_score")
+        .in("user_id", userIds)
+        .in("internship_id", internshipIds);
+
+      const liveMap = new Map(
+        (matchRows || []).map((m) => [`${m.user_id}:${m.internship_id}`, m.match_score]),
+      );
+
+      applications = rawApps.map((a) => {
+        const live = liveMap.get(`${a.user_id}:${a.internship_id}`);
+        return {
+          id: a.id,
+          status: a.status,
+          stage: a.stage,
+          match_score: typeof live === "number" ? Math.round(live) : a.match_score,
+          created_at: a.created_at,
+          internship_id: a.internship_id,
+        };
+      });
+    } else {
+      applications = rawApps;
+    }
   }
 
   return (

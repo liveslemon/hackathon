@@ -19,6 +19,7 @@ import { useAuth } from "@/context/AuthContext";
 import { ApplicationProgress } from "@/components/ApplicationProgress";
 
 import { getDaysUntilDeadline } from "@/lib/deadlines";
+import { MatchScore } from "@/components/match/MatchScore";
 
 interface InternshipCardProps {
   internship: {
@@ -28,7 +29,7 @@ interface InternshipCardProps {
     location: string;
     deadline: string;
     category: string;
-    matchPercentage?: number;
+    matchPercentage?: number | null;
     imageUrl?: string;
     applicationStatus?: string;
     applicationStage?: string;
@@ -112,13 +113,7 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
 
   const daysUntilDeadline = getDaysUntilDeadline(internship.deadline);
 
-  const matchPct = internship.matchPercentage ?? 0;
-  const matchColor =
-    matchPct >= 70
-      ? "text-emerald-600 bg-emerald-50"
-      : matchPct >= 40
-        ? "text-amber-600 bg-amber-50"
-        : "text-slate-500 bg-slate-50";
+
 
   const statusConfig: Record<
     string,
@@ -273,16 +268,9 @@ export default function InternshipCard({ internship }: InternshipCardProps) {
         </button>
 
         {/* Match Badge */}
-        {matchPct > 0 && (
-          <div
-            className={cx(
-              "absolute top-3 left-3 px-2 py-0.5 rounded-md text-[10px] font-bold",
-              matchColor,
-            )}
-          >
-            {matchPct}% match
-          </div>
-        )}
+        <div className="absolute top-3 left-3">
+          <MatchScore score={internship.matchPercentage} variant="badge" />
+        </div>
       </div>
 
       {/* Content */}

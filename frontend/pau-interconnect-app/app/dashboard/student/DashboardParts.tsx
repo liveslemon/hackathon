@@ -50,7 +50,7 @@ interface InternshipWithMatch {
   description: string;
   deadline: string;
   interests: string[];
-  matchPercentage: number;
+  matchPercentage?: number | null;
   applicationStatus?: string;
   applicationStage?: string;
 }
@@ -216,14 +216,20 @@ export async function InternshipGridSection() {
   );
 
   const internshipsWithMatches: InternshipWithMatch[] = visibleInternships.map(
-    (internship) => ({
-      ...internship,
-      matchPercentage:
-        matches.find((m: MatchRow) => m.internship_id === internship.id)
-          ?.match_score ?? 0,
-      applicationStatus: statusMap.get(internship.id),
-      applicationStage: stageMap.get(internship.id),
-    }),
+    (internship) => {
+      const matchRow = matches.find(
+        (m: MatchRow) => m.internship_id === internship.id,
+      );
+      return {
+        ...internship,
+        matchPercentage:
+          matchRow && typeof matchRow.match_score === "number"
+            ? Math.round(matchRow.match_score)
+            : null,
+        applicationStatus: statusMap.get(internship.id),
+        applicationStage: stageMap.get(internship.id),
+      };
+    },
   );
 
   return (

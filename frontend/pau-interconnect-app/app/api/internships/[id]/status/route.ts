@@ -54,7 +54,10 @@ export async function PATCH(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  if (status === "active" && existing.status === "draft") {
+  if (status === "closed" || status === "draft") {
+    // Clean up match rows when posting is closed or set to draft
+    await supabase.from("match_results").delete().eq("internship_id", id);
+  } else if (status === "active" && (existing.status === "draft" || existing.status === "closed")) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
