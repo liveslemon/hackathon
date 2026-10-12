@@ -19,15 +19,15 @@ export default function StudentDashboardError({
       role="alert"
       className="min-h-[50vh] flex items-center justify-center p-6 text-center"
     >
-      <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-100 dark:border-slate-800">
-        <Typography variant="h4" weight="bold" className="mb-3">
+      <div className="max-w-md w-full bg-surface rounded-2xl p-8 shadow-sm border border-border">
+        <Typography variant="h4" weight="bold" className="mb-2 text-fg">
           Student Portal Error
         </Typography>
-        <Typography variant="body2" color="muted" className="mb-6">
+        <Typography variant="body2" className="text-fg-muted mb-6">
           {error.message || "Failed to load student data. Please try again."}
         </Typography>
         <Stack spacing={3}>
-          <Button onClick={reset} className="w-full">
+          <Button onClick={reset} colorType="primary" className="w-full">
             Retry
           </Button>
         </Stack>

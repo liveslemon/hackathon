@@ -47,38 +47,38 @@ export function DecisionTimeline({ applicationId }: { applicationId: string }) {
   }, [applicationId]);
 
   return (
-    <div className="mt-4 border-t pt-4">
+    <div className="mt-4 border-t border-border pt-4">
       <Typography
         variant="caption"
         weight="bold"
-        className="text-slate-500 uppercase tracking-wider mb-2 block"
+        className="text-fg-subtle uppercase tracking-wider mb-3 block text-[10px]"
       >
         Decision History
       </Typography>
       {loading ? (
-        <Typography variant="caption" color="muted">
+        <Typography variant="caption" className="text-fg-subtle">
           Loading timeline...
         </Typography>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {history.map((entry) => (
             <div key={entry.id} className="flex items-start gap-3 text-xs">
-              <div className="w-2 h-2 bg-slate-300 rounded-full mt-1.5 shrink-0" />
+              <div className="w-2 h-2 bg-brand rounded-full mt-1.5 shrink-0" />
               <div>
-                <span className="font-medium capitalize text-slate-800">
+                <span className="font-semibold capitalize text-fg">
                   {entry.action.replace(/_/g, " ")}
                 </span>
                 {entry.details?.reason && (
-                  <span className="text-slate-600 ml-1">
+                  <span className="text-fg-muted ml-1">
                     &mdash; &ldquo;{entry.details.reason}&rdquo;
                   </span>
                 )}
                 {entry.details?.notes && (
-                  <span className="text-slate-600 ml-1">
+                  <span className="text-fg-muted ml-1">
                     &mdash; &ldquo;{entry.details.notes}&rdquo;
                   </span>
                 )}
-                <p className="text-slate-400 mt-0.5">
+                <p className="text-fg-subtle text-[11px] mt-0.5">
                   {new Date(entry.created_at).toLocaleDateString()} at{" "}
                   {new Date(entry.created_at).toLocaleTimeString([], {
                     hour: "2-digit",
@@ -89,8 +89,8 @@ export function DecisionTimeline({ applicationId }: { applicationId: string }) {
             </div>
           ))}
           {history.length === 0 && (
-            <Typography variant="caption" color="muted">
-              No decisions recorded yet
+            <Typography variant="caption" className="text-fg-subtle">
+              No decision records recorded yet
             </Typography>
           )}
         </div>

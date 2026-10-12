@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { supabaseFetch } from "@/lib/supabase-fetch";
 import DashboardShell from "@/components/DashboardShell";
+import { PageHeader } from "@/components/ui";
 import StudentSettingsClient from "./StudentSettingsClient";
 
 export default async function StudentSettingsPage() {
@@ -37,20 +38,15 @@ export default async function StudentSettingsPage() {
 
   return (
     <DashboardShell userProfile={{ id: user.id, email: user.email ?? null }}>
-      <div className="max-w-3xl mx-auto pb-12">
-        <header className="mb-8 px-4 sm:px-0">
-          <h2 className="text-2xl font-bold text-slate-800 leading-tight">
-            Settings
-          </h2>
-          <p className="text-sm text-slate-400 mt-1">
-            Manage your account, notifications, and privacy preferences
-          </p>
-        </header>
-        <div className="px-4 sm:px-0">
-          <StudentSettingsClient
-            initialSettings={profile?.settings ?? null}
-          />
-        </div>
+      <div className="max-w-4xl mx-auto pb-12 px-4 sm:px-0">
+        <PageHeader
+          title="Account Settings"
+          description="Manage theme appearance, application notifications, privacy visibility, and account security."
+          className="mb-8"
+        />
+        <StudentSettingsClient
+          initialSettings={profile?.settings ?? null}
+        />
       </div>
     </DashboardShell>
   );

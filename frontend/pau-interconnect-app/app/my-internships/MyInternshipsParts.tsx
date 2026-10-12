@@ -3,6 +3,7 @@ import { INTERNSHIP_LIST_COLUMNS } from "@/lib/internship-columns";
 import { getDaysUntilDeadline } from "@/lib/deadlines";
 import { cookies } from "next/headers";
 import InternshipCard from "@/components/InternshipCard";
+import { EmptyState } from "@/components/ui";
 import { Calendar, Briefcase, Heart, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { supabaseFetch } from "@/lib/supabase-fetch";
@@ -113,17 +114,17 @@ export async function MyInternshipsSections() {
     <div className="space-y-12">
       {/* 1. Deadlines Section */}
       {expiringInternships.length > 0 && (
-        <div className="bg-rose-50/50 border border-rose-100 rounded-2xl overflow-hidden p-6 md:p-8">
+        <div className="bg-danger-subtle/30 border border-danger/20 rounded-2xl overflow-hidden p-6 md:p-8">
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 bg-white text-rose-500 rounded-xl flex items-center justify-center shadow-sm border border-rose-50">
+            <div className="w-12 h-12 bg-surface text-danger-fg rounded-xl flex items-center justify-center shadow-xs border border-danger/20">
               <Calendar className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-800">
-                Upcoming Deadlines
+              <h3 className="text-lg font-bold text-fg">
+                Upcoming Application Deadlines
               </h3>
-              <p className="text-sm text-slate-400">
-                Don&apos;t miss out on these opportunities
+              <p className="text-sm text-fg-muted">
+                These roles will close within the next 7 days
               </p>
             </div>
           </div>
@@ -138,16 +139,16 @@ export async function MyInternshipsSections() {
                   key={internship.id}
                   className="block group"
                 >
-                  <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-rose-100 shadow-sm group-hover:border-rose-200 group-hover:shadow-md transition-all">
+                  <div className="flex justify-between items-center p-4 bg-surface rounded-xl border border-danger/20 shadow-xs group-hover:border-danger/40 transition-all">
                     <div>
-                      <p className="text-sm font-bold text-slate-700">
+                      <p className="text-sm font-bold text-fg">
                         {internship.role}
                       </p>
-                      <p className="text-xs text-slate-400 mt-0.5">
+                      <p className="text-xs text-fg-muted mt-0.5">
                         at {internship.company}
                       </p>
                     </div>
-                    <span className="px-3 py-1 bg-rose-50 text-rose-600 rounded-lg text-xs font-bold border border-rose-100">
+                    <span className="px-3 py-1 bg-danger-subtle text-danger-fg rounded-lg text-xs font-bold border border-danger/20">
                       {badgeText}
                     </span>
                   </div>
@@ -161,62 +162,64 @@ export async function MyInternshipsSections() {
       {/* 2. Applied Section */}
       <section className="space-y-6">
         <header className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center">
+          <div className="w-9 h-9 bg-brand-subtle text-brand rounded-xl flex items-center justify-center">
             <Briefcase className="w-4 h-4" />
           </div>
-          <h3 className="text-lg font-bold text-slate-800">
+          <h3 className="text-lg font-bold text-fg">
             Applied Internships{" "}
-            <span className="text-slate-400 ml-1 font-medium">
+            <span className="text-fg-subtle ml-1 font-normal text-sm">
               ({appliedInternships.length})
             </span>
           </h3>
         </header>
         {appliedInternships.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {appliedInternships.map((internship) => (
               <InternshipCard key={internship.id} internship={internship} />
             ))}
           </div>
         ) : (
-          <div className="bg-slate-50 border border-slate-100 rounded-2xl py-12 px-6 text-center">
-            <p className="text-sm text-slate-400">
-              You haven&apos;t applied to any internships yet.
-            </p>
-            <Link
-              href="/dashboard/student"
-              className="inline-flex items-center gap-1.5 text-indigo-600 text-xs font-semibold mt-3 hover:gap-2 transition-all"
-            >
-              Explore opportunities <ArrowUpRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
+          <EmptyState
+            icon={<Briefcase className="w-8 h-8" />}
+            title="No applications submitted yet"
+            description="Explore open internship listings on the dashboard and apply directly."
+            action={{
+              label: "Explore Opportunities",
+              href: "/dashboard/student",
+            }}
+          />
         )}
       </section>
 
       {/* 3. Saved Section */}
       <section className="space-y-6 pb-6">
         <header className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-rose-50 text-rose-600 rounded-lg flex items-center justify-center">
+          <div className="w-9 h-9 bg-danger-subtle text-danger-fg rounded-xl flex items-center justify-center">
             <Heart className="w-4 h-4" />
           </div>
-          <h3 className="text-lg font-bold text-slate-800">
+          <h3 className="text-lg font-bold text-fg">
             Saved Internships{" "}
-            <span className="text-slate-400 ml-1 font-medium">
+            <span className="text-fg-subtle ml-1 font-normal text-sm">
               ({savedInternships.length})
             </span>
           </h3>
         </header>
         {savedInternships.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {savedInternships.map((internship) => (
               <InternshipCard key={internship.id} internship={internship} />
             ))}
           </div>
         ) : (
-          <div className="bg-slate-50 border border-slate-100 rounded-2xl py-12 px-6 text-center">
-            <p className="text-sm text-slate-400">
-              Your wishlist is currently empty.
-            </p>
-          </div>
+          <EmptyState
+            icon={<Heart className="w-8 h-8" />}
+            title="Your wishlist is empty"
+            description="Save interesting internships as you browse so you can review them later."
+            action={{
+              label: "Browse Internships",
+              href: "/dashboard/student",
+            }}
+          />
         )}
       </section>
     </div>

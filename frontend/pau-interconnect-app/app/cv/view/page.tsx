@@ -2,7 +2,8 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Typography } from "@/components/ui";
+import { Typography, Button } from "@/components/ui";
+import { Loader2, AlertCircle } from "lucide-react";
 
 function CVViewerContent() {
   const searchParams = useSearchParams();
@@ -12,11 +13,11 @@ function CVViewerContent() {
     : "Student CV";
 
   const urlValidation = (() => {
-    if (!rawUrl) return { valid: false, error: "Invalid CV Link Provided" };
+    if (!rawUrl) return { valid: false, error: "Invalid CV link provided." };
     try {
       const parsed = new URL(rawUrl);
       if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-        return { valid: false, error: "Invalid CV URL protocol." };
+        return { valid: false, error: "Invalid CV link protocol." };
       }
       return { valid: true, error: null };
     } catch {
@@ -35,22 +36,20 @@ function CVViewerContent() {
       return;
     }
 
-    // Fetch PDF as blob to bypass Content-Disposition: attachment headers
     let objectUrl: string | null = null;
     fetch(rawUrl)
       .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch CV");
+        if (!res.ok) throw new Error("Failed to fetch CV document");
         return res.blob();
       })
       .then((blob) => {
-        // Ensure it's treated as a PDF
         const pdfBlob = new Blob([blob], { type: "application/pdf" });
         objectUrl = URL.createObjectURL(pdfBlob);
         setBlobUrl(objectUrl);
         setIsLoading(false);
       })
       .catch(() => {
-        setFetchError("Failed to load CV. The link may have expired.");
+        setFetchError("Failed to load CV. The secure link may have expired.");
         setIsLoading(false);
       });
 
@@ -59,34 +58,37 @@ function CVViewerContent() {
     };
   }, [name, rawUrl, urlValidation.valid]);
 
-  if (!urlValidation.valid) {
+  if (!urlValidation.valid || fetchError) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50">
-        <Typography variant="h6" className="text-red-600 font-bold">
-          {urlValidation.error}
-        </Typography>
-      </div>
-    );
-  }
-
-  if (fetchError) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-slate-50">
-        <Typography variant="h6" className="text-red-600 font-bold">
-          {fetchError}
-        </Typography>
+      <div className="flex h-screen items-center justify-center bg-background p-6">
+        <div className="max-w-md w-full bg-surface rounded-2xl border border-border p-8 text-center shadow-xs">
+          <AlertCircle className="w-10 h-10 text-danger-fg mx-auto mb-3" />
+          <Typography variant="h5" weight="bold" className="text-fg mb-2">
+            Unable to Display CV
+          </Typography>
+          <Typography variant="body2" className="text-fg-muted mb-6">
+            {fetchError || urlValidation.error}
+          </Typography>
+          <Button
+            onClick={() => window.history.back()}
+            variant="outline"
+            className="w-full"
+          >
+            Go Back
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-screen h-screen overflow-hidden relative bg-[#333]">
+    <div className="w-screen h-screen overflow-hidden relative bg-background">
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-slate-50 z-10">
-          <div className="text-center space-y-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-            <Typography variant="body1" weight="semibold" color="muted">
-              Securely loading {name}...
+        <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
+          <div className="text-center space-y-3">
+            <Loader2 className="w-8 h-8 animate-spin text-brand mx-auto" />
+            <Typography variant="body2" weight="medium" className="text-fg-muted">
+              Securely loading {name}…
             </Typography>
           </div>
         </div>
@@ -106,8 +108,8 @@ export default function CVViewer() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-screen items-center justify-center bg-slate-50">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="flex h-screen items-center justify-center bg-background">
+          <Loader2 className="w-8 h-8 animate-spin text-brand" />
         </div>
       }
     >

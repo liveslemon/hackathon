@@ -4,6 +4,8 @@ import { PLACEMENT_COLUMNS, toPlacements, type Placement } from "@/lib/placement
 import { supabase } from "@/lib/supabaseClient";
 import { authenticatedFetch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { Printer, Download, ArrowLeft, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 
 interface LogbookEntry {
   id: string;
@@ -18,7 +20,6 @@ interface LogbookEntry {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// "YYYY-MM-DD" parsed as a local date (new Date("YYYY-MM-DD") is UTC midnight).
 function localDate(iso: string): Date {
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
   return new Date(y, m - 1, d);
@@ -32,8 +33,8 @@ function mondayOf(date: Date): Date {
 
 const STATUS_LABEL: Record<string, string> = {
   approved: "APPROVED",
-  pending: "PENDING REVIEW",
-  flagged: "RETURNED FOR CORRECTION",
+  pending: "PENDING SUPERVISOR REVIEW",
+  flagged: "RETURNED FOR REVISION",
 };
 
 interface InternshipSummary {
@@ -60,7 +61,6 @@ export default function LogbookPrintView() {
   const [approvedOnly, setApprovedOnly] = useState(false);
   const [placement, setPlacement] = useState<Placement | null>(null);
 
-  // Wait for auth to be resolved before fetching data
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
@@ -97,7 +97,6 @@ export default function LogbookPrintView() {
           {},
           10000,
         );
-        // Only this placement's entries (pre-placement rows belong to the active one).
         const forPlacement = (logRes.entries || []).filter((e) =>
           e.application_id
             ? e.application_id === chosen?.id
@@ -121,8 +120,6 @@ export default function LogbookPrintView() {
     ? entries.filter((e) => e.status === "approved")
     : entries;
 
-  // Group into continuous calendar weeks (Mon-Sun) from first week to last week.
-  // Empty weeks are preserved so the SIWES logbook accounts for all weeks.
   const groupEntriesByWeek = () => {
     if (visibleEntries.length === 0) return [];
 
@@ -147,7 +144,6 @@ export default function LogbookPrintView() {
       days: LogbookEntry[];
     }[] = [];
 
-    // Initialize all continuous weeks
     for (let w = 1; w <= totalWeeks; w++) {
       const wStart = new Date(firstMonday.getTime() + (w - 1) * 7 * DAY_MS);
       const wEnd = new Date(wStart);
@@ -168,7 +164,6 @@ export default function LogbookPrintView() {
       });
     }
 
-    // Populate entries into corresponding week bucket
     visibleEntries.forEach((entry) => {
       const entryMonday = mondayOf(localDate(entry.date));
       const weekIndex = Math.round(
@@ -186,9 +181,9 @@ export default function LogbookPrintView() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <p className="text-sm font-medium text-slate-500 uppercase">
-          Loading Logbook...
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-sm font-semibold text-fg-muted uppercase tracking-widest animate-pulse">
+          Generating SIWES Document…
         </p>
       </div>
     );
@@ -201,178 +196,234 @@ export default function LogbookPrintView() {
   };
 
   return (
-    <div className="bg-white text-black min-h-screen p-8 max-w-4xl mx-auto font-serif print:p-0 print:m-0">
-      <div className="text-center mb-10 border-b-2 border-black pb-6">
-        <h1 className="text-3xl font-black uppercase tracking-widest mb-2">
-          Students Industrial Work Experience Scheme
-        </h1>
-        <h2 className="text-xl font-bold tracking-widest mb-6">
-          OFFICIAL SIWES LOGBOOK
-        </h2>
+    <div className="min-h-screen bg-surface-sunken py-6 md:py-10 print:p-0 print:m-0">
+      {/* Print Stylesheet guaranteeing white paper regardless of active theme */}
+      <style jsx global>{`
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 12mm 15mm;
+          }
+          html,
+          body,
+          #__next,
+          div,
+          main,
+          section,
+          article {
+            background-color: white !important;
+            color: black !important;
+            background-image: none !important;
+            box-shadow: none !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+          .print-avoid-break {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          .print-border-black {
+            border-color: black !important;
+          }
+          .print-text-black {
+            color: black !important;
+          }
+        }
+      `}</style>
 
-        <div className="grid grid-cols-2 gap-4 text-left text-sm mt-8 border-2 border-black p-6">
-          <div className="space-y-1">
-            <p>
-              <strong>NAME:</strong> {profile?.full_name?.toUpperCase()}
-            </p>
-            <p>
-              <strong>INSTITUTION:</strong> PAN-ATLANTIC UNIVERSITY
-            </p>
-            <p>
-              <strong>COURSE:</strong> {profile?.course || "N/A"}
-            </p>
-            <p>
-              <strong>LEVEL:</strong> {profile?.level || "N/A"}
-            </p>
-          </div>
-          <div className="space-y-1 border-l-2 border-black pl-6">
-            {internship && (
-              <>
-                <p>
-                  <strong>ORGANIZATION:</strong>{" "}
-                  {internship.company?.toUpperCase()}
-                </p>
-                <p>
-                  <strong>ROLE:</strong> {internship.role?.toUpperCase()}
-                </p>
-                {placement?.started_at && (
-                  <p>
-                    <strong>PERIOD:</strong>{" "}
-                    {new Date(placement.started_at).toLocaleDateString()} –{" "}
-                    {placement.ended_at
-                      ? new Date(placement.ended_at).toLocaleDateString()
-                      : "PRESENT"}
-                  </p>
-                )}
-              </>
-            )}
-            <p>
-              <strong>TOTAL ENTRIES:</strong> {entries.length} days (
-              {approvedCount} approved by supervisor)
-            </p>
-            <p className="text-xs mt-2 text-slate-500 print:text-black">
-              <strong>EXPORT GENERATED:</strong> {new Date().toLocaleString()}
-            </p>
-          </div>
+      {/* Top Toolbar (screen only) */}
+      <div className="max-w-4xl mx-auto px-4 mb-6 no-print flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <Link
+          href="/dashboard/student/logbook"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-fg-muted hover:text-fg transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Logbook</span>
+        </Link>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-xs text-fg-muted cursor-pointer mr-2">
+            <input
+              type="checkbox"
+              checked={approvedOnly}
+              onChange={(e) => setApprovedOnly(e.target.checked)}
+              className="rounded border-border text-brand focus:ring-focus-ring"
+            />
+            <span>Include only approved entries</span>
+          </label>
+
+          <button
+            type="button"
+            onClick={handleDownloadCsv}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface border border-border text-fg hover:bg-surface-raised transition-colors cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>CSV Data</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-brand text-fg-inverse hover:bg-brand-hover shadow-xs transition-colors cursor-pointer"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Print / Save PDF</span>
+          </button>
         </div>
       </div>
 
-      <div className="space-y-12">
-        {weeklyData.length === 0 ? (
-          <p className="text-center italic mt-20">
-            No logbook entries available for this period.
+      {/* Official Document Sheet */}
+      <div className="bg-surface text-fg max-w-4xl mx-auto p-8 md:p-12 rounded-2xl shadow-md border border-border print:border-none print:shadow-none print:p-0 print:m-0 print:rounded-none font-serif">
+        {/* Header Block */}
+        <div className="text-center mb-8 border-b-2 border-black pb-6">
+          <p className="text-xs font-sans font-bold tracking-widest uppercase mb-1">
+            Pan-Atlantic University · School of Science and Technology
           </p>
-        ) : (
-          weeklyData.map((week) => (
-            <div key={week.weekNumber} className="break-inside-avoid">
-              <div className="flex items-center gap-4 mb-4">
-                <h3 className="text-lg font-black uppercase bg-black text-white px-3 py-1">
-                  Week {week.weekNumber}
-                </h3>
-                <span className="text-sm font-bold border-b-2 border-black flex-1 pb-1">
-                  {week.startDate} — {week.endDate}
-                </span>
-              </div>
+          <h1 className="text-2xl md:text-3xl font-black uppercase tracking-wider mb-1">
+            Students Industrial Work Experience Scheme
+          </h1>
+          <h2 className="text-base font-bold tracking-widest text-fg-muted print-text-black uppercase">
+            Official SIWES Daily Training Logbook
+          </h2>
 
-              <div className="border-2 border-black">
-                {week.days.length === 0 ? (
-                  <div className="p-6 text-center text-sm text-slate-500 italic">
-                    No entries logged for this week.
-                  </div>
-                ) : (
-                  week.days.map((day, idx) => (
-                    <div
-                      key={day.id}
-                      className={idx !== 0 ? "border-t-2 border-black" : ""}
-                    >
-                      <div className="flex border-b border-black bg-slate-50">
-                        <div className="w-40 border-r border-black p-2 font-bold text-xs uppercase shrink-0">
-                          {localDate(day.date).toLocaleDateString([], {
-                            weekday: "long",
-                          })}
-                          <br />
-                          <span className="font-normal opacity-60 font-sans">
-                            {day.date}
-                          </span>
-                        </div>
-                        <div className="p-2 text-[10px] font-bold text-slate-400 uppercase flex items-center flex-1">
-                          Daily Progress Report
-                        </div>
-                        <div
-                          className={
-                            "p-2 text-[10px] font-bold uppercase flex items-center border-l border-black " +
-                            (day.status === "approved"
-                              ? "text-emerald-700 print:text-black"
-                              : "text-amber-700 print:text-black")
-                          }
-                        >
-                          {STATUS_LABEL[day.status] ?? day.status?.toUpperCase()}
-                          {day.status === "approved" && day.reviewed_at
-                            ? ` · ${new Date(day.reviewed_at).toLocaleDateString()}`
-                            : ""}
-                        </div>
-                      </div>
-                      <div className="p-4 text-sm leading-relaxed min-h-[80px] whitespace-pre-line">
-                        {day.activities_enhanced || day.activities_raw}
-                      </div>
-                      {day.feedback_notes && (
-                        <div className="px-4 pb-3 text-xs italic">
-                          <strong className="not-italic">Supervisor feedback:</strong>{" "}
-                          {day.feedback_notes}
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <div className="mt-4 grid grid-cols-2 gap-4 border-2 border-black border-t-0 p-4 bg-slate-50/50">
-                <div className="text-[11px] space-y-4">
-                  <p className="font-bold border-b border-black pb-1">
-                    INDUSTRY SUPERVISOR&apos;S COMMENTS
-                  </p>
-                  <div className="h-10"></div>
-                  <p className="border-t border-dotted border-black pt-1">
-                    NAME & SIGNATURE / DATE
-                  </p>
-                </div>
-                <div className="text-[11px] space-y-4 border-l-2 border-black pl-4">
-                  <p className="font-bold border-b border-black pb-1">
-                    INSTITUTION SUPERVISOR&apos;S COMMENTS
-                  </p>
-                  <div className="h-10"></div>
-                  <p className="border-t border-dotted border-black pt-1">
-                    NAME & SIGNATURE / DATE
-                  </p>
-                </div>
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left text-xs mt-6 border-2 border-black p-5">
+            <div className="space-y-1.5">
+              <p>
+                <strong>STUDENT NAME:</strong> {profile?.full_name?.toUpperCase() || "N/A"}
+              </p>
+              <p>
+                <strong>INSTITUTION:</strong> PAN-ATLANTIC UNIVERSITY, LAGOS
+              </p>
+              <p>
+                <strong>DEPARTMENT / COURSE:</strong> {profile?.course || "N/A"}
+              </p>
+              <p>
+                <strong>ACADEMIC LEVEL:</strong> {profile?.level ? `${profile.level} LEVEL` : "N/A"}
+              </p>
             </div>
-          ))
-        )}
-      </div>
+            <div className="space-y-1.5 sm:border-l-2 sm:border-black sm:pl-5">
+              {internship && (
+                <>
+                  <p>
+                    <strong>HOST ORGANIZATION:</strong>{" "}
+                    {internship.company?.toUpperCase()}
+                  </p>
+                  <p>
+                    <strong>ASSIGNED ROLE:</strong> {internship.role?.toUpperCase()}
+                  </p>
+                  {placement?.started_at && (
+                    <p>
+                      <strong>TRAINING PERIOD:</strong>{" "}
+                      {new Date(placement.started_at).toLocaleDateString()} –{" "}
+                      {placement.ended_at
+                        ? new Date(placement.ended_at).toLocaleDateString()
+                        : "PRESENT"}
+                    </p>
+                  )}
+                </>
+              )}
+              <p>
+                <strong>TOTAL VERIFIED DAYS:</strong> {approvedCount} of {entries.length} entries
+              </p>
+              <p className="text-[10px] text-fg-muted print-text-black pt-1">
+                <strong>DATE GENERATED:</strong> {new Date().toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
 
-      <div className="mt-12 text-center print:hidden pb-20 space-y-4">
-        <label className="flex items-center justify-center gap-2 text-sm font-sans">
-          <input
-            type="checkbox"
-            checked={approvedOnly}
-            onChange={(e) => setApprovedOnly(e.target.checked)}
-          />
-          Only include entries approved by my supervisor
-        </label>
-        <div className="flex justify-center gap-4">
-          <button
-            onClick={() => window.print()}
-            className="bg-black text-white px-8 py-3 rounded-full font-bold hover:scale-105 transition-transform shadow-lg text-sm"
-          >
-            Print Logbook / Export PDF
-          </button>
-          <button
-            onClick={handleDownloadCsv}
-            className="bg-white text-black border-2 border-black px-8 py-3 rounded-full font-bold hover:bg-slate-50 transition-colors shadow-lg text-sm"
-          >
-            Export CSV
-          </button>
+        {/* Weekly Content Tables */}
+        <div className="space-y-10">
+          {weeklyData.length === 0 ? (
+            <p className="text-center italic py-16 text-fg-muted print-text-black text-sm">
+              No daily entries recorded for this placement yet.
+            </p>
+          ) : (
+            weeklyData.map((week) => (
+              <div key={week.weekNumber} className="print-avoid-break">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-xs font-black uppercase bg-black text-white px-3 py-1 font-sans">
+                    Week {week.weekNumber}
+                  </span>
+                  <span className="text-xs font-bold border-b-2 border-black flex-1 pb-1">
+                    {week.startDate} — {week.endDate}
+                  </span>
+                </div>
+
+                <div className="border-2 border-black">
+                  {week.days.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-fg-muted print-text-black italic">
+                      No training logs recorded for this weekly block.
+                    </div>
+                  ) : (
+                    week.days.map((day, idx) => (
+                      <div
+                        key={day.id}
+                        className={idx !== 0 ? "border-t border-black" : ""}
+                      >
+                        <div className="flex border-b border-black bg-surface-sunken text-[11px]">
+                          <div className="w-36 border-r border-black p-2 font-bold uppercase shrink-0">
+                            {localDate(day.date).toLocaleDateString([], {
+                              weekday: "short",
+                            })}
+                            , {day.date}
+                          </div>
+                          <div className="p-2 font-semibold text-fg-muted print-text-black flex-1">
+                            Daily Progress Description
+                          </div>
+                          <div
+                            className={
+                              "p-2 font-bold uppercase border-l border-black text-[10px] " +
+                              (day.status === "approved"
+                                ? "text-emerald-700 dark:text-emerald-400 print-text-black"
+                                : "text-amber-700 dark:text-amber-400 print-text-black")
+                            }
+                          >
+                            {STATUS_LABEL[day.status] ?? day.status?.toUpperCase()}
+                            {day.status === "approved" && day.reviewed_at
+                              ? ` · ${new Date(day.reviewed_at).toLocaleDateString()}`
+                              : ""}
+                          </div>
+                        </div>
+                        <div className="p-3.5 text-xs leading-relaxed min-h-[60px] whitespace-pre-line font-sans">
+                          {day.activities_enhanced || day.activities_raw}
+                        </div>
+                        {day.feedback_notes && (
+                          <div className="px-3.5 pb-2.5 text-[11px] italic bg-surface-sunken/60 border-t border-dotted border-border print-border-black font-sans">
+                            <strong className="not-italic">Supervisor Review:</strong>{" "}
+                            {day.feedback_notes}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Supervisor Signatures Box */}
+                <div className="grid grid-cols-2 gap-4 border-2 border-black border-t-0 p-3.5 bg-surface-sunken/40 text-[10px]">
+                  <div className="space-y-4">
+                    <p className="font-bold border-b border-black pb-1">
+                      INDUSTRY SUPERVISOR ENDORSEMENT
+                    </p>
+                    <div className="h-8"></div>
+                    <p className="border-t border-dotted border-black pt-1">
+                      SIGNATURE & DATE
+                    </p>
+                  </div>
+                  <div className="space-y-4 border-l-2 border-black pl-3.5">
+                    <p className="font-bold border-b border-black pb-1">
+                      INSTITUTION SUPERVISOR ENDORSEMENT
+                    </p>
+                    <div className="h-8"></div>
+                    <p className="border-t border-dotted border-black pt-1">
+                      SIGNATURE & DATE
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

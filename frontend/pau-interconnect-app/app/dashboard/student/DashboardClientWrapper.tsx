@@ -16,11 +16,11 @@ export default function DashboardClientWrapper({
 }) {
   const [analysisOpen, setAnalysisOpen] = useState(false);
 
-  const getMatchColor = (percentage?: number) => {
-    if (percentage === undefined || percentage === null) return "primary";
-    if (percentage >= 70) return "success";
-    if (percentage >= 40) return "warning";
-    return "error";
+  const getMatchBadgeVariant = (percentage?: number) => {
+    if (percentage === undefined || percentage === null) return "primary" as const;
+    if (percentage >= 70) return "success" as const;
+    if (percentage >= 40) return "warning" as const;
+    return "error" as const;
   };
 
   return (
@@ -39,20 +39,20 @@ export default function DashboardClientWrapper({
             No internships available for analysis.
           </Typography>
         ) : (
-          <Stack spacing={8}>
+          <Stack spacing={6}>
             {internships.map((internship) => (
-              <div key={internship.id} className="group">
+              <div key={internship.id} className="group p-3 rounded-xl hover:bg-surface-sunken transition-colors">
                 <Stack
                   direction="row"
                   justify="between"
                   align="center"
-                  className="mb-4"
+                  className="mb-3"
                 >
                   <div>
                     <Typography
-                      variant="h5"
+                      variant="h6"
                       weight="bold"
-                      className="group-hover:text-brand transition-colors"
+                      className="group-hover:text-brand transition-colors text-fg"
                     >
                       {internship.role}
                     </Typography>
@@ -63,29 +63,29 @@ export default function DashboardClientWrapper({
 
                   {internship.matchPercentage !== undefined ? (
                     <Badge
-                      variant={getMatchColor(internship.matchPercentage)}
-                      className="px-4 py-1.5 rounded-xl font-bold"
+                      variant={getMatchBadgeVariant(internship.matchPercentage)}
+                      className="px-3 py-1 rounded-full font-bold text-xs"
                     >
                       {internship.matchPercentage}% Match
                     </Badge>
                   ) : (
-                    <Badge variant="slate" className="px-4 py-1.5 rounded-xl">
+                    <Badge variant="neutral" className="px-3 py-1 rounded-full text-xs">
                       Not analyzed
                     </Badge>
                   )}
                 </Stack>
 
                 {internship.matchPercentage !== undefined && (
-                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-surface-sunken rounded-full overflow-hidden">
                     <div
-                      className={`h-full transition-all duration-1000 ease-out ${
+                      className={`h-full transition-all duration-700 ease-out ${
                         internship.matchPercentage >= 70
-                          ? "bg-emerald-500"
+                          ? "bg-success"
                           : internship.matchPercentage >= 40
-                            ? "bg-amber-500"
-                            : "bg-red-500"
+                            ? "bg-warning"
+                            : "bg-danger"
                       }`}
-                      style={{ width: `${internship.matchPercentage}%` }}
+                      style={{ width: `${Math.min(100, Math.max(0, internship.matchPercentage))}%` }}
                     />
                   </div>
                 )}

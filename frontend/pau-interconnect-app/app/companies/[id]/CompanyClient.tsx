@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import Image from "next/image";
-import { Typography } from "@/components/ui";
+import { Typography, Card, Badge, EmptyState } from "@/components/ui";
 import { Globe, Users, Building, Briefcase } from "lucide-react";
 import InternshipCard from "@/components/InternshipCard";
 import type { Internship } from "@/types/domain";
@@ -34,8 +34,8 @@ export default function CompanyClient({
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
       {/* Hero Section */}
-      <div className="bg-white rounded-3xl border border-slate-100/60 overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)] relative">
-        <div className="h-56 relative bg-slate-100">
+      <Card className="rounded-3xl border border-border overflow-hidden relative">
+        <div className="h-56 relative bg-surface-sunken border-b border-border">
           {company.company_banner_url ? (
             <Image
               src={company.company_banner_url}
@@ -45,15 +45,15 @@ export default function CompanyClient({
               className="object-cover"
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-r from-brand to-brand/70 relative">
-              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+            <div className="w-full h-full bg-gradient-to-r from-primary/20 via-primary/10 to-transparent relative">
+              <div className="absolute inset-0 bg-radial from-primary/10 to-transparent opacity-50" />
             </div>
           )}
         </div>
-        <div className="px-10 pb-10 relative">
+        <div className="px-6 sm:px-10 pb-10 relative">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between -mt-20 sm:-mt-24 mb-8 gap-4">
             <div className="flex items-end gap-6">
-              <div className="w-32 h-32 rounded-2xl bg-white border-4 border-white shadow-md overflow-hidden flex items-center justify-center">
+              <div className="w-32 h-32 rounded-2xl bg-surface border-4 border-surface shadow-md overflow-hidden flex items-center justify-center shrink-0">
                 {company.company_logo_url ? (
                   <Image
                     src={company.company_logo_url}
@@ -64,22 +64,22 @@ export default function CompanyClient({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <Building className="w-12 h-12 text-slate-300" />
+                  <Building className="w-12 h-12 text-fg-subtle" />
                 )}
               </div>
               <div className="mb-2">
                 <Typography
                   variant="h2"
                   weight="bold"
-                  className="text-slate-900 tracking-tight"
+                  className="text-fg tracking-tight"
                 >
                   {companyName}
                 </Typography>
-                <div className="flex items-center gap-4 mt-3 text-slate-500 text-sm font-medium">
+                <div className="flex flex-wrap items-center gap-3 mt-3 text-fg-muted text-sm font-medium">
                   {company.industry && (
-                    <span className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-4 py-1.5 rounded-full text-slate-600 shadow-sm">
+                    <Badge variant="neutral" size="md">
                       {company.industry}
-                    </span>
+                    </Badge>
                   )}
                   {company.company_website && (
                     <a
@@ -90,9 +90,9 @@ export default function CompanyClient({
                       }
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center gap-1.5 hover:text-brand transition-colors bg-brand/5 text-brand px-4 py-1.5 rounded-full"
+                      className="flex items-center gap-1.5 hover:text-primary transition-colors bg-primary/10 text-primary px-3.5 py-1.5 rounded-full text-xs font-semibold"
                     >
-                      <Globe className="w-4 h-4" /> Website
+                      <Globe className="w-3.5 h-3.5" /> Website
                     </a>
                   )}
                 </div>
@@ -100,20 +100,20 @@ export default function CompanyClient({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-            <div className="md:col-span-2 space-y-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="md:col-span-2 space-y-8">
               {company.company_description && (
                 <section>
                   <Typography
                     variant="h4"
                     weight="bold"
-                    className="text-slate-800 mb-4"
+                    className="text-fg mb-3"
                   >
                     About Us
                   </Typography>
                   <Typography
                     variant="body1"
-                    className="text-slate-600 leading-relaxed whitespace-pre-wrap"
+                    className="text-fg-muted leading-relaxed whitespace-pre-wrap"
                   >
                     {company.company_description}
                   </Typography>
@@ -124,13 +124,13 @@ export default function CompanyClient({
                   <Typography
                     variant="h4"
                     weight="bold"
-                    className="text-slate-800 mb-4"
+                    className="text-fg mb-3"
                   >
                     Culture & Perks
                   </Typography>
                   <Typography
                     variant="body1"
-                    className="text-slate-600 leading-relaxed whitespace-pre-wrap"
+                    className="text-fg-muted leading-relaxed whitespace-pre-wrap"
                   >
                     {company.culture}
                   </Typography>
@@ -138,31 +138,31 @@ export default function CompanyClient({
               )}
             </div>
 
-            <div className="bg-white rounded-2xl p-8 border border-slate-100/60 shadow-[0_4px_20px_rgba(0,0,0,0.02)] h-fit space-y-5">
+            <div className="bg-surface-sunken/40 rounded-2xl p-6 border border-border h-fit space-y-4">
               <Typography
                 variant="h5"
                 weight="bold"
-                className="text-slate-800 mb-6"
+                className="text-fg mb-4"
               >
                 Company Overview
               </Typography>
-              <div className="flex items-center gap-4 text-slate-600">
-                <div className="w-10 h-10 rounded-full bg-brand/5 flex items-center justify-center text-brand">
-                  <Building className="w-5 h-5" />
+              <div className="flex items-center gap-3 text-fg-muted text-sm">
+                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                  <Building className="w-4 h-4" />
                 </div>
                 <span className="font-medium">
                   {company.industry || "Industry unlisted"}
                 </span>
               </div>
-              <div className="flex items-center gap-4 text-slate-600">
-                <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
-                  <Users className="w-5 h-5" />
+              <div className="flex items-center gap-3 text-fg-muted text-sm">
+                <div className="w-9 h-9 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                  <Users className="w-4 h-4" />
                 </div>
-                <span className="font-medium">Verified Employer</span>
+                <span className="font-medium">Verified Employer Partner</span>
               </div>
-              <div className="flex items-center gap-4 text-slate-600">
-                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-                  <Briefcase className="w-5 h-5" />
+              <div className="flex items-center gap-3 text-fg-muted text-sm">
+                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                  <Briefcase className="w-4 h-4" />
                 </div>
                 <span className="font-medium">
                   {internships.length}{" "}
@@ -172,27 +172,23 @@ export default function CompanyClient({
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Internships List */}
-      <div className="pt-4">
+      <div className="pt-2">
         <Typography
           variant="h3"
           weight="bold"
-          className="text-slate-800 mb-6 tracking-tight"
+          className="text-fg mb-6 tracking-tight"
         >
           Open Internships
         </Typography>
         {internships.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl border border-slate-100/60 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
-            <Briefcase className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <Typography variant="body1" className="text-slate-600 font-medium">
-              No open roles at the moment.
-            </Typography>
-            <p className="text-xs text-slate-400 mt-1">
-              This company currently has no active internship postings.
-            </p>
-          </div>
+          <EmptyState
+            icon={<Briefcase className="w-10 h-10 text-fg-subtle" />}
+            title="No open roles at the moment"
+            description="This company currently has no active internship postings. Check back later or browse other listings."
+          />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {internships.map((job) => {
