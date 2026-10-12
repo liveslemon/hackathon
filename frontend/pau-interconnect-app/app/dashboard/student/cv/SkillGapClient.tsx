@@ -114,7 +114,7 @@ export default function SkillGapClient() {
           )
           .slice(0, 10) as TargetJob[];
         setInternships(jobs);
-        setShowDropdown(jobs.length > 0);
+        setShowDropdown(true);
       } catch {
         setInternships([]);
       } finally {
@@ -183,7 +183,9 @@ export default function SkillGapClient() {
                 }
               }}
               onFocus={() => {
-                if (internships.length > 0) setShowDropdown(true);
+                if (internships.length > 0 || searchQuery.trim().length >= 2) {
+                  setShowDropdown(true);
+                }
               }}
             />
             {searching && (
@@ -193,21 +195,27 @@ export default function SkillGapClient() {
             )}
             {showDropdown && (
               <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-                {internships.map((job) => (
-                  <button
-                    key={job.id}
-                    type="button"
-                    className="w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0"
-                    onClick={() => handleSelect(job)}
-                  >
-                    <span className="font-medium text-slate-800 text-sm">
-                      {job.role}
-                    </span>
-                    <span className="text-slate-400 text-sm ml-2">
-                      at {job.company}
-                    </span>
-                  </button>
-                ))}
+                {internships.length > 0 ? (
+                  internships.map((job) => (
+                    <button
+                      key={job.id}
+                      type="button"
+                      className="w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0"
+                      onClick={() => handleSelect(job)}
+                    >
+                      <span className="font-medium text-slate-800 text-sm">
+                        {job.role}
+                      </span>
+                      <span className="text-slate-400 text-sm ml-2">
+                        at {job.company}
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-4 py-3 text-sm text-slate-400 text-center">
+                    No active internships found
+                  </div>
+                )}
               </div>
             )}
           </div>
