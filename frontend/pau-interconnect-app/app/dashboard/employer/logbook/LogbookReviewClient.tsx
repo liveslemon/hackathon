@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import { toast } from "sonner";
 import { Button, Typography, Stack, Card, Badge } from "@/components/ui";
-import { FiCheckCircle, FiXCircle, FiClock } from "react-icons/fi";
+import { FiCheckCircle, FiXCircle, FiClock, FiCheckSquare, FiSquare } from "react-icons/fi";
 import { authenticatedFetch } from "@/lib/api";
 
 interface LogbookEntry {
@@ -29,16 +30,56 @@ export default function LogbookReviewClient({
 }: LogbookReviewClientProps) {
   const [entries, setEntries] = useState<LogbookEntry[]>(initialEntries);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkApproving, setIsBulkApproving] = useState(false);
+
+  const pendingEntries = entries.filter((e) => e.status === "pending");
+  const historyEntries = entries.filter((e) => e.status !== "pending");
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === pendingEntries.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(pendingEntries.map((e) => e.id)));
+    }
+  };
 
   const handleUpdateStatus = async (entryId: string, newStatus: string) => {
-    let feedback_notes = undefined;
+    let feedback_notes: string | undefined = undefined;
     if (newStatus === "flagged") {
       const reason = window.prompt(
         "Please provide feedback on why this logbook entry needs revision:",
       );
       if (reason === null) return; // User cancelled
-      feedback_notes = reason;
+      if (!reason.trim()) {
+        toast.error("Feedback note is required when returning an entry for revision.");
+        return;
+      }
+      feedback_notes = reason.trim();
     }
+
+    const previousEntries = [...entries];
+    // Optimistic UI update
+    setEntries((prev) =>
+      prev.map((e) =>
+        e.id === entryId ? { ...e, status: newStatus, feedback_notes } : e,
+      ),
+    );
+    // Remove from selection if pending
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(entryId);
+      return next;
+    });
 
     setUpdatingId(entryId);
     try {
@@ -46,20 +87,56 @@ export default function LogbookReviewClient({
         method: "PATCH",
         body: JSON.stringify({ status: newStatus, feedback_notes }),
       });
-
-      // Optimistic UI update
-      setEntries((prev) =>
-        prev.map((e) =>
-          e.id === entryId ? { ...e, status: newStatus, feedback_notes } : e,
-        ),
+      toast.success(
+        newStatus === "approved"
+          ? "Logbook entry approved."
+          : "Entry returned for student revision.",
       );
     } catch (err: unknown) {
-      alert(
-        "Error updating status: " +
+      // Rollback on failure
+      setEntries(previousEntries);
+      toast.error(
+        "Failed to update status: " +
           (err instanceof Error ? err.message : "Unknown error"),
       );
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleBulkApprove = async () => {
+    const idsToApprove = Array.from(selectedIds);
+    if (idsToApprove.length === 0) return;
+
+    const previousEntries = [...entries];
+    // Optimistic UI update
+    setEntries((prev) =>
+      prev.map((e) =>
+        selectedIds.has(e.id) ? { ...e, status: "approved" } : e,
+      ),
+    );
+    setSelectedIds(new Set());
+    setIsBulkApproving(true);
+
+    try {
+      await authenticatedFetch("/api/logbook/bulk-status", {
+        method: "POST",
+        body: JSON.stringify({
+          entry_ids: idsToApprove,
+          status: "approved",
+        }),
+      });
+      toast.success(`Successfully approved ${idsToApprove.length} entries.`);
+    } catch (err: unknown) {
+      // Rollback on failure
+      setEntries(previousEntries);
+      setSelectedIds(new Set(idsToApprove));
+      toast.error(
+        "Bulk approval failed: " +
+          (err instanceof Error ? err.message : "Please try again."),
+      );
+    } finally {
+      setIsBulkApproving(false);
     }
   };
 
@@ -74,7 +151,7 @@ export default function LogbookReviewClient({
       case "flagged":
         return (
           <Badge variant="error" className="px-3 py-1 text-xs">
-            Flagged
+            Revision Requested
           </Badge>
         );
       default:
@@ -88,9 +165,6 @@ export default function LogbookReviewClient({
         );
     }
   };
-
-  const pendingEntries = entries.filter((e) => e.status === "pending");
-  const historyEntries = entries.filter((e) => e.status !== "pending");
 
   return (
     <div className="space-y-12">
@@ -106,16 +180,51 @@ export default function LogbookReviewClient({
       <Stack spacing={10}>
         {/* Pending Reviews Section */}
         <div>
-          <Typography
-            variant="h4"
-            weight="bold"
-            className="mb-6 flex items-center gap-3"
-          >
-            <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-500">
-              <FiClock size={20} />
-            </div>
-            Pending Approval ({pendingEntries.length})
-          </Typography>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <Typography
+              variant="h4"
+              weight="bold"
+              className="flex items-center gap-3"
+            >
+              <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-500">
+                <FiClock size={20} />
+              </div>
+              Pending Approval ({pendingEntries.length})
+            </Typography>
+
+            {pendingEntries.length > 0 && (
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleSelectAll}
+                  className="text-xs font-semibold"
+                >
+                  {selectedIds.size === pendingEntries.length ? (
+                    <>
+                      <FiCheckSquare className="mr-1.5 inline" size={14} /> Deselect All
+                    </>
+                  ) : (
+                    <>
+                      <FiSquare className="mr-1.5 inline" size={14} /> Select All
+                    </>
+                  )}
+                </Button>
+                {selectedIds.size > 0 && (
+                  <Button
+                    variant="solid"
+                    size="sm"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs"
+                    onClick={handleBulkApprove}
+                    isLoading={isBulkApproving}
+                  >
+                    <FiCheckCircle className="mr-1.5 inline" size={14} />
+                    Approve Selected ({selectedIds.size})
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
 
           <Stack spacing={4}>
             {pendingEntries.length === 0 && (
@@ -125,76 +234,96 @@ export default function LogbookReviewClient({
                 </Typography>
               </Card>
             )}
-            {pendingEntries.map((entry) => (
-              <Card
-                key={entry.id}
-                className="p-8 bg-white border border-slate-100 rounded-[32px] hover:shadow-xl hover:ring-2 hover:ring-brand/5 transition-all group"
-              >
-                <Stack direction="row" justify="between" align="start">
-                  <div className="flex-1">
-                    <Stack
-                      direction="row"
-                      align="center"
-                      spacing={4}
-                      className="mb-2"
-                    >
-                      <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-600">
-                        {entry.profiles?.full_name?.charAt(0) || "S"}
-                      </div>
-                      <div>
-                        <Typography
-                          variant="h4"
-                          weight="bold"
-                          className="text-slate-900 mb-0.5"
+            {pendingEntries.map((entry) => {
+              const isSelected = selectedIds.has(entry.id);
+              return (
+                <Card
+                  key={entry.id}
+                  className={`p-8 bg-white border rounded-[32px] hover:shadow-xl transition-all group ${
+                    isSelected ? "border-emerald-400 ring-2 ring-emerald-100" : "border-slate-100 hover:ring-2 hover:ring-brand/5"
+                  }`}
+                >
+                  <Stack direction="row" justify="between" align="start">
+                    <div className="flex items-start gap-4 flex-1">
+                      <button
+                        type="button"
+                        onClick={() => toggleSelect(entry.id)}
+                        className="mt-1 text-slate-400 hover:text-emerald-600 transition-colors focus:outline-none"
+                        aria-label={isSelected ? "Deselect entry" : "Select entry"}
+                      >
+                        {isSelected ? (
+                          <FiCheckSquare size={20} className="text-emerald-600" />
+                        ) : (
+                          <FiSquare size={20} />
+                        )}
+                      </button>
+
+                      <div className="flex-1">
+                        <Stack
+                          direction="row"
+                          align="center"
+                          spacing={4}
+                          className="mb-2"
                         >
-                          {entry.profiles?.full_name || "Unknown Student"}
-                        </Typography>
-                        <div className="flex items-center gap-3">
-                          <Typography
-                            variant="caption"
-                            color="muted"
-                            className="font-medium"
-                          >
-                            {new Date(entry.date).toLocaleDateString([], {
-                              weekday: "long",
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </Typography>
-                          {getStatusBadge(entry.status)}
+                          <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-600">
+                            {entry.profiles?.full_name?.charAt(0) || "S"}
+                          </div>
+                          <div>
+                            <Typography
+                              variant="h4"
+                              weight="bold"
+                              className="text-slate-900 mb-0.5"
+                            >
+                              {entry.profiles?.full_name || "Unknown Student"}
+                            </Typography>
+                            <div className="flex items-center gap-3">
+                              <Typography
+                                variant="caption"
+                                color="muted"
+                                className="font-medium"
+                              >
+                                {new Date(entry.date).toLocaleDateString([], {
+                                  weekday: "long",
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </Typography>
+                              {getStatusBadge(entry.status)}
+                            </div>
+                          </div>
+                        </Stack>
+
+                        <div className="text-[15px] text-slate-600 leading-relaxed whitespace-pre-wrap mt-6 bg-slate-50/80 p-6 rounded-2xl border border-slate-100 group-hover:bg-white transition-colors group-hover:shadow-inner">
+                          {entry.activities_enhanced || entry.activities_raw}
                         </div>
                       </div>
-                    </Stack>
-
-                    <div className="text-[15px] text-slate-600 leading-relaxed whitespace-pre-wrap mt-6 bg-slate-50/80 p-6 rounded-2xl border border-slate-100 group-hover:bg-white transition-colors group-hover:shadow-inner">
-                      {entry.activities_enhanced || entry.activities_raw}
                     </div>
-                  </div>
 
-                  <div className="flex flex-col gap-3 ml-10 pt-2">
-                    <Button
-                      variant="solid"
-                      className="w-36 h-12 bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-100 rounded-xl border-none font-bold"
-                      onClick={() => handleUpdateStatus(entry.id, "approved")}
-                      isLoading={updatingId === entry.id}
-                      disabled={updatingId !== null}
-                    >
-                      <FiCheckCircle className="mr-2 inline" size={18} />{" "}
-                      Approve
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-36 h-12 border-rose-100 text-rose-600 hover:bg-rose-50 rounded-xl font-bold"
-                      onClick={() => handleUpdateStatus(entry.id, "flagged")}
-                      isLoading={updatingId === entry.id}
-                      disabled={updatingId !== null}
-                    >
-                      <FiXCircle className="mr-2 inline" size={18} /> Flag Issue
-                    </Button>
-                  </div>
-                </Stack>
-              </Card>
-            ))}
+                    <div className="flex flex-col gap-3 ml-6 pt-2">
+                      <Button
+                        variant="solid"
+                        className="w-36 h-12 bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-100 rounded-xl border-none font-bold"
+                        onClick={() => handleUpdateStatus(entry.id, "approved")}
+                        isLoading={updatingId === entry.id}
+                        disabled={updatingId !== null || isBulkApproving}
+                      >
+                        <FiCheckCircle className="mr-2 inline" size={18} />{" "}
+                        Approve
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-36 h-12 border-rose-100 text-rose-600 hover:bg-rose-50 rounded-xl font-bold"
+                        onClick={() => handleUpdateStatus(entry.id, "flagged")}
+                        isLoading={updatingId === entry.id}
+                        disabled={updatingId !== null || isBulkApproving}
+                      >
+                        <FiXCircle className="mr-2 inline" size={18} /> Flag Issue
+                      </Button>
+                    </div>
+                  </Stack>
+                </Card>
+              );
+            })}
           </Stack>
         </div>
 
@@ -220,16 +349,23 @@ export default function LogbookReviewClient({
                         <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 text-sm font-bold">
                           {entry.profiles?.full_name?.charAt(0) || "S"}
                         </div>
-                        <Typography
-                          variant="body1"
-                          weight="bold"
-                          className="text-slate-700"
-                        >
-                          {entry.profiles?.full_name || "Unknown Student"}
-                          <span className="font-medium text-slate-400 ml-4">
-                            {entry.date}
-                          </span>
-                        </Typography>
+                        <div>
+                          <Typography
+                            variant="body1"
+                            weight="bold"
+                            className="text-slate-700"
+                          >
+                            {entry.profiles?.full_name || "Unknown Student"}
+                            <span className="font-medium text-slate-400 ml-4">
+                              {entry.date}
+                            </span>
+                          </Typography>
+                          {entry.feedback_notes && (
+                            <Typography variant="caption" color="muted" className="italic block mt-1">
+                              Note: {entry.feedback_notes}
+                            </Typography>
+                          )}
+                        </div>
                         <div className="ml-auto">
                           {getStatusBadge(entry.status)}
                         </div>
@@ -245,3 +381,4 @@ export default function LogbookReviewClient({
     </div>
   );
 }
+
