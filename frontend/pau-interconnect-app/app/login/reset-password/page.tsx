@@ -134,7 +134,7 @@ export default function ResetPasswordPage() {
             </div>
 
             <Button
-              className="w-full !rounded-full"
+              className="w-full !rounded-full font-bold dark:bg-indigo-600"
               onClick={() => router.push("/login/student")}
             >
               Sign In Now
@@ -152,7 +152,7 @@ export default function ResetPasswordPage() {
             </div>
 
             <Button
-              className="w-full !rounded-full"
+              className="w-full !rounded-full font-bold dark:bg-indigo-600"
               onClick={() => router.push("/login/forgot-password")}
             >
               Request New Reset Link
@@ -180,7 +180,7 @@ export default function ResetPasswordPage() {
 
             <Button
               type="submit"
-              className="w-full !rounded-full"
+              className="w-full !rounded-full font-bold dark:bg-indigo-600"
               size="lg"
               isLoading={isLoading}
             >

@@ -122,7 +122,7 @@ export default function AdminLogin() {
                 <button
                   type="button"
                   onClick={() => router.push("/login/forgot-password")}
-                  className="text-xs text-brand hover:underline font-medium"
+                  className="text-xs text-brand dark:text-indigo-400 hover:underline font-semibold"
                 >
                   Forgot password?
                 </button>
@@ -131,7 +131,7 @@ export default function AdminLogin() {
 
             <Button
               type="submit"
-              className="w-full !rounded-full"
+              className="w-full !rounded-full font-bold dark:bg-indigo-600"
               size="lg"
               isLoading={loading}
             >
@@ -146,7 +146,7 @@ export default function AdminLogin() {
           >
             Not an admin?{" "}
             <span
-              className="text-brand cursor-pointer font-bold hover:underline ml-1"
+              className="text-brand dark:text-indigo-400 cursor-pointer font-bold hover:underline ml-1"
               onClick={() => router.push("/")}
             >
               Go back home

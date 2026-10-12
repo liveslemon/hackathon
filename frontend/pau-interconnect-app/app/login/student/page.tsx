@@ -180,7 +180,7 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={() => router.push("/login/forgot-password")}
-                  className="text-xs text-brand hover:underline font-medium"
+                  className="text-xs text-brand dark:text-indigo-400 hover:underline font-semibold"
                 >
                   Forgot password?
                 </button>
@@ -189,7 +189,7 @@ const Login = () => {
 
             <Button
               type="submit"
-              className="w-full !rounded-full"
+              className="w-full !rounded-full font-bold dark:bg-indigo-600"
               size="lg"
               isLoading={isLoading}
             >
@@ -200,12 +200,11 @@ const Login = () => {
           <Stack spacing={2} className="mt-8">
             <Button
               variant="ghost"
-              colorType="secondary"
               onClick={() => router.push("/onboarding")}
-              className="text-sm"
+              className="text-sm text-fg-muted hover:text-fg"
             >
               Don&apos;t have an account?{" "}
-              <span className="underline font-bold ml-1">Sign Up</span>
+              <span className="underline font-bold ml-1 text-fg">Sign Up</span>
             </Button>
 
             <div className="grid grid-cols-2 gap-4">
@@ -218,7 +217,6 @@ const Login = () => {
               </Button>
               <Button
                 variant="outline"
-                colorType="secondary"
                 onClick={() => router.push("/login/admin")}
                 className="text-xs hidden md:inline-flex"
               >

@@ -7,12 +7,10 @@ import {
   Button,
   Container,
   Typography,
-  Stack,
   Card,
   Badge,
 } from "@/components/ui";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { motion } from "motion/react";
 import {
   Briefcase,
   TrendingUp,
@@ -53,7 +51,7 @@ export default function LandingPage() {
             <span className="text-sm sm:text-base font-bold text-fg tracking-tight group-hover:text-brand transition-colors">
               PAU InterConnect
             </span>
-            <span className="text-[10px] text-fg-subtle font-medium hidden sm:block -mt-1">
+            <span className="text-[10px] text-fg-muted font-medium hidden sm:block -mt-1">
               Pan-Atlantic University
             </span>
           </div>
@@ -109,7 +107,7 @@ export default function LandingPage() {
           </Button>
           <Button
             href="/login/student"
-            className="text-xs sm:text-sm px-3 sm:px-4 h-8 sm:h-9"
+            className="text-xs sm:text-sm px-3 sm:px-4 h-8 sm:h-9 dark:bg-indigo-600 font-bold"
           >
             Student
           </Button>
@@ -129,12 +127,8 @@ export default function LandingPage() {
 
         <Container maxWidth="lg" className="relative z-10">
           <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-            >
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-subtle border border-brand/20 text-brand text-xs sm:text-sm font-medium mb-6">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-subtle border border-brand/20 text-brand dark:text-indigo-300 text-xs sm:text-sm font-semibold mb-6">
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Pan-Atlantic University Internship &amp; SIWES Portal</span>
               </div>
@@ -144,7 +138,7 @@ export default function LandingPage() {
                 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-fg mb-6 leading-[1.12]"
               >
                 Where Ambition Meets Opportunity,{" "}
-                <span className="text-brand">Powered by AI</span>
+                <span className="text-brand dark:text-indigo-400">Powered by AI</span>
               </Typography>
 
               <Typography
@@ -160,7 +154,7 @@ export default function LandingPage() {
                 <Button
                   size="lg"
                   href="/login/student"
-                  className="w-full sm:w-auto px-6 font-semibold"
+                  className="w-full sm:w-auto px-6 font-bold dark:bg-indigo-600"
                 >
                   <GraduationCap className="w-4 h-4 mr-2" />
                   Student Portal
@@ -169,33 +163,29 @@ export default function LandingPage() {
                   size="lg"
                   variant="outline"
                   href="/login/employer"
-                  className="w-full sm:w-auto px-6 font-semibold"
+                  className="w-full sm:w-auto px-6 font-bold"
                 >
                   <Building2 className="w-4 h-4 mr-2" />
                   Employer Portal
                 </Button>
               </div>
 
-              <p className="text-xs text-fg-subtle">
+              <p className="text-xs text-fg-muted">
                 University coordinator or supervisor?{" "}
                 <Link
                   href="/login/admin"
-                  className="text-brand hover:underline font-medium inline-flex items-center gap-0.5"
+                  className="text-brand dark:text-indigo-400 hover:underline font-bold inline-flex items-center gap-0.5"
                 >
                   Sign in as Admin <ChevronRight className="w-3 h-3" />
                 </Link>
               </p>
-            </motion.div>
+            </div>
           </div>
 
           {/* Interactive Feature Previews */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto">
             {/* Card 1: AI Match Preview */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.15 }}
-            >
+            <div className="transition-transform duration-300">
               <Card className="h-full p-5 sm:p-6 bg-surface border-border hover:border-brand/40 transition-all shadow-xs">
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-9 h-9 rounded-xl bg-brand-subtle text-brand flex items-center justify-center">
@@ -223,24 +213,20 @@ export default function LandingPage() {
                     <span className="text-amber-600 dark:text-amber-400">Docker, CI/CD</span>
                   </div>
                 </div>
-                <p className="text-xs text-fg-subtle leading-relaxed">
+                <p className="text-xs text-fg-muted leading-relaxed">
                   Instant CV analysis provides personalized suggestions to improve your match score before applying.
                 </p>
               </Card>
-            </motion.div>
+            </div>
 
             {/* Card 2: Employer Queue Preview */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-            >
+            <div className="transition-transform duration-300">
               <Card className="h-full p-5 sm:p-6 bg-surface border-border hover:border-brand/40 transition-all shadow-xs">
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                     <Users className="w-5 h-5" />
                   </div>
-                  <Badge variant="primary" className="text-xs">
+                  <Badge variant="primary" className="text-xs font-semibold dark:text-indigo-300">
                     Verified Talent
                   </Badge>
                 </div>
@@ -260,24 +246,20 @@ export default function LandingPage() {
                     <span className="font-semibold text-emerald-600 dark:text-emerald-400">4 Interviews</span>
                   </div>
                 </div>
-                <p className="text-xs text-fg-subtle leading-relaxed">
+                <p className="text-xs text-fg-muted leading-relaxed">
                   Employers evaluate pre-vetted candidates with AI-ranked relevance scores and verified academic standings.
                 </p>
               </Card>
-            </motion.div>
+            </div>
 
             {/* Card 3: SIWES Logbook Preview */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.45 }}
-            >
+            <div className="transition-transform duration-300">
               <Card className="h-full p-5 sm:p-6 bg-surface border-border hover:border-brand/40 transition-all shadow-xs">
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
                     <FileCheck2 className="w-5 h-5" />
                   </div>
-                  <Badge variant="neutral" className="text-xs">
+                  <Badge variant="neutral" className="text-xs font-semibold">
                     Week 6 Approved
                   </Badge>
                 </div>
@@ -299,11 +281,11 @@ export default function LandingPage() {
                     <span className="text-fg font-semibold">Verified</span>
                   </div>
                 </div>
-                <p className="text-xs text-fg-subtle leading-relaxed">
+                <p className="text-xs text-fg-muted leading-relaxed">
                   Eliminate lost paper records. Seamless weekly submissions, attendance tracking, and grading for university credit.
                 </p>
               </Card>
-            </motion.div>
+            </div>
           </div>
         </Container>
       </section>
@@ -316,7 +298,7 @@ export default function LandingPage() {
               <Typography variant="h3" weight="bold" className="text-fg mb-1">
                 100%
               </Typography>
-              <Typography variant="body2" className="text-fg-muted">
+              <Typography variant="body2" className="text-fg-muted font-medium">
                 Digital SIWES Compliance
               </Typography>
             </div>
@@ -324,7 +306,7 @@ export default function LandingPage() {
               <Typography variant="h3" weight="bold" className="text-fg mb-1">
                 94%+
               </Typography>
-              <Typography variant="body2" className="text-fg-muted">
+              <Typography variant="body2" className="text-fg-muted font-medium">
                 Skill Match Accuracy
               </Typography>
             </div>
@@ -332,7 +314,7 @@ export default function LandingPage() {
               <Typography variant="h3" weight="bold" className="text-fg mb-1">
                 150+
               </Typography>
-              <Typography variant="body2" className="text-fg-muted">
+              <Typography variant="body2" className="text-fg-muted font-medium">
                 Vetted Industry Partners
               </Typography>
             </div>
@@ -340,7 +322,7 @@ export default function LandingPage() {
               <Typography variant="h3" weight="bold" className="text-fg mb-1">
                 48 hrs
               </Typography>
-              <Typography variant="body2" className="text-fg-muted">
+              <Typography variant="body2" className="text-fg-muted font-medium">
                 Avg. Employer Response
               </Typography>
             </div>
@@ -352,7 +334,7 @@ export default function LandingPage() {
       <section id="how-it-works" className="py-16 sm:py-24 bg-background">
         <Container maxWidth="lg">
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <Badge variant="neutral" className="mb-3 text-xs">
+            <Badge variant="neutral" className="mb-3 text-xs font-semibold">
               Simple 4-Step Process
             </Badge>
             <Typography variant="h2" weight="bold" className="text-fg mb-4">
@@ -397,7 +379,7 @@ export default function LandingPage() {
               >
                 <div>
                   <div className="flex items-center justify-between mb-5">
-                    <span className="text-2xl font-black text-brand tracking-tight">
+                    <span className="text-2xl font-black text-brand dark:text-indigo-400 tracking-tight">
                       {item.step}
                     </span>
                     <div className="w-9 h-9 rounded-xl bg-surface-sunken text-fg-muted group-hover:text-brand group-hover:bg-brand-subtle transition-colors flex items-center justify-center">
@@ -422,7 +404,7 @@ export default function LandingPage() {
         <Container maxWidth="lg">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             <div className="lg:col-span-5">
-              <Badge variant="primary" className="mb-3 text-xs">
+              <Badge variant="primary" className="mb-3 text-xs font-semibold dark:text-indigo-300">
                 For Students
               </Badge>
               <Typography variant="h2" weight="bold" className="text-fg mb-4">
@@ -460,7 +442,7 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <Button size="lg" href="/login/student">
+              <Button size="lg" href="/login/student" className="font-bold dark:bg-indigo-600">
                 Enter Student Portal <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
@@ -468,7 +450,7 @@ export default function LandingPage() {
             <div className="lg:col-span-7">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Card className="p-5 bg-surface-sunken border-border">
-                  <Briefcase className="w-6 h-6 text-brand mb-3" />
+                  <Briefcase className="w-6 h-6 text-brand dark:text-indigo-400 mb-3" />
                   <Typography variant="h6" weight="bold" className="text-fg mb-1">
                     Direct Applications
                   </Typography>
@@ -478,7 +460,7 @@ export default function LandingPage() {
                 </Card>
 
                 <Card className="p-5 bg-surface-sunken border-border">
-                  <TrendingUp className="w-6 h-6 text-brand mb-3" />
+                  <TrendingUp className="w-6 h-6 text-brand dark:text-indigo-400 mb-3" />
                   <Typography variant="h6" weight="bold" className="text-fg mb-1">
                     Application Tracker
                   </Typography>
@@ -488,7 +470,7 @@ export default function LandingPage() {
                 </Card>
 
                 <Card className="p-5 bg-surface-sunken border-border">
-                  <ShieldCheck className="w-6 h-6 text-brand mb-3" />
+                  <ShieldCheck className="w-6 h-6 text-brand dark:text-indigo-400 mb-3" />
                   <Typography variant="h6" weight="bold" className="text-fg mb-1">
                     University Verification
                   </Typography>
@@ -498,7 +480,7 @@ export default function LandingPage() {
                 </Card>
 
                 <Card className="p-5 bg-surface-sunken border-border">
-                  <Award className="w-6 h-6 text-brand mb-3" />
+                  <Award className="w-6 h-6 text-brand dark:text-indigo-400 mb-3" />
                   <Typography variant="h6" weight="bold" className="text-fg mb-1">
                     Certified Completion
                   </Typography>
@@ -519,7 +501,7 @@ export default function LandingPage() {
             <div className="lg:col-span-7 order-2 lg:order-1">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Card className="p-5 bg-surface border-border">
-                  <Building2 className="w-6 h-6 text-brand mb-3" />
+                  <Building2 className="w-6 h-6 text-brand dark:text-indigo-400 mb-3" />
                   <Typography variant="h6" weight="bold" className="text-fg mb-1">
                     Pre-Vetted Academic Talent
                   </Typography>
@@ -529,7 +511,7 @@ export default function LandingPage() {
                 </Card>
 
                 <Card className="p-5 bg-surface border-border">
-                  <Search className="w-6 h-6 text-brand mb-3" />
+                  <Search className="w-6 h-6 text-brand dark:text-indigo-400 mb-3" />
                   <Typography variant="h6" weight="bold" className="text-fg mb-1">
                     AI-Ranked Screening
                   </Typography>
@@ -539,7 +521,7 @@ export default function LandingPage() {
                 </Card>
 
                 <Card className="p-5 bg-surface border-border">
-                  <CalendarCheck className="w-6 h-6 text-brand mb-3" />
+                  <CalendarCheck className="w-6 h-6 text-brand dark:text-indigo-400 mb-3" />
                   <Typography variant="h6" weight="bold" className="text-fg mb-1">
                     Fast Sign-Off Workflows
                   </Typography>
@@ -549,7 +531,7 @@ export default function LandingPage() {
                 </Card>
 
                 <Card className="p-5 bg-surface border-border">
-                  <Lock className="w-6 h-6 text-brand mb-3" />
+                  <Lock className="w-6 h-6 text-brand dark:text-indigo-400 mb-3" />
                   <Typography variant="h6" weight="bold" className="text-fg mb-1">
                     Secure &amp; Dedicated Portal
                   </Typography>
@@ -561,7 +543,7 @@ export default function LandingPage() {
             </div>
 
             <div className="lg:col-span-5 order-1 lg:order-2">
-              <Badge variant="primary" className="mb-3 text-xs">
+              <Badge variant="primary" className="mb-3 text-xs font-semibold dark:text-indigo-300">
                 For Employers
               </Badge>
               <Typography variant="h2" weight="bold" className="text-fg mb-4">
@@ -574,7 +556,7 @@ export default function LandingPage() {
 
               <div className="space-y-4 mb-8">
                 <div className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-brand-subtle text-brand flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-5 h-5 rounded-full bg-brand-subtle text-brand dark:text-indigo-300 flex items-center justify-center shrink-0 mt-0.5">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                   </div>
                   <Typography variant="body2" className="text-fg">
@@ -582,7 +564,7 @@ export default function LandingPage() {
                   </Typography>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-brand-subtle text-brand flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-5 h-5 rounded-full bg-brand-subtle text-brand dark:text-indigo-300 flex items-center justify-center shrink-0 mt-0.5">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                   </div>
                   <Typography variant="body2" className="text-fg">
@@ -591,7 +573,7 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <Button size="lg" variant="outline" href="/login/employer">
+              <Button size="lg" variant="outline" href="/login/employer" className="font-bold">
                 Employer Sign In <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
@@ -602,7 +584,7 @@ export default function LandingPage() {
       {/* SIWES Compliance Section */}
       <section id="siwes" className="py-16 sm:py-24 bg-surface-sunken border-t border-border">
         <Container maxWidth="md" className="text-center">
-          <Badge variant="neutral" className="mb-3 text-xs">
+          <Badge variant="neutral" className="mb-3 text-xs font-semibold">
             University Certified
           </Badge>
           <Typography variant="h2" weight="bold" className="text-fg mb-4">
@@ -651,7 +633,7 @@ export default function LandingPage() {
               <Typography variant="h2" color="white" className="mb-4">
                 Ready to Accelerate Your Career or Hire Top Talent?
               </Typography>
-              <Typography variant="body1" className="text-white/80 mb-8 leading-relaxed">
+              <Typography variant="body1" className="text-white/90 mb-8 leading-relaxed">
                 Join students and employers across Nigeria leveraging Pan-Atlantic
                 University&apos;s unified placement platform.
               </Typography>
@@ -660,7 +642,7 @@ export default function LandingPage() {
                   size="lg"
                   colorType="secondary"
                   href="/login/student"
-                  className="w-full sm:w-auto bg-surface text-fg hover:bg-surface-sunken font-semibold"
+                  className="w-full sm:w-auto bg-surface text-fg hover:bg-surface-sunken font-bold"
                 >
                   <GraduationCap className="w-4 h-4 mr-2" />
                   Get Started as Student
@@ -669,7 +651,7 @@ export default function LandingPage() {
                   size="lg"
                   variant="outline"
                   href="/login/employer"
-                  className="w-full sm:w-auto border-surface/40 text-surface hover:bg-surface/20 font-semibold"
+                  className="w-full sm:w-auto border-surface/40 text-surface hover:bg-surface/20 font-bold"
                 >
                   <Building2 className="w-4 h-4 mr-2" />
                   Partner as Employer
@@ -697,11 +679,11 @@ export default function LandingPage() {
                   PAU InterConnect
                 </span>
               </div>
-              <p className="text-xs text-fg-subtle leading-relaxed max-w-sm mb-4">
+              <p className="text-xs text-fg-muted leading-relaxed max-w-sm mb-4">
                 Pan-Atlantic University&apos;s intelligent internship matching
                 and SIWES logbook platform. Bridging classroom theory with corporate excellence.
               </p>
-              <p className="text-xs text-fg-subtle">
+              <p className="text-xs text-fg-muted">
                 Km 52, Lekki-Epe Expressway, Ibeju-Lekki, Lagos, Nigeria.
               </p>
             </div>
@@ -740,16 +722,16 @@ export default function LandingPage() {
               </Typography>
               <ul className="space-y-2 text-xs">
                 <li>
-                  <span className="text-fg-subtle">SST (Science &amp; Tech)</span>
+                  <span className="text-fg-muted">SST (Science &amp; Tech)</span>
                 </li>
                 <li>
-                  <span className="text-fg-subtle">SMC (Media &amp; Comm)</span>
+                  <span className="text-fg-muted">SMC (Media &amp; Comm)</span>
                 </li>
                 <li>
-                  <span className="text-fg-subtle">EBS (Business School)</span>
+                  <span className="text-fg-muted">EBS (Business School)</span>
                 </li>
                 <li>
-                  <span className="text-fg-subtle">SIWES Accreditation</span>
+                  <span className="text-fg-muted">SIWES Accreditation</span>
                 </li>
               </ul>
             </div>
@@ -758,19 +740,19 @@ export default function LandingPage() {
               <Typography weight="bold" className="text-xs uppercase tracking-wider text-fg mb-4">
                 Support
               </Typography>
-              <p className="text-xs text-fg-subtle mb-3">
+              <p className="text-xs text-fg-muted mb-3">
                 Have questions or need assistance with your placement account?
               </p>
               <a
                 href="mailto:interconnect@pau.edu.ng"
-                className="text-xs text-brand hover:underline font-medium"
+                className="text-xs text-brand dark:text-indigo-400 hover:underline font-semibold"
               >
                 interconnect@pau.edu.ng
               </a>
             </div>
           </div>
 
-          <div className="border-t border-border pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-fg-subtle">
+          <div className="border-t border-border pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-fg-muted">
             <p>&copy; {new Date().getFullYear()} Pan-Atlantic University. All rights reserved.</p>
             <div className="flex gap-6">
               <Link href="/login/student" className="hover:text-fg transition-colors">

@@ -63,3 +63,6 @@ test_main_api.py
 test_storage_upload.py
 Alex_Mercer_Stacked_CV.pdf
 public/Alex_Mercer_Stacked_CV.md
+.screenshots/
+test-results/
+playwright-report/

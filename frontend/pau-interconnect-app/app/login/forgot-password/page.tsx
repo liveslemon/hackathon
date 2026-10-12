@@ -115,7 +115,7 @@ export default function ForgotPasswordPage() {
 
             <Button
               type="submit"
-              className="w-full !rounded-full"
+              className="w-full !rounded-full font-bold dark:bg-indigo-600"
               size="lg"
               isLoading={isLoading}
             >
