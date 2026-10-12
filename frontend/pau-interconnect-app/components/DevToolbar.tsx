@@ -39,6 +39,10 @@ const PREDEFINED_ACCOUNTS: Record<
 
 // Remove this component from app/layout.tsx to disable the toolbar entirely.
 export default function DevToolbar() {
+  if (process.env.NODE_ENV === "production") {
+    return null;
+  }
+
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
