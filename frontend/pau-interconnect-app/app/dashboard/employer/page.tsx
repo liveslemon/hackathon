@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { Skeleton, Typography, Divider } from "@/components/ui";
+import { Skeleton, PageHeader, Divider } from "@/components/ui";
 import {
   EmployerStatsSection,
   EmployerQuickActionsSection,
@@ -37,21 +37,12 @@ export default async function EmployerDashboardPage() {
   if (devRole === "employer") {
     return (
       <DashboardShellWrapper userProfile={devProfile}>
-        <main className="max-w-6xl mx-auto py-12 px-6">
-          <div className="mb-12">
-            <Typography
-              variant="h2"
-              weight="bold"
-              className="text-slate-900 tracking-tight mb-1"
-            >
-              Recruitment Overview
-            </Typography>
-            <Typography variant="body1" className="text-slate-500 font-medium">
-              Managing{" "}
-              <span className="text-brand font-bold">{companyName}</span>
-              &apos;s activity.
-            </Typography>
-          </div>
+        <main className="max-w-6xl mx-auto py-8 lg:py-12 px-4 sm:px-6">
+          <PageHeader
+            title="Recruitment Overview"
+            description={`Managing ${companyName}'s activity.`}
+            className="mb-8"
+          />
 
           <EmployerQuickActionsSection
             profile={devProfile as Record<string, unknown>}
@@ -59,9 +50,9 @@ export default async function EmployerDashboardPage() {
 
           <Suspense
             fallback={
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-12">
-                {[...Array(2)].map((_, i) => (
-                  <Skeleton key={i} className="h-[160px] rounded-[32px]" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} className="h-[140px] rounded-2xl" />
                 ))}
               </div>
             }
@@ -69,14 +60,14 @@ export default async function EmployerDashboardPage() {
             <EmployerStatsSection />
           </Suspense>
 
-          <Divider className="my-12 opacity-50" />
+          <Divider className="my-10" />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
             <Suspense
               fallback={
-                <div className="space-y-6">
-                  <div className="h-8 w-48 bg-slate-100 rounded-xl animate-pulse mb-6 ml-2" />
-                  <div className="h-[400px] w-full bg-slate-50/50 rounded-[40px] animate-pulse" />
+                <div className="space-y-4">
+                  <Skeleton className="h-7 w-48 rounded-xl" />
+                  <Skeleton className="h-[360px] w-full rounded-2xl" />
                 </div>
               }
             >
@@ -85,9 +76,9 @@ export default async function EmployerDashboardPage() {
 
             <Suspense
               fallback={
-                <div className="space-y-6">
-                  <div className="h-8 w-48 bg-slate-100 rounded-xl animate-pulse mb-6 ml-2" />
-                  <div className="h-[400px] w-full bg-slate-50/50 rounded-[40px] animate-pulse" />
+                <div className="space-y-4">
+                  <Skeleton className="h-7 w-48 rounded-xl" />
+                  <Skeleton className="h-[360px] w-full rounded-2xl" />
                 </div>
               }
             >
@@ -120,32 +111,20 @@ export default async function EmployerDashboardPage() {
 
   return (
     <DashboardShellWrapper userProfile={profile}>
-      <main className="max-w-6xl mx-auto py-12 px-6">
-        {/* 1. Integrated Header Context */}
-        <div className="mb-12">
-          <Typography
-            variant="h2"
-            weight="bold"
-            className="text-slate-900 tracking-tight mb-1"
-          >
-            Recruitment Overview
-          </Typography>
-          <Typography variant="body1" className="text-slate-500 font-medium">
-            Managing{" "}
-            <span className="text-brand font-bold">{profile.company_name}</span>
-            &apos;s activity.
-          </Typography>
-        </div>
+      <main className="max-w-6xl mx-auto py-8 lg:py-12 px-4 sm:px-6">
+        <PageHeader
+          title="Recruitment Overview"
+          description={`Managing ${profile.company_name}'s activity.`}
+          className="mb-8"
+        />
 
-        {/* 2. Streamlined Toolbar (Instant) */}
         <EmployerQuickActionsSection profile={profile} />
 
-        {/* 3. Core Metrics (Streaming) */}
         <Suspense
           fallback={
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-12">
-              {[...Array(2)].map((_, i) => (
-                <Skeleton key={i} className="h-[160px] rounded-[32px]" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-[140px] rounded-2xl" />
               ))}
             </div>
           }
@@ -153,15 +132,14 @@ export default async function EmployerDashboardPage() {
           <EmployerStatsSection />
         </Suspense>
 
-        <Divider className="my-12 opacity-50" />
+        <Divider className="my-10" />
 
-        {/* 4. Live Activity Feeds (Streaming) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
           <Suspense
             fallback={
-              <div className="space-y-6">
-                <div className="h-8 w-48 bg-slate-100 rounded-xl animate-pulse mb-6 ml-2" />
-                <div className="h-[400px] w-full bg-slate-50/50 rounded-[40px] animate-pulse" />
+              <div className="space-y-4">
+                <Skeleton className="h-7 w-48 rounded-xl" />
+                <Skeleton className="h-[360px] w-full rounded-2xl" />
               </div>
             }
           >
@@ -170,9 +148,9 @@ export default async function EmployerDashboardPage() {
 
           <Suspense
             fallback={
-              <div className="space-y-6">
-                <div className="h-8 w-48 bg-slate-100 rounded-xl animate-pulse mb-6 ml-2" />
-                <div className="h-[400px] w-full bg-slate-50/50 rounded-[40px] animate-pulse" />
+              <div className="space-y-4">
+                <Skeleton className="h-7 w-48 rounded-xl" />
+                <Skeleton className="h-[360px] w-full rounded-2xl" />
               </div>
             }
           >

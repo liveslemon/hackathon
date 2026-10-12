@@ -1,8 +1,8 @@
 import { EmployerActivityClient } from "./EmployerActivityClient";
 import { getSupabaseServer } from "@/lib/supabase-server";
 import DashboardHeader from "@/components/DashboardHeader";
-import { Typography, Stack, Button } from "@/components/ui";
-import { Briefcase } from "lucide-react";
+import { Typography, Stack, Button, StatCard, EmptyState } from "@/components/ui";
+import { Briefcase, Users, Target, Clock } from "lucide-react";
 import Link from "next/link";
 import { EmployerQuickActionsClient } from "./EmployerQuickActionsClient";
 
@@ -93,106 +93,58 @@ export async function EmployerStatsSection() {
   const internshipCount = internshipsRes?.length || 0;
 
   return (
-    <div className="mb-12">
+    <div className="mb-10">
       {/* Activity Summary Line */}
       <div className="mb-6 px-1 flex items-center justify-between">
         <Typography variant="body2" color="muted">
           You have{" "}
-          <strong className="text-slate-900 font-semibold">{newThisWeek}</strong> new{" "}
+          <strong className="text-fg font-semibold">{newThisWeek}</strong> new{" "}
           {newThisWeek === 1 ? "application" : "applications"} this week and{" "}
-          <strong className="text-slate-900 font-semibold">{pendingReviews}</strong> logbook{" "}
+          <strong className="text-fg font-semibold">{pendingReviews}</strong> logbook{" "}
           {pendingReviews === 1 ? "entry" : "entries"} pending review.
         </Typography>
       </div>
 
       {internshipCount === 0 && (
-        <div className="text-center py-12 px-6 mb-8 bg-slate-50/80 rounded-3xl border border-dashed border-slate-200">
-          <Briefcase className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <Typography variant="h4" className="text-slate-800 mb-1">
-            Welcome! Post your first internship
-          </Typography>
-          <Typography variant="body2" color="muted" className="mb-6 max-w-md mx-auto">
-            Attract Pan-Atlantic University students to your organization by publishing your first open position.
-          </Typography>
-          <Link href="/dashboard/post">
-            <Button size="md">Post an Internship</Button>
-          </Link>
+        <div className="mb-8">
+          <EmptyState
+            icon={<Briefcase className="w-8 h-8 text-brand" />}
+            title="Welcome! Post your first internship"
+            description="Attract Pan-Atlantic University students to your organization by publishing your first open position."
+            action={{
+              label: "Post an Internship",
+              href: "/dashboard/post",
+            }}
+          />
         </div>
       )}
 
       {/* 4 Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="p-6 rounded-[28px] bg-white border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col justify-between min-h-[140px]">
-          <Typography
-            variant="subtitle2"
-            weight="bold"
-            className="text-slate-400 uppercase tracking-widest text-[11px]"
-          >
-            Active Postings
-          </Typography>
-          <div className="flex items-baseline gap-2">
-            <Typography variant="h2" className="text-slate-900 leading-none">
-              {internshipCount}
-            </Typography>
-            <Typography variant="caption" color="muted">
-              live roles
-            </Typography>
-          </div>
-        </div>
-
-        <div className="p-6 rounded-[28px] bg-white border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col justify-between min-h-[140px]">
-          <Typography
-            variant="subtitle2"
-            weight="bold"
-            className="text-slate-400 uppercase tracking-widest text-[11px]"
-          >
-            Total Applicants
-          </Typography>
-          <div className="flex items-baseline gap-2">
-            <Typography variant="h2" className="text-slate-900 leading-none">
-              {applicationCount}
-            </Typography>
-            <Typography variant="caption" color="muted">
-              all time
-            </Typography>
-          </div>
-        </div>
-
-        <div className="p-6 rounded-[28px] bg-white border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col justify-between min-h-[140px]">
-          <Typography
-            variant="subtitle2"
-            weight="bold"
-            className="text-slate-400 uppercase tracking-widest text-[11px]"
-          >
-            Acceptance Rate
-          </Typography>
-          <div className="flex items-baseline gap-2">
-            <Typography variant="h2" className="text-slate-900 leading-none">
-              {acceptanceRate}%
-            </Typography>
-            <Typography variant="caption" color="muted">
-              {acceptedCount} accepted
-            </Typography>
-          </div>
-        </div>
-
-        <div className="p-6 rounded-[28px] bg-white border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col justify-between min-h-[140px]">
-          <Typography
-            variant="subtitle2"
-            weight="bold"
-            className="text-slate-400 uppercase tracking-widest text-[11px]"
-          >
-            Pending Reviews
-          </Typography>
-          <div className="flex items-baseline gap-2">
-            <Typography variant="h2" className="text-slate-900 leading-none">
-              {pendingReviews}
-            </Typography>
-            <Typography variant="caption" color="muted">
-              logbook entries
-            </Typography>
-          </div>
-        </div>
+        <StatCard
+          label="Active Postings"
+          value={internshipCount}
+          icon={<Briefcase className="w-5 h-5 text-brand" />}
+        />
+        <StatCard
+          label="Total Applicants"
+          value={applicationCount}
+          icon={<Users className="w-5 h-5 text-brand" />}
+        />
+        <StatCard
+          label="Acceptance Rate"
+          value={`${acceptanceRate}%`}
+          change={{
+            value: `${acceptedCount} accepted`,
+            trend: acceptanceRate > 0 ? "up" : "neutral",
+          }}
+          icon={<Target className="w-5 h-5 text-brand" />}
+        />
+        <StatCard
+          label="Pending Reviews"
+          value={pendingReviews}
+          icon={<Clock className="w-5 h-5 text-brand" />}
+        />
       </div>
     </div>
   );
@@ -250,14 +202,14 @@ export async function EmployerRecentApplicantsSection() {
   }
 
   return (
-    <div className="mb-12">
+    <div className="space-y-4">
       <Stack
         direction="row"
         justify="between"
         align="baseline"
-        className="mb-6 px-2"
+        className="px-1"
       >
-        <Typography variant="h4" weight="bold" className="text-slate-800">
+        <Typography variant="h4" weight="bold" className="text-fg">
           New Candidates
         </Typography>
         <Link href="/dashboard/employer/internships">
@@ -271,7 +223,7 @@ export async function EmployerRecentApplicantsSection() {
         </Link>
       </Stack>
 
-      <div className="bg-white rounded-[40px] border border-slate-100/60 overflow-hidden shadow-sm">
+      <div className="bg-surface rounded-2xl border border-border overflow-hidden shadow-sm">
         <EmployerActivityClient
           initialItems={enrichedApps}
           type="applicants"
@@ -298,14 +250,14 @@ export async function EmployerLogbookAlertsSection() {
     .limit(5);
 
   return (
-    <div className="mb-12">
+    <div className="space-y-4">
       <Stack
         direction="row"
         justify="between"
         align="baseline"
-        className="mb-6 px-2"
+        className="px-1"
       >
-        <Typography variant="h4" weight="bold" className="text-slate-800">
+        <Typography variant="h4" weight="bold" className="text-fg">
           Pending Reviews
         </Typography>
         <Link href="/dashboard/employer/logbook">
@@ -319,7 +271,7 @@ export async function EmployerLogbookAlertsSection() {
         </Link>
       </Stack>
 
-      <div className="bg-white rounded-[40px] border border-slate-100/60 overflow-hidden shadow-sm">
+      <div className="bg-surface rounded-2xl border border-border overflow-hidden shadow-sm">
         <EmployerActivityClient
           initialItems={pendingLogs || []}
           type="logbooks"
@@ -347,14 +299,15 @@ export async function EmployerInternshipListSection() {
 
   if (!internships || internships.length === 0) {
     return (
-      <div className="p-10 bg-white border border-dashed border-slate-200 rounded-3xl text-center">
-        <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Briefcase className="w-8 h-8 text-slate-300" />
-        </div>
-        <Typography variant="h6" color="muted">
-          You haven&apos;t posted any internships yet.
-        </Typography>
-      </div>
+      <EmptyState
+        icon={<Briefcase className="w-8 h-8 text-brand" />}
+        title="No internships posted yet"
+        description="You haven't posted any internship opportunities yet. Create one to start receiving applications from students."
+        action={{
+          label: "Post an Internship",
+          href: "/dashboard/post",
+        }}
+      />
     );
   }
 

@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { FiPlus } from "react-icons/fi";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Button,
   Modal,
@@ -88,19 +89,19 @@ export function PostInternshipButton({
       const result = await res.json();
       if (!res.ok) {
         if (result.details) {
-          // Show field-level errors
           const errorMsg = Object.entries(result.details)
             .map(
               ([field, msgs]) => `${field}: ${(msgs as string[])?.join(", ")}`,
             )
             .join("\n");
-          alert(errorMsg);
+          toast.error(errorMsg);
         } else {
           throw new Error(result.error || "Failed to create internship");
         }
         return;
       }
 
+      toast.success(status === "draft" ? "Draft saved successfully" : "Internship published successfully");
       setIsOpen(false);
       setFormData({
         role: "",
@@ -114,7 +115,7 @@ export function PostInternshipButton({
       });
       router.refresh();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to create internship");
+      toast.error(err instanceof Error ? err.message : "Failed to create internship");
     } finally {
       setCreating(false);
     }
@@ -130,7 +131,6 @@ export function PostInternshipButton({
         <Button
           onClick={() => setIsOpen(true)}
           leftIcon={<FiPlus className="w-5 h-5" />}
-          className="shadow-lg shadow-indigo-100"
         >
           Post Internship
         </Button>
@@ -184,7 +184,7 @@ export function PostInternshipButton({
                 setShowTemplatePicker(false);
                 setFormData({ ...formData });
               }}
-              className="w-full p-4 border-2 border-dashed rounded-xl text-center hover:border-brand transition-colors"
+              className="w-full p-4 border-2 border-dashed border-border rounded-xl text-center hover:border-brand hover:bg-brand-subtle transition-colors text-fg"
             >
               Start from scratch
             </button>
@@ -204,7 +204,7 @@ export function PostInternshipButton({
                   });
                   setShowTemplatePicker(false);
                 }}
-                className="w-full p-4 border rounded-xl text-left hover:border-brand hover:bg-brand/5 transition-colors"
+                className="w-full p-4 border border-border rounded-xl text-left hover:border-brand hover:bg-brand-subtle transition-colors"
               >
                 <Typography variant="body2" weight="bold">
                   {template.name}
@@ -227,7 +227,7 @@ export function PostInternshipButton({
                 placeholder="e.g. UX Intern"
               />
               {errors.role && (
-                <p className="text-red-500 text-xs mt-1">{errors.role}</p>
+                <p className="text-danger-fg text-xs mt-1">{errors.role}</p>
               )}
             </div>
 
@@ -241,7 +241,7 @@ export function PostInternshipButton({
                 placeholder="e.g. Engineering, Design"
               />
               {errors.field && (
-                <p className="text-red-500 text-xs mt-1">{errors.field}</p>
+                <p className="text-danger-fg text-xs mt-1">{errors.field}</p>
               )}
             </div>
 
@@ -255,7 +255,7 @@ export function PostInternshipButton({
                 }
               />
               {errors.category && (
-                <p className="text-red-500 text-xs mt-1">{errors.category}</p>
+                <p className="text-danger-fg text-xs mt-1">{errors.category}</p>
               )}
             </div>
 
@@ -269,7 +269,7 @@ export function PostInternshipButton({
                 rows={4}
               />
               {errors.description && (
-                <p className="text-red-500 text-xs mt-1">
+                <p className="text-danger-fg text-xs mt-1">
                   {errors.description}
                 </p>
               )}
@@ -285,7 +285,7 @@ export function PostInternshipButton({
                 rows={4}
               />
               {errors.requirements && (
-                <p className="text-red-500 text-xs mt-1">
+                <p className="text-danger-fg text-xs mt-1">
                   {errors.requirements}
                 </p>
               )}
@@ -301,7 +301,7 @@ export function PostInternshipButton({
                 placeholder="React, Figma"
               />
               {errors.tags && (
-                <p className="text-red-500 text-xs mt-1">{errors.tags}</p>
+                <p className="text-danger-fg text-xs mt-1">{errors.tags}</p>
               )}
             </div>
 
@@ -316,7 +316,7 @@ export function PostInternshipButton({
                   }
                 />
                 {errors.deadline && (
-                  <p className="text-red-500 text-xs mt-1">{errors.deadline}</p>
+                  <p className="text-danger-fg text-xs mt-1">{errors.deadline}</p>
                 )}
               </div>
               <div>
@@ -330,7 +330,7 @@ export function PostInternshipButton({
                   placeholder="https://..."
                 />
                 {errors.link && (
-                  <p className="text-red-500 text-xs mt-1">{errors.link}</p>
+                  <p className="text-danger-fg text-xs mt-1">{errors.link}</p>
                 )}
               </div>
             </div>
