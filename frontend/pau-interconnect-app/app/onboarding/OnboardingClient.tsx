@@ -148,13 +148,28 @@ export default function OnboardingClient({
               stage?: string;
               cvProcessingStatus?: string;
               role?: string;
+              profile?: {
+                full_name?: string;
+                course?: string;
+                level?: string;
+                interests?: string[];
+                company_name?: string;
+                company_description?: string;
+                company_website?: string;
+                industry?: string;
+                culture?: string;
+              } | null;
             };
           }
         ).onboarding;
         if (!onboarding) return;
 
         const loadedRole: Role =
-          onboarding.role === "employer" ? "employer" : "student";
+          onboarding.role === "employer"
+            ? "employer"
+            : onboarding.role === "student"
+              ? "student"
+              : initialRolePreference ?? "student";
 
         // If onboarding is already completed, redirect to the dashboard
         // instead of showing the form with stale pre-filled data.
@@ -169,8 +184,42 @@ export default function OnboardingClient({
 
         setRole(loadedRole);
 
-        if (loadedRole === "employer") {
-          setStep(2);
+        if (onboarding.profile) {
+          const p = onboarding.profile;
+          setFormData((prev) => ({
+            ...prev,
+            name: p.full_name || prev.name,
+            course: p.course || prev.course,
+            level: p.level || prev.level,
+            interests:
+              p.interests && p.interests.length > 0
+                ? p.interests
+                : prev.interests,
+            companyName: p.company_name || prev.companyName,
+            companyDescription:
+              p.company_description || prev.companyDescription,
+            companyWebsite: p.company_website || prev.companyWebsite,
+            industry: p.industry || prev.industry,
+            culture: p.culture || prev.culture,
+          }));
+
+          if (loadedRole === "employer") {
+            if (p.company_name && p.company_description) {
+              setStep(3);
+            } else if (p.full_name) {
+              setStep(3);
+            } else {
+              setStep(2);
+            }
+          } else {
+            if (p.course && p.level) {
+              setStep(4);
+            } else if (p.full_name) {
+              setStep(3);
+            } else {
+              setStep(2);
+            }
+          }
         } else {
           setStep(2);
         }
@@ -180,7 +229,7 @@ export default function OnboardingClient({
     };
 
     loadOnboardingStatus();
-  }, [initialUser, router]);
+  }, [initialRolePreference, initialUser, router]);
 
   const handleInputChange = (field: string, value: string) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
