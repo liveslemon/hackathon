@@ -1,4 +1,4 @@
-import { Skeleton, Card, CardContent, Stack } from "@/components/ui";
+import { Skeleton, Card, CardContent } from "@/components/ui";
 
 export default function LogbookLoading() {
   return (

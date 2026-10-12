@@ -1,6 +1,13 @@
 import os
+import sys
+from pathlib import Path
 from unittest.mock import MagicMock, AsyncMock, patch
 import pytest
+
+# Ensure backend root is on sys.path
+backend_root = str(Path(__file__).resolve().parent.parent.parent)
+if backend_root not in sys.path:
+    sys.path.insert(0, backend_root)
 
 # Ensure required environment variables for tests without live Supabase
 os.environ.setdefault("SUPABASE_URL", "https://mock.supabase.co")
