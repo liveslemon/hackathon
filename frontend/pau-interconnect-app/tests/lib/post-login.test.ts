@@ -114,3 +114,20 @@ describe("loginPathFor", () => {
   });
 });
 
+describe("getNextPath", () => {
+  it("resolves safe next from window location search", () => {
+    if (typeof window !== "undefined") {
+      window.location.search = "?next=%2Fmy-internships";
+      expect(getNextPath("student", false)).toBe("/my-internships");
+
+      window.location.search = "?next=%2Fdashboard%2Femployer";
+      expect(getNextPath("student", false)).toBeNull();
+
+      window.location.search = "";
+      expect(getNextPath("student", false)).toBeNull();
+    } else {
+      expect(getNextPath("student", false)).toBeNull();
+    }
+  });
+});
+
