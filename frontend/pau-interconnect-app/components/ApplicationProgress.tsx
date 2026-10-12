@@ -14,6 +14,14 @@ export function ApplicationProgress({ stage }: { stage?: string }) {
     );
   }
 
+  if (currentStageName === "withdrawn") {
+    return (
+      <div className="flex items-center gap-2 w-full mt-2 bg-slate-100 p-2 rounded-lg border border-slate-200">
+        <Typography variant="caption" className="text-slate-600 font-bold ml-1">Application Withdrawn</Typography>
+      </div>
+    );
+  }
+
   const currentIndex = stages.indexOf(currentStageName);
   const safeIndex = currentIndex === -1 ? 0 : currentIndex;
 

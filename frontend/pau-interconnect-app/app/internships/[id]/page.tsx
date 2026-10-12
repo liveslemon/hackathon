@@ -19,6 +19,9 @@ import InternshipClientParts from "./InternshipClientParts";
 import { supabaseFetch } from "@/lib/supabase-fetch";
 import type { Profile } from "@/types/domain";
 
+import { notFound } from "next/navigation";
+import { getDaysUntilDeadline } from "@/lib/deadlines";
+
 export default async function InternshipDetailsPage({
   params,
 }: {
@@ -53,24 +56,7 @@ export default async function InternshipDetailsPage({
     .single();
 
   if (internshipError || !internship) {
-    return (
-      <div className="min-h-screen bg-[#f9fafb] flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-          <Briefcase className="w-6 h-6 text-slate-300" />
-        </div>
-        <h2 className="text-lg font-semibold text-slate-800 mb-1">
-          Internship not found
-        </h2>
-        <p className="text-sm text-slate-400 mb-6">
-          This listing may have been removed or is no longer available.
-        </p>
-        <Link href="/dashboard/student">
-          <button className="px-5 py-2.5 bg-slate-800 text-white rounded-lg text-sm font-semibold hover:bg-slate-700 transition-colors">
-            Back to Dashboard
-          </button>
-        </Link>
-      </div>
-    );
+    notFound();
   }
 
   // Fetch user-specific data if logged in
@@ -82,9 +68,10 @@ export default async function InternshipDetailsPage({
   let matchingSkills: string[] = [];
   let missingSkills: string[] = [];
   let userProfile: Profile | null = null;
+  let hasCvFromTable = false;
 
   if (user) {
-    const [appliedRes, matchRes, profileRes] = await Promise.all([
+    const [appliedRes, matchRes, profileRes, cvRes] = await Promise.all([
       supabase
         .from("applied_internships")
         .select("id, status, stage")
@@ -98,6 +85,11 @@ export default async function InternshipDetailsPage({
         .eq("internship_id", internshipId)
         .maybeSingle(),
       supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+      supabase
+        .from("student_cvs")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle(),
     ]);
 
     if (appliedRes.data) {
@@ -114,7 +106,45 @@ export default async function InternshipDetailsPage({
     }
 
     userProfile = profileRes.data;
+    if (cvRes.data?.id) {
+      hasCvFromTable = true;
+    }
   }
+
+  // Hide draft internships from anyone who is not the creator or admin
+  if (internship.status === "draft") {
+    const isOwner = Boolean(
+      user?.id &&
+        (internship.poster_id === user.id ||
+          internship.employer_id === user.id),
+    );
+    const isAdmin = Boolean(
+      userProfile?.is_admin || userProfile?.role === "admin",
+    );
+    if (!isOwner && !isAdmin) {
+      notFound();
+    }
+  }
+
+  const rawProfile = userProfile as
+    | (Profile & {
+        resume_url?: string;
+        cv_url?: string;
+        cv_text?: string;
+        course?: string;
+      })
+    | null;
+
+  const hasCv = Boolean(
+    hasCvFromTable ||
+      rawProfile?.resume_url ||
+      rawProfile?.cv_url ||
+      rawProfile?.cv_text,
+  );
+  const isProfileComplete = Boolean(
+    userProfile?.full_name?.trim() &&
+      (userProfile?.course_of_study?.trim() || rawProfile?.course?.trim()),
+  );
 
   const requirementsList = Array.isArray(internship.requirements)
     ? internship.requirements
@@ -127,12 +157,7 @@ export default async function InternshipDetailsPage({
   const displayScore =
     matchScore !== null ? matchScore : internship.matchPercentage || 0;
 
-  const daysUntilDeadline = internship.deadline
-    ? Math.ceil(
-        (new Date(internship.deadline).getTime() - new Date().getTime()) /
-          (1000 * 60 * 60 * 24),
-      )
-    : null;
+  const daysUntilDeadline = getDaysUntilDeadline(internship.deadline);
 
   const matchColor =
     displayScore >= 70
@@ -191,7 +216,7 @@ export default async function InternshipDetailsPage({
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border ${
                       daysUntilDeadline > 7
                         ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                        : daysUntilDeadline > 0
+                        : daysUntilDeadline >= 0
                           ? "bg-amber-50 text-amber-600 border-amber-100"
                           : "bg-red-50 text-red-500 border-red-100"
                     }`}
@@ -199,7 +224,9 @@ export default async function InternshipDetailsPage({
                     <CalendarDays className="w-3 h-3" />
                     {daysUntilDeadline > 0
                       ? `${daysUntilDeadline} days left`
-                      : "Deadline passed"}
+                      : daysUntilDeadline === 0
+                        ? "Ends today"
+                        : "Deadline passed"}
                   </span>
                 )}
               </div>
@@ -258,24 +285,42 @@ export default async function InternshipDetailsPage({
               {/* Match Score Card */}
               <div className="bg-white rounded-xl border border-slate-100 overflow-hidden">
                 <div className="p-5 text-center border-b border-slate-50">
-                  <p className="text-[10px] font-semibold text-slate-300 uppercase tracking-widest mb-2">
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">
                     Profile match
                   </p>
-                  <div className={`text-4xl font-bold ${matchColor}`}>
-                    {displayScore}%
-                  </div>
-                  <div className="w-full h-1.5 bg-slate-100 rounded-full mt-3 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-1000 ${
-                        displayScore >= 70
-                          ? "bg-emerald-500"
-                          : displayScore >= 40
-                            ? "bg-amber-500"
-                            : "bg-slate-300"
-                      }`}
-                      style={{ width: `${displayScore}%` }}
-                    />
-                  </div>
+                  {user && !hasCv ? (
+                    <div className="py-1">
+                      <div className="text-3xl font-bold text-slate-300">--%</div>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Upload your CV to calculate match score
+                      </p>
+                    </div>
+                  ) : !user ? (
+                    <div className="py-1">
+                      <div className="text-3xl font-bold text-slate-300">--%</div>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Sign in to view personalized match
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className={`text-4xl font-bold ${matchColor}`}>
+                        {displayScore}%
+                      </div>
+                      <div className="w-full h-1.5 bg-slate-100 rounded-full mt-3 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-1000 ${
+                            displayScore >= 70
+                              ? "bg-emerald-500"
+                              : displayScore >= 40
+                                ? "bg-amber-500"
+                                : "bg-slate-300"
+                          }`}
+                          style={{ width: `${displayScore}%` }}
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="p-5 space-y-3">
@@ -290,6 +335,8 @@ export default async function InternshipDetailsPage({
                       missingSkills={missingSkills}
                       userId={user.id}
                       studentEmail={user.email}
+                      hasCv={hasCv}
+                      isProfileComplete={isProfileComplete}
                     />
                   ) : (
                     <Link href="/login/student">
