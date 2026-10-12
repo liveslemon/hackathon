@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { FiLock, FiArrowLeft } from "react-icons/fi";
+import { FiLock, FiArrowLeft, FiAlertCircle } from "react-icons/fi";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 import {
   Typography,
   Button,
@@ -11,50 +12,79 @@ import {
   Input,
 } from "@/components/ui";
 
-interface AdminAccount {
-  email: string;
-  password: string;
-}
+const ALLOWED_ADMINS = ["hillary.ilona@pau.edu.ng"];
 
-const adminAccounts: AdminAccount[] = [
-  { email: "admin@pau.edu.ng", password: "admin123" },
-  { email: "supervisor@pau.edu.ng", password: "super456" },
-  { email: "head@pau.edu.ng", password: "admin789" },
-];
-
-export default function Home() {
+export default function AdminPortalEntry() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@pau.edu.ng");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
 
     if (!cleanEmail || !cleanPassword) {
-      setError("Please enter your email and password.");
+      setError("Please enter your admin email and password.");
       return;
     }
 
-    // find an admin account that matches the entered email (if any)
-    const admin = adminAccounts.find((a) => a.email.toLowerCase() === cleanEmail);
+    setLoading(true);
+    setError("");
 
-    if (admin) {
-      if (admin.password === cleanPassword) {
+    try {
+      // 1. Authenticate against Supabase Auth
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: cleanPassword,
+        });
+
+      if (authError) throw authError;
+
+      // 2. Server-aligned Admin authorization check
+      if (authData.user) {
+        const isWhitelisted =
+          authData.user.email && ALLOWED_ADMINS.includes(authData.user.email);
+
+        if (isWhitelisted) {
+          router.push("/dashboard/admin");
+          return;
+        }
+
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("is_admin, role")
+          .eq("id", authData.user.id)
+          .maybeSingle();
+
+        if (profileError) throw profileError;
+
+        const isAdmin = profile?.is_admin === true || profile?.role === "admin";
+        if (!isAdmin) {
+          // Immediately revoke session for non-admin accounts
+          await supabase.auth.signOut();
+          setError("Unauthorized: This account does not have administrator privileges.");
+          return;
+        }
+
         router.push("/dashboard/admin");
-      } else {
-        setError("Invalid password for admin account.");
       }
-    } else {
-      setError("This account is not authorized to access the Admin Portal.");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "Authentication failed. Please verify your credentials.",
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-brand bg-gradient-to-br from-brand via-brand-secondary to-brand">
       <div className="w-full max-w-md animate-in fade-in zoom-in duration-500">
-        <Card className="rounded-[40px] shadow-2xl border-none overflow-hidden">
+        <Card className="rounded-[40px] shadow-2xl border-none overflow-hidden bg-white">
           <CardContent className="p-10 md:p-12">
             <div className="flex justify-center mb-8">
               <div className="w-20 h-20 bg-brand rounded-[32px] flex items-center justify-center shadow-xl shadow-indigo-100/50 transform -rotate-6">
@@ -64,26 +94,35 @@ export default function Home() {
 
             <div className="text-center space-y-2 mb-10">
               <Typography variant="h2" weight="bold">Admin Portal</Typography>
-              <Typography color="muted">Sign in to manage the internship ecosystem</Typography>
+              <Typography color="muted">Sign in with authorized administrator credentials</Typography>
             </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleLogin();
-              }}
-              className="space-y-6"
-            >
+            {error && (
+              <div
+                role="alert"
+                className="mb-6 p-4 rounded-2xl bg-red-50 text-red-700 border border-red-100 text-sm font-medium flex items-center gap-3 animate-in fade-in"
+              >
+                <FiAlertCircle className="w-5 h-5 shrink-0 text-red-500" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleLogin} className="space-y-6">
               <Input
-                label="Email Address"
+                label="Admin Email Address"
+                type="email"
                 placeholder="admin@pau.edu.ng"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (error) setError("");
+                }}
+                required
                 className="bg-slate-50 border-slate-100 focus:bg-white"
               />
 
               <Input
-                label="Security Key"
+                label="Security Key / Password"
                 type="password"
                 placeholder="••••••••"
                 value={password}
@@ -91,14 +130,15 @@ export default function Home() {
                   setPassword(e.target.value);
                   if (error) setError("");
                 }}
-                error={error}
+                required
                 className="bg-slate-50 border-slate-100 focus:bg-white"
               />
 
               <Button
                 type="submit"
                 size="lg"
-                className="w-full h-14 text-lg shadow-xl shadow-indigo-100"
+                isLoading={loading}
+                className="w-full h-14 text-lg shadow-xl shadow-indigo-100 font-bold"
               >
                 Enter Portal
               </Button>

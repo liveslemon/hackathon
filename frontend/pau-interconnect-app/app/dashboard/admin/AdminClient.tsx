@@ -1,22 +1,37 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button, Stack, Typography, Divider } from "@/components/ui";
 import { LogOut, Search } from "lucide-react";
 import { cx } from "@/utils/cx";
 import SearchOverlay from "@/components/SearchOverlay";
+import { NotificationBell } from "@/components/NotificationBell";
 import { fastSignOut } from "@/lib/fast-signout";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function AdminClient({
   children,
+  userId,
 }: {
   children: React.ReactNode;
+  userId?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTab = searchParams?.get("tab") || "overview";
   const [showSearch, setShowSearch] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(userId || null);
+
+  useEffect(() => {
+    if (!currentUserId) {
+      void supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user?.id) {
+          setCurrentUserId(session.user.id);
+        }
+      });
+    }
+  }, [currentUserId]);
 
   const tabs = [
     { key: "overview", label: "Overview" },
@@ -34,7 +49,6 @@ export default function AdminClient({
   const handleLogout = () => {
     if (isLoggingOut) return;
     setIsLoggingOut(true);
-
     fastSignOut("/");
   };
 
@@ -69,22 +83,30 @@ export default function AdminClient({
             />
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            leftIcon={
-              isLoggingOut ? (
-                <div className="w-4 h-4 rounded-full border-2 border-red-500 border-t-transparent animate-spin" />
-              ) : (
-                <LogOut className="w-4 h-4" />
-              )
-            }
-            className={`rounded-xl transition-all ${isLoggingOut ? "opacity-50 cursor-not-allowed border-red-200 text-red-500 bg-red-50" : "border-slate-200 hover:border-red-200 hover:text-red-500 hover:bg-red-50"}`}
-          >
-            {isLoggingOut ? "Logging out..." : "Logout"}
-          </Button>
+          <Stack direction="row" align="center" spacing={3}>
+            {currentUserId && <NotificationBell userId={currentUserId} />}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              leftIcon={
+                isLoggingOut ? (
+                  <div className="w-4 h-4 rounded-full border-2 border-red-500 border-t-transparent animate-spin" />
+                ) : (
+                  <LogOut className="w-4 h-4" />
+                )
+              }
+              className={`rounded-xl transition-all ${
+                isLoggingOut
+                  ? "opacity-50 cursor-not-allowed border-red-200 text-red-500 bg-red-50"
+                  : "border-slate-200 hover:border-red-200 hover:text-red-500 hover:bg-red-50"
+              }`}
+            >
+              {isLoggingOut ? "Logging out..." : "Logout"}
+            </Button>
+          </Stack>
         </header>
 
         <Divider className="mb-10 opacity-50" />

@@ -90,7 +90,7 @@ export default function PostInternshipView() {
         .eq("is_admin", true)
         .maybeSingle();
 
-      posterId = adminProfile?.id ?? user?.id ?? null;
+      posterId = user?.id ?? adminProfile?.id ?? null;
 
       const payload = {
         poster_id: posterId,
@@ -103,6 +103,7 @@ export default function PostInternshipView() {
         interests,
         deadline: deadline ? new Date(deadline).toISOString() : null,
         recruiter_link: linkedin || null,
+        status: "active",
       };
 
       const { error } = await supabase.from("internships").insert([payload]);
