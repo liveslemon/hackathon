@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Input } from "@/components/ui";
@@ -168,8 +168,10 @@ type ProfileState = {
 };
 
 function isHttpUrl(value: string): boolean {
+  if (!value || !value.trim()) return true;
+  const trimmed = value.trim();
   try {
-    const url = new URL(value);
+    const url = new URL(trimmed.startsWith("http://") || trimmed.startsWith("https://") ? trimmed : `https://${trimmed}`);
     return url.protocol === "https:" || url.protocol === "http:";
   } catch {
     return false;
@@ -181,35 +183,111 @@ function validateProfile(
   profile: ProfileState,
   projects: Project[],
   certifications: Certification[],
+  experience: Experience[],
+  languages: Language[],
 ): string | null {
+  const fullName = profile.full_name?.trim();
+  if (fullName && (fullName.length < 2 || fullName.length > 100)) {
+    return "Full name must be between 2 and 100 characters.";
+  }
+
   const phone = profile.phone?.trim();
   if (phone && !/^\+?[\d\s()-]{7,20}$/.test(phone)) {
     return "Enter a valid phone number, e.g. +234 801 234 5678.";
   }
+
+  const bio = profile.bio?.trim();
+  if (bio && bio.length > 300) {
+    return "Bio must not exceed 300 characters.";
+  }
+
   const cgpa = profile.cgpa?.toString().trim();
   if (cgpa) {
     const n = Number(cgpa);
     if (Number.isNaN(n) || n < 0 || n > 5) {
-      return "CGPA must be a number between 0 and 5.";
+      return "CGPA must be a number between 0.0 and 5.0.";
     }
   }
+
+  const grad = profile.expected_graduation?.trim();
+  if (grad) {
+    const yearMatch = grad.match(/\d{4}/);
+    if (yearMatch) {
+      const year = parseInt(yearMatch[0], 10);
+      if (year < 2020 || year > 2040) {
+        return "Expected graduation year should be between 2020 and 2040.";
+      }
+    }
+  }
+
+  // Validate Experience
+  for (const exp of experience) {
+    const hasCompany = Boolean(exp.company?.trim());
+    const hasRole = Boolean(exp.role?.trim());
+    if (hasCompany || hasRole) {
+      if (!hasCompany) return "Experience entry is missing company name.";
+      if (!hasRole) return "Experience entry is missing role/title.";
+      if (exp.company.trim().length < 2) return "Company name must be at least 2 characters.";
+      if (exp.role.trim().length < 2) return "Role title must be at least 2 characters.";
+      if (exp.description && exp.description.trim().length > 1000) {
+        return `Description for role "${exp.role}" must not exceed 1000 characters.`;
+      }
+    }
+  }
+
+  // Validate Projects
+  for (const proj of projects) {
+    const hasTitle = Boolean(proj.title?.trim());
+    const hasDesc = Boolean(proj.description?.trim());
+    const hasUrl = Boolean(proj.github_url?.trim() || proj.demo_url?.trim());
+    if (hasTitle || hasDesc || hasUrl) {
+      if (!hasTitle) return "Project is missing a title.";
+      if (proj.title.trim().length < 2) return "Project title must be at least 2 characters.";
+      if (proj.description && proj.description.trim().length > 1000) {
+        return `Description for project "${proj.title}" must not exceed 1000 characters.`;
+      }
+      if (proj.github_url && proj.github_url.trim() && !isHttpUrl(proj.github_url)) {
+        return `Project "${proj.title}" GitHub link must be a valid URL.`;
+      }
+      if (proj.demo_url && proj.demo_url.trim() && !isHttpUrl(proj.demo_url)) {
+        return `Project "${proj.title}" demo link must be a valid URL.`;
+      }
+    }
+  }
+
+  // Validate Certifications
+  for (const cert of certifications) {
+    const hasName = Boolean(cert.name?.trim());
+    const hasIssuer = Boolean(cert.issuer?.trim());
+    const hasUrl = Boolean(cert.credential_url?.trim());
+    if (hasName || hasIssuer || hasUrl) {
+      if (!hasName) return "Certification is missing a name.";
+      if (!hasIssuer) return `Certification "${cert.name}" is missing an issuing organization.`;
+      if (cert.credential_url && cert.credential_url.trim() && !isHttpUrl(cert.credential_url)) {
+        return `Credential link for "${cert.name}" must be a valid URL.`;
+      }
+    }
+  }
+
+  // Validate Languages
+  for (const lang of languages) {
+    if (lang.name && lang.name.trim() && lang.name.trim().length < 2) {
+      return "Language name must be at least 2 characters.";
+    }
+  }
+
+  // Validate Portfolio links
   const links: Array<[string, string | undefined]> = [
     ...Object.entries(profile.portfolio_links || {}).map(
       ([k, v]) => [`${k} link`, v as string | undefined] as [string, string | undefined],
     ),
-    ...projects.flatMap((p) => [
-      [`"${p.title || "Project"}" GitHub link`, p.github_url],
-      [`"${p.title || "Project"}" demo link`, p.demo_url],
-    ] as Array<[string, string | undefined]>),
-    ...certifications.map(
-      (c) => [`"${c.name || "Certification"}" credential link`, c.credential_url] as [string, string | undefined],
-    ),
   ];
   for (const [label, value] of links) {
     if (value && value.trim() && !isHttpUrl(value.trim())) {
-      return `The ${label} must be a full URL starting with https://`;
+      return `The ${label} must be a valid URL.`;
     }
   }
+
   return null;
 }
 
@@ -287,16 +365,19 @@ export default function ProfileClient({
       ? interestsArray.filter((i) => i !== interest)
       : [...interestsArray, interest];
     setProfile({ ...profile, interests: updated });
+    setHasUnsavedChanges(true);
   };
 
   const addSkill = (skill: string) => {
     if (!skill.trim() || skillsArray.includes(skill.trim())) return;
     setProfile({ ...profile, skills: [...skillsArray, skill.trim()] });
     setNewSkill("");
+    setHasUnsavedChanges(true);
   };
 
   const removeSkill = (skill: string) => {
     setProfile({ ...profile, skills: skillsArray.filter((s) => s !== skill) });
+    setHasUnsavedChanges(true);
   };
 
   const addExperience = () => {
@@ -313,6 +394,7 @@ export default function ProfileClient({
         },
       ],
     });
+    setHasUnsavedChanges(true);
   };
 
   const updateExperience = (
@@ -323,6 +405,7 @@ export default function ProfileClient({
     const updated = [...experienceArray];
     updated[index] = { ...updated[index], [field]: value };
     setProfile({ ...profile, experience: updated });
+    setHasUnsavedChanges(true);
   };
 
   const removeExperience = (index: number) => {
@@ -330,6 +413,7 @@ export default function ProfileClient({
       ...profile,
       experience: experienceArray.filter((_, i) => i !== index),
     });
+    setHasUnsavedChanges(true);
   };
 
   const addProject = () => {
@@ -346,6 +430,7 @@ export default function ProfileClient({
         },
       ],
     });
+    setHasUnsavedChanges(true);
   };
 
   const updateProject = (
@@ -356,6 +441,7 @@ export default function ProfileClient({
     const updated = [...projectsArray];
     updated[index] = { ...updated[index], [field]: value };
     setProfile({ ...profile, projects: updated });
+    setHasUnsavedChanges(true);
   };
 
   const removeProject = (index: number) => {
@@ -363,6 +449,7 @@ export default function ProfileClient({
       ...profile,
       projects: projectsArray.filter((_, i) => i !== index),
     });
+    setHasUnsavedChanges(true);
   };
 
   const addCertification = () => {
@@ -373,6 +460,7 @@ export default function ProfileClient({
         { name: "", issuer: "", date: "", credential_url: "" },
       ],
     });
+    setHasUnsavedChanges(true);
   };
 
   const updateCertification = (
@@ -383,6 +471,7 @@ export default function ProfileClient({
     const updated = [...certificationsArray];
     updated[index] = { ...updated[index], [field]: value };
     setProfile({ ...profile, certifications: updated });
+    setHasUnsavedChanges(true);
   };
 
   const removeCertification = (index: number) => {
@@ -390,6 +479,7 @@ export default function ProfileClient({
       ...profile,
       certifications: certificationsArray.filter((_, i) => i !== index),
     });
+    setHasUnsavedChanges(true);
   };
 
   const addLanguage = () => {
@@ -397,6 +487,7 @@ export default function ProfileClient({
       ...profile,
       languages: [...languagesArray, { name: "", proficiency: "Intermediate" }],
     });
+    setHasUnsavedChanges(true);
   };
 
   const updateLanguage = (
@@ -407,6 +498,7 @@ export default function ProfileClient({
     const updated = [...languagesArray];
     updated[index] = { ...updated[index], [field]: value };
     setProfile({ ...profile, languages: updated });
+    setHasUnsavedChanges(true);
   };
 
   const removeLanguage = (index: number) => {
@@ -414,10 +506,30 @@ export default function ProfileClient({
       ...profile,
       languages: languagesArray.filter((_, i) => i !== index),
     });
+    setHasUnsavedChanges(true);
   };
 
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Warn about unsaved changes before leaving
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges && isEditing) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges, isEditing]);
+
   const handleSave = async () => {
-    const invalid = validateProfile(profile, projectsArray, certificationsArray);
+    const invalid = validateProfile(
+      profile,
+      projectsArray,
+      certificationsArray,
+      experienceArray,
+      languagesArray,
+    );
     if (invalid) {
       setStatus({ type: "error", message: invalid });
       return;
@@ -425,16 +537,16 @@ export default function ProfileClient({
     setIsSaving(true);
     setStatus(null);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData?.session?.user?.id;
-      if (!userId) throw new Error("Not logged in");
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id || profile.id;
+      if (!userId) throw new Error("You must be logged in to save your profile.");
 
       // Filter out empty entries before saving
       const cleanExperience = experienceArray.filter(
-        (e) => e.company.trim() || e.role.trim(),
+        (e) => e.company.trim() && e.role.trim(),
       );
       const cleanProjects = projectsArray.filter((p) => p.title.trim());
-      const cleanCerts = certificationsArray.filter((c) => c.name.trim());
+      const cleanCerts = certificationsArray.filter((c) => c.name.trim() && c.issuer.trim());
       const cleanLanguages = languagesArray.filter((l) => l.name.trim());
       const cleanSkills = skillsArray.filter((s) => s.trim());
 
@@ -464,20 +576,40 @@ export default function ProfileClient({
         .eq("id", userId);
       if (error) throw error;
 
+      // Update local profile state with cleaned arrays so no stale empty items persist
+      setProfile((prev) => ({
+        ...prev,
+        skills: cleanSkills,
+        languages: cleanLanguages,
+        experience: cleanExperience,
+        projects: cleanProjects,
+        certifications: cleanCerts,
+      }));
+
       // Skills, projects and experience feed internship matching; refresh
-      // matches in the background (fire and forget).
-      if (hasCv) {
+      // matches in the background whenever the student has CV or profile skills.
+      const shouldRematch = Boolean(
+        hasCv ||
+        cleanSkills.length > 0 ||
+        cleanProjects.length > 0 ||
+        cleanExperience.length > 0
+      );
+
+      if (shouldRematch) {
         import("@/lib/api")
           .then(({ authenticatedFetch, backendUrl }) =>
             authenticatedFetch(backendUrl("/api/me/refresh-matches"), { method: "POST" }),
           )
-          .catch(() => {});
+          .catch((refreshErr) => {
+            console.warn("[ProfileClient] Rematch request:", refreshErr);
+          });
       }
 
+      setHasUnsavedChanges(false);
       setStatus({
         type: "success",
-        message: hasCv
-          ? "Profile saved! Your internship matches will update in a few minutes."
+        message: shouldRematch
+          ? "Profile saved! Your internship matches will update shortly."
           : "Profile saved successfully!",
       });
       setIsEditing(false);
@@ -496,7 +628,14 @@ export default function ProfileClient({
   return (
     <div className="space-y-6">
       <button
-        onClick={() => router.push("/dashboard/student")}
+        onClick={() => {
+          if (hasUnsavedChanges && isEditing) {
+            if (!window.confirm("You have unsaved changes. Are you sure you want to leave?")) {
+              return;
+            }
+          }
+          router.push("/dashboard/student");
+        }}
         className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-600 transition-colors group"
       >
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
@@ -585,6 +724,7 @@ export default function ProfileClient({
                   onClick={() => {
                     setProfile(initialProfile || {});
                     setIsEditing(false);
+                    setHasUnsavedChanges(false);
                     setStatus(null);
                   }}
                   className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-500 hover:bg-slate-50 transition-all shadow-sm"

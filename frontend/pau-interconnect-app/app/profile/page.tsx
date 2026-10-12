@@ -26,21 +26,24 @@ export default async function ProfilePage() {
     .from("profiles")
     .select("*")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
-  const isEmployer = profile?.role === "employer";
+  if (profile?.role === "employer") {
+    redirect("/dashboard/employer/settings");
+  }
+  if (profile?.role === "admin" || profile?.is_admin) {
+    redirect("/dashboard/admin");
+  }
 
   return (
     <DashboardShell userProfile={profile}>
       <div className="max-w-4xl mx-auto pb-12">
         <header className="mb-8 px-4 sm:px-0">
           <h2 className="text-2xl font-bold text-slate-800 leading-tight">
-            {isEmployer ? "Company Profile" : "Profile Settings"}
+            Profile Settings
           </h2>
           <p className="text-sm text-slate-400 mt-1">
-            {isEmployer 
-              ? "Manage your company information and brand identity" 
-              : "Manage your personal information, interests, and CV"}
+            Manage your personal information, interests, and CV
           </p>
         </header>
 

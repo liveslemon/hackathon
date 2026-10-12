@@ -31,7 +31,7 @@ export default async function ViewStudentProfilePage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/login/employer");
+  if (!user) redirect("/login/student");
 
   // Fetch viewer's profile to determine role
   const { data: viewerProfile } = await supabase
@@ -40,17 +40,41 @@ export default async function ViewStudentProfilePage({
     .eq("id", user.id)
     .maybeSingle();
 
-  const isEmployerOrAdmin =
-    viewerProfile?.role === "employer" || viewerProfile?.is_admin === true;
   const isOwnProfile = user.id === studentId;
+  const isAdmin = viewerProfile?.is_admin === true || viewerProfile?.role === "admin";
+  const isEmployer = viewerProfile?.role === "employer";
 
-  if (!isEmployerOrAdmin && !isOwnProfile) {
-    // Students can't view other students' profiles
+  if (!isOwnProfile && !isAdmin && !isEmployer) {
+    // Students cannot view other students' profiles
     redirect("/dashboard/student");
   }
 
-  // Fetch student profile using service-level read (RLS allows admin/employer reads
-  // via policy or we use the viewer's session which should have access)
+  // Employers may ONLY view students who applied to their internships or whose logbooks they supervise
+  if (isEmployer && !isAdmin && !isOwnProfile) {
+    const [{ data: application }, { data: logbookEntry }] = await Promise.all([
+      supabase
+        .from("applied_internships")
+        .select("id, internships!inner(employer_id, poster_id)")
+        .eq("user_id", studentId)
+        .or(`internships.employer_id.eq.${user.id},internships.poster_id.eq.${user.id}`)
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("logbook_entries")
+        .select("id")
+        .eq("student_id", studentId)
+        .eq("employer_id", user.id)
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    const canView = Boolean(application || logbookEntry);
+    if (!canView) {
+      notFound();
+    }
+  }
+
+  // Fetch student profile using viewer's session (enforced by RLS)
   const { data: studentProfile } = await supabase
     .from("profiles")
     .select("*")
@@ -61,13 +85,17 @@ export default async function ViewStudentProfilePage({
     notFound();
   }
 
+  // Owner and admins see full profile; employers see server-side masked profile
+  const displayProfile = isOwnProfile || isAdmin
+    ? studentProfile
+    : maskStudentForEmployer(studentProfile);
+
   return (
     <DashboardShell userProfile={viewerProfile}>
       <div className="max-w-4xl mx-auto pb-12 px-4 sm:px-0">
-        <StudentPublicProfile
-          profile={isOwnProfile ? studentProfile : maskStudentForEmployer(studentProfile)}
-        />
+        <StudentPublicProfile profile={displayProfile} />
       </div>
     </DashboardShell>
   );
 }
+

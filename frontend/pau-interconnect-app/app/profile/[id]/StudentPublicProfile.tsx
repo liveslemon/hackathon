@@ -20,7 +20,6 @@ import {
   Loader2,
 } from "lucide-react";
 import { cx } from "@/utils/cx";
-import Link from "next/link";
 
 type Experience = {
   company: string;
