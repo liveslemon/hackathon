@@ -65,7 +65,8 @@ Finish in 1–2 days. The other four wave 3 agents start from your merged work.
 
 SCOPE: audit/delivery/ui/shared/{app-shell,notifications,feedback,internship-card}.md (all P1/P2), ui/README G-1, G-2, G-5 (kit side),
 G-6, G-9, G-12; 07 W-4 (match explainer), W-9 (⌘K palette); 04 R-9 (react-icons → lucide-react, then remove react-icons and @untitledui/*
-from package.json; that's your one allowed package.json edit), R-10 (rebuild FileUpload on components/ui, then delete components/{base,foundations,application}).
+from package.json; that's your one allowed package.json edit. app/page.tsx (the landing page the owner chose to keep) imports react-icons/md:
+swap those 4 icons for the closest lucide-react icons at the same size and colour, with no other change to that file; it's an allowed out-of-area edit), R-10 (rebuild FileUpload on components/ui, then delete components/{base,foundations,application}).
 1. Shell:
    - Sidebar: labelled by default ≥ 1024 px and collapsible, keeping agent 34's nav config arrays (K11)
    - the real logo from public/logo.svg / logo-dark.svg (agent 27)

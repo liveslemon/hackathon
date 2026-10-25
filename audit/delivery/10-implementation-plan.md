@@ -168,7 +168,7 @@ Each agent implements the matching files in [`ui/`](ui/README.md) literally, plu
 | **42 Student pages** | Sonnet | all of `ui/student/*` | W-1 coach, PF-1 `student_feed` RPC, PF-3/PF-4, saved-search UI on top of 35's API |
 | **43 Employer pages** | Sonnet | all of `ui/employer/*` | R-5 one `InternshipForm` (also used by admin post on behalf, P1-3 UI half), PF-7 |
 | **44 Admin, coordinator and supervisor UI** | Sonnet | `ui/admin/*` | Admin into `DashboardShell` with real routes (R-8, G-10), F-12 support tools, F-14 health panel, PF-2 `admin_kpis()`, W-11 heatmap, a polish pass on 32's pages |
-| **45 Public, auth and email visuals** | Flash | `ui/public/*`, the visual side of `ui/shared/emails.md` | One `/login` + SSO button (provider chosen in wave 0), W-3 live counters, PF-3 static/ISR, OpenGraph, sitemap |
+| **45 Public, auth and email visuals** | Flash | `ui/public/*` **except the landing page, which keeps the owner's original design**, plus the visual side of `ui/shared/emails.md` | One `/login` + SSO button (provider chosen in wave 0), PF-3 static/ISR, OpenGraph, sitemap |
 
 Ownership: 41 owns `components/**` (except `components/internships/**`, which is 43's) and `app/globals.css`. 42–45 own
 their `app/**` areas as listed in their prompts. Only 44 may edit `backend/routers/admin.py`. 42 may add SQL migrations
