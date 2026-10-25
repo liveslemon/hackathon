@@ -19,6 +19,9 @@ Keep the existing exports working (callers exist). Other agents put their templa
    - REFRESH MATERIALIZED VIEW CONCURRENTLY platform_stats, hourly (K13: you create the view: students placed in the active session, open
      roles, verified companies, logbook days signed)
    - purge_expired_data() (K16, agent 36), weekly
+   - expire_internships(): SECURITY DEFINER; sets status='expired' on internships whose deadline has passed and status is 'active'
+     (found in wave 0: 22 of 25 "active" postings were past their deadline). Daily at 00:10 Africa/Lagos. The K6 trigger and the stale-match
+     cleanup then drop their scores. Check the internships status CHECK constraint allows 'expired' (the zod schema does), and add it if not.
    - digests: offers_expiring_soon (33) and overdue_logbook_weeks (32), via an edge function or route you own that emails them, daily
    Document what the human must enable (pg_cron, pg_net, the Vault secret) in your report.
 5. F-6 saved searches: a saved_searches table (user, filters jsonb, frequency 'daily'|'weekly'), API app/api/saved-searches/** (CRUD), and a

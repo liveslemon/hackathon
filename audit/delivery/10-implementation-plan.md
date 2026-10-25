@@ -128,7 +128,7 @@ Agents can't do these. Wave 1 shouldn't start until items 1–6 are done.
 | **32 SIWES roles and logbook loop** | **Opus** | F-2 (sessions, enrolments, assignments), F-8 weekly sign-off, F-9 evaluation, completion and certificate (incl. W-8 verify page), coordinator and supervisor pages (functional), proxy routing for the new roles |
 | **33 Hiring: interviews, offers, screening** | Sonnet | F-3, F-4, F-7 on top of K5; the student offer/interview tabs in `/my-internships`; employer schedule/offer actions in applicant review |
 | **34 Communications** | Sonnet | F-5 `/messages`, the notifications page + grouping + digest settings, F-10 announcements, S-5, Sidebar nav entries for Messages, coordinator and supervisor |
-| **35 Email and scheduling** | Flash | R-15 single provider + `email_log`, the new templates (shared/emails.md), pg_cron jobs (deadline reminders, offer expiry, stats refresh, retention), F-6 saved searches + alerts (API + email; the UI comes in wave 3), S-11 |
+| **35 Email and scheduling** | Flash | R-15 single provider + `email_log`, the new templates (shared/emails.md), pg_cron jobs (deadline reminders, **posting auto-expiry**, offer expiry, stats refresh, retention), F-6 saved searches + alerts (API + email; the UI comes in wave 3), S-11 |
 | **36 Privacy and NDPA** | Sonnet | F-13 `/privacy`, `/terms`, `/accessibility`; the consent API; `student_public_profile` view; a 30-day deletion grace period + receipt; the retention purge function |
 
 ### Wave 2 file ownership
