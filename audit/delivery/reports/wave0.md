@@ -18,7 +18,9 @@
 
 ## Your turn (dashboards only you can reach)
 
-Tick these off. Wave 1 can start once 2, 3, 4 and 6 are done.
+**Deferred by the owner (25 Oct) until the audit is complete**, except: **3 (passwords)** is strongly recommended now, and **6 (staging) or Docker
+Desktop** (for a local Supabase) is needed by the time wave 1 is integrated, so migrations aren't first applied to production.
+Wave 1 can start without the rest. If 9 isn't decided by wave 3, agent 45 builds email login only and leaves SSO for later.
 
 - [ ] **2. Render: free plan, in Europe, kept awake** (decision 25 Oct: stay on free for now; upgrade to Starter before real users).
   1. Render → New → Web Service → this repo. Root `backend`, region **Frankfurt**, instance type **Free**.
@@ -55,6 +57,7 @@ Tick these off. Wave 1 can start once 2, 3, 4 and 6 are done.
 | Decision | Value | Date |
 |---|---|---|
 | Render plan | Free (Frankfurt) + 5-min external pinger; worker stays inline | 25 Oct 2026 |
+| Dashboard tasks 2, 4, 7, 8, 10 | Deferred until after the audit | 25 Oct 2026 |
 | SSO provider | _pending_ | |
 | Email provider | _pending_ (default Resend) | |
 | Sender domain | _pending_ | |
