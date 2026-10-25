@@ -63,9 +63,16 @@ Commit it as the LAST commit on your branch.
 YOU ARE AGENT 21: PLATFORM & INFRA. Wave 1. Branch: agent/w1-21-platform. Model: Sonnet.
 
 SCOPE (audit IDs, see 02, 05, 06, 08)
-- P0-1 code side: render.yaml sets region: frankfurt and plan: starter for the web service, and ADDS a background worker service
-  "pau-interconnect-worker" (startCommand: python worker.py, same env vars, region frankfurt). Delete .github/workflows/keep-render-alive.yml.
-- K1: env RUN_INLINE_WORKER (default "true"). When "false", backend/main.py lifespan does NOT start worker_loop.
+- P0-1 code side. DECISION: the owner stays on Render's FREE plan for now. So:
+  - render.yaml: region: frankfurt, plan: free, startCommand with --workers 1 (the free instance has ~512 MB RAM and a shared CPU; two
+    workers plus the inline job loop risk running out of memory). Do NOT add a separate worker service: free hours only cover one
+    always-on service. Add a commented-out "pau-interconnect-worker" block (startCommand: python worker.py) with a note:
+    "enable when moving to a paid plan, and set RUN_INLINE_WORKER=false on the web service".
+  - keep .github/workflows/keep-render-alive.yml as a BACKUP only, pointing at env/secret BACKEND_URL instead of a hard-coded URL. The
+    primary keep-alive is an external uptime monitor pinging /ready every 5 min (the human sets it up).
+  - make the cold-start experience survivable: the frontend shows "The server is waking up…" after 3 s (K2 errors with kind "timeout"
+    let pages do this), and server components use READ_TIMEOUT_MS.
+- K1: env RUN_INLINE_WORKER (default "true", and it STAYS true on the free plan). When "false", backend/main.py lifespan does NOT start worker_loop.
   Agent 25 writes backend/worker.py. Just reference it.
 - K2 + P1-6 + PF-5: lib/api.ts exports READ_TIMEOUT_MS = 8000 and AI_TIMEOUT_MS = 20000. Default reads use READ_TIMEOUT_MS
   with one retry only for network errors. lib/api-server.ts uses READ_TIMEOUT_MS. Errors carry a `kind`

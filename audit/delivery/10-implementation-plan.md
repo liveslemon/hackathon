@@ -70,7 +70,7 @@ Agents can't do these. Wave 1 shouldn't start until items 1–6 are done.
 | # | Task | Audit ref | Where |
 |---|---|---|---|
 | 1 | Commit the audit, `CLAUDE.md` and the prompts to `dev`, so worktrees can see them (in the setup script) | — | terminal |
-| 2 | Render: upgrade the web service to **Starter**; create the service in **Frankfurt** (region can't be changed in place, so create a new service and point Vercel's `NEXT_PUBLIC_BACKEND_URL` at it) | P0-1 | Render |
+| 2 | Render (**free plan, owner's decision**): create the service in **Frankfurt** (region can't be changed in place, so create a new service and point Vercel's `NEXT_PUBLIC_BACKEND_URL` at it), plus an external uptime pinger on `/ready` every 5 min to stop it sleeping. Upgrade to Starter before real users. | P0-1 | Render, UptimeRobot |
 | 3 | Rotate the `admin@pau.edu.ng` and `admin2@pau.edu.ng` passwords; delete the test student and employer accounts in production | P0-3 | Supabase Auth |
 | 4 | Supabase Auth: leaked-password protection on; minimum password length 10; enable TOTP MFA | P0-3, S-4 | Supabase |
 | 5 | Ship `dev` → `main` (PR), deploy backend then frontend, then the backfill; delete the 8 failed jobs | P0-5 | me + you |
@@ -110,7 +110,7 @@ Agents can't do these. Wave 1 shouldn't start until items 1–6 are done.
 
 | ID | Provider | Contract |
 |---|---|---|
-| K1 | 21 | Env `RUN_INLINE_WORKER` (default `true`). When `false`, `main.py` doesn't start `worker_loop`. Render gets a second service, `pau-interconnect-worker`: `python worker.py`, Frankfurt. |
+| K1 | 21 | Env `RUN_INLINE_WORKER` (default `true`). When `false`, `main.py` doesn't start `worker_loop`. **On the free plan the worker stays inline** (one always-on free service). `backend/worker.py` (25) is ready for a paid plan; `render.yaml` carries a commented-out worker service. |
 | K2 | 21 | `lib/api.ts` exports `READ_TIMEOUT_MS = 8000` and `AI_TIMEOUT_MS = 20000`, and the server helper uses `READ_TIMEOUT_MS`. |
 | K3 | 21 | `/ready` returns `{status, checks:{database}, queue:{queued, processing, failed_1h, oldest_queued_s}, version}`. |
 | K4 | 22 | `profiles.role` check: `student, employer, admin, coordinator, academic_supervisor`. SQL helpers `public.has_role(text) → bool`, `public.current_user_active() → bool` (not suspended). `is_admin` **stays a real column**, kept equal to `(role = 'admin')` by a trigger (20 files and 6 policies read it). It's removed in wave 3 by 44, after readers move to `role`. |

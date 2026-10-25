@@ -20,12 +20,13 @@
 
 Tick these off. Wave 1 can start once 2, 3, 4 and 6 are done.
 
-- [ ] **2. Render: always-on, in Europe.**
-  1. Render → New → Web Service → this repo. Root `backend`, region **Frankfurt**, plan **Starter**.
-     Build: `pip install -r requirements.txt`. Start: `python -m uvicorn main:app --host 0.0.0.0 --port $PORT --workers 2`.
+- [ ] **2. Render: free plan, in Europe, kept awake** (decision 25 Oct: stay on free for now; upgrade to Starter before real users).
+  1. Render → New → Web Service → this repo. Root `backend`, region **Frankfurt**, instance type **Free**.
+     Build: `pip install -r requirements.txt`. Start: `python -m uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1` (1 worker: the free instance has ~512 MB RAM).
   2. Copy every env var from the current service (Environment tab → copy each).
   3. When it's live, set Vercel → Settings → Environment Variables → `NEXT_PUBLIC_BACKEND_URL` = the new URL (Production + Preview), and redeploy.
-  4. Update `FRONTEND_URL` on the new Render service if needed. Then suspend the old Oregon/free service.
+  4. Update `FRONTEND_URL` on the new Render service if needed. Then **delete** the old Oregon service (two free services can't both stay awake on the ~750 free hours a month).
+  5. UptimeRobot (free) → New monitor → HTTP(s) → `<new backend URL>/ready`, every **5 minutes**, with an email alert. This is what keeps it awake.
   Tell me the new URL, and I'll verify latency and update `render.yaml` and the keep-alive URL.
 - [ ] **3. Passwords.** Supabase → Authentication → Users:
   - for `admin@pau.edu.ng` and `admin2@pau.edu.ng`, use "Send password recovery" (or set a new 16+ character password in a password manager)
@@ -53,6 +54,7 @@ Tick these off. Wave 1 can start once 2, 3, 4 and 6 are done.
 ## Decisions log
 | Decision | Value | Date |
 |---|---|---|
+| Render plan | Free (Frankfurt) + 5-min external pinger; worker stays inline | 25 Oct 2026 |
 | SSO provider | _pending_ | |
 | Email provider | _pending_ (default Resend) | |
 | Sender domain | _pending_ | |
