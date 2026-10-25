@@ -1,7 +1,8 @@
 YOU ARE AGENT 45: PUBLIC, AUTH & EMAIL VISUALS. Wave 3 (after 41 merges). Branch: agent/w3-45-public. Model: Gemini 3.8 Flash (high thinking).
 
-SCOPE: OWNER DECISION (25 Oct 2026): the landing page (app/page.tsx) was restored to its ORIGINAL design at the owner's request, and it
-is forced to light mode via forcedTheme in app/providers.tsx. Do NOT redesign it or change its layout, colours, fonts or imagery.
+SCOPE: OWNER DECISION (25 Oct 2026): the landing page (app/page.tsx + app/_landing/**) was redesigned at the owner's request, keeping the
+original content and flow, with light/dark support and a circular theme-switch animation. Do NOT redesign it or change its layout,
+colours, fonts or imagery.
 For the landing page you may ONLY add non-visual things: metadata/OpenGraph, static rendering, alt text and semantic
 headings (no visible change). Ignore ui/public/landing.md's redesign and W-3 counters on it.
 Then: every OTHER file in audit/delivery/ui/public/ (login, password-reset, onboarding (VISUAL only; its logic is agent 31's),
