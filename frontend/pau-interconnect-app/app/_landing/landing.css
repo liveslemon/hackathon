@@ -1,0 +1,119 @@
+/* Landing page palette: warm paper and ink, one indigo accent. Scoped to .landing. */
+.landing {
+  --paper: #f6f5f1;
+  --paper-raised: #fbfaf7;
+  --ink: #131318;
+  --muted: #55555f;
+  --subtle: #7b7b86;
+  --hairline: rgba(19, 19, 24, 0.08);
+  --hairline-strong: rgba(19, 19, 24, 0.14);
+  --hover: rgba(19, 19, 24, 0.05);
+  --dot: rgba(19, 19, 24, 0.17);
+  --card: #ffffff;
+  --card-line: rgba(19, 19, 24, 0.08);
+  --track: rgba(19, 19, 24, 0.08);
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(79, 70, 229, 0.09);
+  --panel: #131318;
+  --panel-ink: #f6f5f1;
+  --panel-muted: rgba(246, 245, 241, 0.62);
+  --panel-line: rgba(246, 245, 241, 0.07);
+  --note: #fbefc5;
+  --note-ink: #4a300c;
+  --pin: #e5484d;
+  --match: #0a8259;
+  --match-soft: rgba(15, 157, 110, 0.1);
+  --queue-alert: #d4343a;
+  --badge-ink: #ffffff;
+  --violet: #7c3aed;
+  --shadow-card: 0 1px 0 rgba(19, 19, 24, 0.03), 0 18px 40px -18px rgba(19, 19, 24, 0.28);
+  --shadow-soft: 0 10px 30px -14px rgba(19, 19, 24, 0.25);
+
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-landing-sans), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+}
+
+.dark .landing {
+  --paper: #0b0c10;
+  --paper-raised: #101116;
+  --ink: #ecebe6;
+  --muted: #a2a2ad;
+  --subtle: #747480;
+  --hairline: rgba(236, 235, 230, 0.07);
+  --hairline-strong: rgba(236, 235, 230, 0.14);
+  --hover: rgba(236, 235, 230, 0.06);
+  --dot: rgba(236, 235, 230, 0.11);
+  --card: #15161c;
+  --card-line: rgba(236, 235, 230, 0.08);
+  --track: rgba(236, 235, 230, 0.09);
+  --accent: #8d8ffa;
+  --accent-hover: #a5a6fb;
+  --accent-ink: #0b0c10;
+  --accent-soft: rgba(141, 143, 250, 0.12);
+  --panel: #14151b;
+  --panel-ink: #ecebe6;
+  --panel-muted: rgba(236, 235, 230, 0.6);
+  --panel-line: rgba(236, 235, 230, 0.06);
+  --note: #2c2515;
+  --note-ink: #f2dfae;
+  --pin: #ff6b6f;
+  --match: #3ccf9a;
+  --match-soft: rgba(60, 207, 154, 0.12);
+  --queue-alert: #ff6b6f;
+  --badge-ink: #0b0c10;
+  --violet: #a78bfa;
+  --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.5), 0 24px 48px -20px rgba(0, 0, 0, 0.85);
+  --shadow-soft: 0 14px 36px -16px rgba(0, 0, 0, 0.8);
+}
+
+.landing-serif {
+  font-family: var(--font-landing-serif), ui-serif, Georgia, serif;
+}
+
+.landing-mono {
+  font-family: var(--font-landing-mono), ui-monospace, monospace;
+  font-feature-settings: "zero";
+}
+
+/* Dotted field, faded towards the edges so it reads as a surface, not wallpaper. */
+.landing-dots {
+  background-image: radial-gradient(var(--dot) 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
+  background-position: -11px -11px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 45%, #000 45%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 45%, #000 45%, transparent 100%);
+}
+
+.landing-grid-lines {
+  background-image:
+    linear-gradient(var(--panel-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--panel-line) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+/* Theme switch: let the circular clip-path reveal do the work. */
+html[data-theme-transition="on"]::view-transition-old(root),
+html[data-theme-transition="on"]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html[data-theme-transition="on"]::view-transition-old(root) {
+  z-index: 1;
+}
+html[data-theme-transition="on"]::view-transition-new(root) {
+  z-index: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing *,
+  .landing *::before,
+  .landing *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
