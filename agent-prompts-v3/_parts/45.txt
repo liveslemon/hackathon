@@ -1,12 +1,15 @@
 YOU ARE AGENT 45: PUBLIC, AUTH & EMAIL VISUALS. Wave 3 (after 41 merges). Branch: agent/w3-45-public. Model: Gemini 3.8 Flash (high thinking).
 
-SCOPE: every file in audit/delivery/ui/public/ (landing, login, password-reset, onboarding (VISUAL only; its logic is agent 31's),
+SCOPE: OWNER DECISION (25 Oct 2026): the landing page (app/page.tsx) was restored to its ORIGINAL design at the owner's request, and it
+is forced to light mode via forcedTheme in app/providers.tsx. Do NOT redesign it or change its layout, colours, fonts or imagery.
+For the landing page you may ONLY add non-visual things: metadata/OpenGraph, static rendering, alt text and semantic
+headings (no visible change). Ignore ui/public/landing.md's redesign and W-3 counters on it.
+Then: every OTHER file in audit/delivery/ui/public/ (login, password-reset, onboarding (VISUAL only; its logic is agent 31's),
 not-found-and-errors), the visual items in ui/shared/emails.md, plus:
 - ONE /login page (role hint from ?as=) replacing /login/{student,employer,admin}, which become redirects; /login/mfa (agent 22)
   restyled. "Continue with PAU account": supabase.auth.signInWithOAuth with the provider the human chose in wave 0 (Google `hd` hint or
   Azure tenant). Add app/auth/callback/route.ts for the code exchange. Domain restriction stays enforced by agent 22's DB trigger.
   Document the Supabase and provider console steps in your report.
-- W-3 live counters on the landing page from agent 35's platform_stats (hide any counter below a threshold; no invented numbers).
 - 05 PF-3: the landing page and the legal pages are static (or revalidate 300).
 - SEO: metadata + OpenGraph/Twitter images (app/opengraph-image.tsx), app/sitemap.ts, app/robots.ts.
 - Error pages show the Sentry event id with Retry; the 404 suggests destinations.
@@ -18,5 +21,5 @@ app/not-found.tsx, app/error.tsx, app/loading.tsx, app/{opengraph-image,sitemap,
 tests/e2e/visual/public.spec.ts.
 
 ACCEPTANCE
-- Lighthouse on the landing page (mobile): Performance ≥ 90, Accessibility 100, SEO 100. Put the numbers in the report.
+- Lighthouse on the landing page (mobile): report Performance, Accessibility and SEO scores. Improve them only without visible change.
 - There's one login route; no public page links to an admin login.

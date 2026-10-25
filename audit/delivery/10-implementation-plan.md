@@ -70,7 +70,7 @@ Agents can't do these. Wave 1 shouldn't start until items 1–6 are done.
 | # | Task | Audit ref | Where |
 |---|---|---|---|
 | 1 | Commit the audit, `CLAUDE.md` and the prompts to `dev`, so worktrees can see them (in the setup script) | — | terminal |
-| 2 | Render: upgrade the web service to **Starter**; create the service in **Frankfurt** (region can't be changed in place, so create a new service and point Vercel's `NEXT_PUBLIC_BACKEND_URL` at it) | P0-1 | Render |
+| 2 | Render (**free plan, owner's decision**): create the service in **Frankfurt** (region can't be changed in place, so create a new service and point Vercel's `NEXT_PUBLIC_BACKEND_URL` at it), plus an external uptime pinger on `/ready` every 5 min to stop it sleeping. Upgrade to Starter before real users. | P0-1 | Render, UptimeRobot |
 | 3 | Rotate the `admin@pau.edu.ng` and `admin2@pau.edu.ng` passwords; delete the test student and employer accounts in production | P0-3 | Supabase Auth |
 | 4 | Supabase Auth: leaked-password protection on; minimum password length 10; enable TOTP MFA | P0-3, S-4 | Supabase |
 | 5 | Ship `dev` → `main` (PR), deploy backend then frontend, then the backfill; delete the 8 failed jobs | P0-5 | me + you |
@@ -110,7 +110,7 @@ Agents can't do these. Wave 1 shouldn't start until items 1–6 are done.
 
 | ID | Provider | Contract |
 |---|---|---|
-| K1 | 21 | Env `RUN_INLINE_WORKER` (default `true`). When `false`, `main.py` doesn't start `worker_loop`. Render gets a second service, `pau-interconnect-worker`: `python worker.py`, Frankfurt. |
+| K1 | 21 | Env `RUN_INLINE_WORKER` (default `true`). When `false`, `main.py` doesn't start `worker_loop`. **On the free plan the worker stays inline** (one always-on free service). `backend/worker.py` (25) is ready for a paid plan; `render.yaml` carries a commented-out worker service. |
 | K2 | 21 | `lib/api.ts` exports `READ_TIMEOUT_MS = 8000` and `AI_TIMEOUT_MS = 20000`, and the server helper uses `READ_TIMEOUT_MS`. |
 | K3 | 21 | `/ready` returns `{status, checks:{database}, queue:{queued, processing, failed_1h, oldest_queued_s}, version}`. |
 | K4 | 22 | `profiles.role` check: `student, employer, admin, coordinator, academic_supervisor`. SQL helpers `public.has_role(text) → bool`, `public.current_user_active() → bool` (not suspended). `is_admin` **stays a real column**, kept equal to `(role = 'admin')` by a trigger (20 files and 6 policies read it). It's removed in wave 3 by 44, after readers move to `role`. |
@@ -128,7 +128,7 @@ Agents can't do these. Wave 1 shouldn't start until items 1–6 are done.
 | **32 SIWES roles and logbook loop** | **Opus** | F-2 (sessions, enrolments, assignments), F-8 weekly sign-off, F-9 evaluation, completion and certificate (incl. W-8 verify page), coordinator and supervisor pages (functional), proxy routing for the new roles |
 | **33 Hiring: interviews, offers, screening** | Sonnet | F-3, F-4, F-7 on top of K5; the student offer/interview tabs in `/my-internships`; employer schedule/offer actions in applicant review |
 | **34 Communications** | Sonnet | F-5 `/messages`, the notifications page + grouping + digest settings, F-10 announcements, S-5, Sidebar nav entries for Messages, coordinator and supervisor |
-| **35 Email and scheduling** | Flash | R-15 single provider + `email_log`, the new templates (shared/emails.md), pg_cron jobs (deadline reminders, offer expiry, stats refresh, retention), F-6 saved searches + alerts (API + email; the UI comes in wave 3), S-11 |
+| **35 Email and scheduling** | Flash | R-15 single provider + `email_log`, the new templates (shared/emails.md), pg_cron jobs (deadline reminders, **posting auto-expiry**, offer expiry, stats refresh, retention), F-6 saved searches + alerts (API + email; the UI comes in wave 3), S-11 |
 | **36 Privacy and NDPA** | Sonnet | F-13 `/privacy`, `/terms`, `/accessibility`; the consent API; `student_public_profile` view; a 30-day deletion grace period + receipt; the retention purge function |
 
 ### Wave 2 file ownership
@@ -168,7 +168,7 @@ Each agent implements the matching files in [`ui/`](ui/README.md) literally, plu
 | **42 Student pages** | Sonnet | all of `ui/student/*` | W-1 coach, PF-1 `student_feed` RPC, PF-3/PF-4, saved-search UI on top of 35's API |
 | **43 Employer pages** | Sonnet | all of `ui/employer/*` | R-5 one `InternshipForm` (also used by admin post on behalf, P1-3 UI half), PF-7 |
 | **44 Admin, coordinator and supervisor UI** | Sonnet | `ui/admin/*` | Admin into `DashboardShell` with real routes (R-8, G-10), F-12 support tools, F-14 health panel, PF-2 `admin_kpis()`, W-11 heatmap, a polish pass on 32's pages |
-| **45 Public, auth and email visuals** | Flash | `ui/public/*`, the visual side of `ui/shared/emails.md` | One `/login` + SSO button (provider chosen in wave 0), W-3 live counters, PF-3 static/ISR, OpenGraph, sitemap |
+| **45 Public, auth and email visuals** | Flash | `ui/public/*` **except the landing page, which keeps the owner's original design**, plus the visual side of `ui/shared/emails.md` | One `/login` + SSO button (provider chosen in wave 0), PF-3 static/ISR, OpenGraph, sitemap |
 
 Ownership: 41 owns `components/**` (except `components/internships/**`, which is 43's) and `app/globals.css`. 42–45 own
 their `app/**` areas as listed in their prompts. Only 44 may edit `backend/routers/admin.py`. 42 may add SQL migrations
