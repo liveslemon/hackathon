@@ -1,7 +1,8 @@
 # Landing page `/`
 
-> **Superseded by an owner decision (25 Oct 2026):** the original landing design was restored and is kept light-only. The redesign
-> below is **not** to be implemented. Only non-visual improvements (SEO metadata, static rendering, accessibility semantics) apply.
+> **Superseded by an owner decision (25 Oct 2026):** the landing page was redesigned at the owner's request, keeping the original
+> content and flow (`app/page.tsx` + `app/_landing/`), with light/dark and a circular theme-switch animation. The redesign below is
+> **not** to be implemented. Only non-visual improvements (SEO metadata, accessibility semantics) apply.
 
 **File:** `app/page.tsx` (895 lines)  **Seen:** ✅ full page, dark; light from code
 

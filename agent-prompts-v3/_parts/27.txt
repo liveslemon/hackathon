@@ -18,8 +18,9 @@ SCOPE (audit 04 R-7 test-connection only, R-11, R-12, R-13, R-14; 02 P0-6 copy; 
    - 20260223000000_create_profiles.sql contains Python. It's marked applied in remote history. Replace its body with a SQL comment
      explaining that the original content wasn't SQL and the schema was created by later migrations. This is the ONE allowed edit to an
      existing migration. Note it in the report.
-3. Landing page: OWNER DECISION (25 Oct 2026): the landing page (app/page.tsx) was restored to its ORIGINAL design at the owner's request, and it
-   is forced to light mode via forcedTheme in app/providers.tsx. Do NOT redesign it or change its layout, colours, fonts or imagery.
+3. Landing page: OWNER DECISION (25 Oct 2026): the landing page (app/page.tsx + app/_landing/**) was redesigned at the owner's request, keeping the
+   original content and flow, with light/dark support and a circular theme-switch animation. Do NOT redesign it or change its layout,
+   colours, fonts or imagery.
       The restored page no longer has the stats band or the 'official' claims. Make only these copy fixes, with no layout change: remove the
    'Admin' link from the top nav; replace the placeholder email hello@pauinterconnect.edu with a real contact (ask the owner, or leave it
    and hand it off); change '© 2024' to the current year; remove 'Get a special offer now!'.
