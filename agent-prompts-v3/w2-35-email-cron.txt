@@ -1,0 +1,100 @@
+You are one of several AI agents working IN PARALLEL on "PAU InterConnect", an internship + SIWES logbook platform for
+Pan-Atlantic University that is moving from hackathon project to production. Each agent has its own git worktree and branch.
+
+STACK
+- Frontend: frontend/pau-interconnect-app (Next.js 16 App Router, React 19, TypeScript, Tailwind 4 with semantic design tokens,
+  next-themes, sonner, lucide-react, Supabase SSR, Vitest, Playwright). The route guard is proxy.ts. Route handlers live in app/api/**.
+- Backend: backend/ (FastAPI "AI service": CV parsing/OCR, embeddings, matching, LLM failover, durable job queue). pytest in backend/tests.
+- DB: Supabase Postgres + RLS. The ONLY migrations folder is frontend/pau-interconnect-app/supabase/migrations. Read CLAUDE.md.
+
+READ FIRST (in this order)
+1. audit/delivery/README.md, then audit/delivery/10-implementation-plan.md: your wave, your file ownership, the contracts (K1…K14).
+2. The audit files and IDs named in YOUR SECTION below. They're your spec: implement them literally unless you find a better way,
+   and if you do, explain it in your report.
+3. docs/design-system.md, before touching any UI.
+
+FILE OWNERSHIP (this is how we avoid merge conflicts)
+- Edit ONLY the files and folders listed under "YOU OWN". Read anything.
+- You need a change elsewhere? Don't make it. Write it in the "Handoffs" section of your report (file, exact change, why).
+  The one exception: a change of 5 lines or fewer that's needed to compile or to call your new API. Mark it "OUT-OF-AREA EDIT" in the report.
+- New files are fine inside folders you own.
+- Contracts: implement the ones you PROVIDE with exactly the names and signatures in the plan, early (first commit), so others
+  can rely on them. Code against the ones you CONSUME even before the provider merges. Mock them in tests.
+
+DATABASE RULES
+- Never edit an existing migration. Create new files only, in your number range: <wave date>00<agent 2 digits><seq 2 digits>_<agent>_<desc>.sql
+  (wave 1 = 20261101, wave 2 = 20261115, wave 3 = 20261201, wave 4 = 20261215). Example: 20261101002401_24_application_state.sql.
+- Make migrations idempotent and safe on a LIVE database with existing rows: IF NOT EXISTS, DROP … IF EXISTS before CREATE,
+  backfill new NOT NULL columns before adding the constraint, and DROP FUNCTION before changing a return type.
+- The production column types differ from the old migrations in places. profiles.skills is jsonb, NOT text[]. If you depend on
+  a column's type, say so in your report so the integrator can check it against production.
+- Every SECURITY DEFINER function: SET search_path = public, check the caller (auth.uid() / role) inside, and
+  REVOKE ALL … FROM PUBLIC, anon, authenticated, then GRANT only what's needed.
+- NEVER run supabase db push, supabase link, migration repair, backfills or deploys. Never touch production or staging data.
+
+CODE RULES
+- Mocks hide bugs. Two production bugs came from this: a Python MagicMock accepted the JS-only .maybeSingle(), and a pgvector
+  RPC assumed text[]. Call only methods that exist in the real library. For DB code, add at least one test that exercises the real SQL
+  (pgTAP in supabase/tests, or the integration job from agent 26) where you can.
+- Tailwind: use ONLY tokens that exist in app/globals.css (bg-surface, text-fg, text-fg-muted, border-border, bg-brand,
+  text-on-success …). Unknown classes are silently dropped. No raw hex, bg-white, text-slate-*, text-primary, text-muted-fg.
+- No browser dialogs (window.confirm / alert). Use components/ui ConfirmDialog, Modal, Drawer, and sonner toasts.
+- Authorization must hold on the server (RLS, SQL function, or route handler), never only in the UI.
+- Keep existing behaviour unless your scope says to change it. Behaviour changes need a test and a line in your report.
+- Match the surrounding code style. Small commits in the repo's style: "feat(companies): …", "fix(auth): …", "test(rls): …".
+
+QUALITY BAR (must pass before you finish)
+- cd frontend/pau-interconnect-app && npm ci && npm run lint && npm run typecheck && npm run test
+- NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy npx next build
+- cd backend && python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt -r requirements-dev.txt (if present) && .venv/bin/python -m pytest -q
+- Don't push, force-push or rebase. Commit only to your own branch.
+
+DELIVERABLE: audit/delivery/reports/<your-branch-name>.md containing:
+  1. For EVERY audit ID in your scope: ✅ done / ⚠️ partial (why) / ⏭ deferred (why), with the commit hash.
+  2. Contracts provided or consumed, and any deviation from the plan.
+  3. Migrations added, what they do, whether they're safe on existing rows, and which column types you assumed.
+  4. Tests added, plus the exact commands and results.
+  5. Handoffs and OUT-OF-AREA EDITS.
+  6. Manual test steps for a human, per role.
+Commit it as the LAST commit on your branch.
+
+====================================================================================================
+
+YOU ARE AGENT 35: EMAIL & SCHEDULED JOBS. Wave 2. Branch: agent/w2-35-email-cron. Model: Gemini 3.8 Flash (high thinking).
+The human chose ONE email provider in wave 0 (read audit/delivery/reports/wave0.md if present; else default to Resend, and say so).
+
+SCOPE (audit 04 R-15; ui/shared/emails.md P1/P2; 02 P1-8; 06 S-11; 07 F-6 backend + email, W-3 data; 03 notification matrix email column)
+FIRST COMMIT, within your first hour (K15, others depend on it): lib/email.ts exports
+  sendEmail({ to, subject, html, text, category, replyTo?, attachments? }): Promise<{ status: "sent"|"skipped"|"failed", id?, reason? }>
+and lib/emails/layout.ts exports
+  renderEmailLayout({ preheader, title, bodyHtml, cta?: { label, url }, footerNote?, unsubscribeCategory? }): { html, text }
+Keep the existing exports working (callers exist). Other agents put their templates in lib/emails/<area>.ts and call these two.
+1. One provider behind sendEmail. Remove the other provider's code path. The backend's Resend calls in routers/applications.py (cover-letter
+   area) go through the same provider config, or you move those sends to the Next side. Keep the behaviour.
+2. email_log table (to, category, template, status, provider_id, error, created_at) plus provider webhook handling (bounces, complaints) at
+   app/api/email/webhook (verify the signature).
+3. Per-category unsubscribe: signed links to /notifications/settings?unsubscribe=<category>, respecting profiles.settings.notifications
+   (agent 34 owns that page; you generate the links).
+4. pg_cron jobs in a migration (pg_cron + pg_net, secret from Vault via vault.decrypted_secrets, name 'cron_secret'):
+   - deadline-reminders edge function, daily at 08:00 Africa/Lagos
+   - expire_offers() (K10, agent 33), daily at 00:05
+   - REFRESH MATERIALIZED VIEW CONCURRENTLY platform_stats, hourly (K13: you create the view: students placed in the active session, open
+     roles, verified companies, logbook days signed)
+   - purge_expired_data() (K16, agent 36), weekly
+   - digests: offers_expiring_soon (33) and overdue_logbook_weeks (32), via an edge function or route you own that emails them, daily
+   Document what the human must enable (pg_cron, pg_net, the Vault secret) in your report.
+5. F-6 saved searches: a saved_searches table (user, filters jsonb, frequency 'daily'|'weekly'), API app/api/saved-searches/** (CRUD), and a
+   daily/weekly job emailing "N new roles match your search" using match_results and the filters. The UI (a Save search button) is wave 3
+   (agent 42). Document the API in your report.
+6. Templates (lib/emails/platform.ts): application received (student receipt), weekly digest, saved-search alert.
+   Plus a dev-only preview route app/dev/emails/page.tsx (404 in production) that renders every template from every
+   lib/emails/*.ts file.
+
+YOU OWN: lib/{email,email-templates}.ts; lib/emails/{layout,platform}.ts; supabase/functions/**; backend/routers/applications.py
+(email sends only); new app/api/{saved-searches,email}/**, app/dev/emails/**; migrations 20261115003501+; tests/lib/email*.test.ts.
+
+PROVIDES: K13, K15. CONSUMES: K10 (33), K16 (36), views from 32/33 (if missing, guard with to_regclass and log).
+
+ACCEPTANCE
+- Vitest: every template renders html + text, contains an unsubscribe link when unsubscribeCategory is set, and escapes user input.
+- The migration is safe to apply before 32/33/36 merge (cron bodies check that the function/view exists before calling it).

@@ -1,0 +1,33 @@
+YOU ARE AGENT 36: PRIVACY & NDPA COMPLIANCE. Wave 2. Branch: agent/w2-36-privacy. Model: Sonnet.
+
+SCOPE (audit 06 "Data protection: NDPA" table; 07 F-13; 06 S-10 review; ui/student/public-profile.md P1 privacy items)
+FIRST COMMIT (K12): lib/consent.ts exports CONSENT_VERSION (e.g. "2026-11-v1") and recordConsent(); POST /api/consent {version} stores
+profiles.consent_version and profiles.consented_at (migration adds them). Agent 31 adds the checkbox in onboarding.
+1. Pages (public per K14; in the existing design system): /privacy, /terms, /accessibility. Content:
+   - plain-English NDPA-aligned notice: controller (PAU) vs processor (the platform), data collected, purposes, lawful basis, retention
+   - the sub-processors list: Supabase, Vercel, Render, Cohere, the LLM providers in use (read backend LLM_PROVIDERS), the email provider
+   - cross-border transfers, rights and how to exercise them, contact, 72-hour breach commitment
+   Mark legal text "Draft: review with PAU legal" at the top until approved.
+2. Data minimisation: a student_public_profile VIEW (security_invoker = true) exposing only the fields employers may see, honouring
+   profiles.settings privacy flags (email/phone visibility). Switch app/profile/[id]/** to read it. List every other employer-side read of
+   profiles you find (applicant review etc.) as handoffs for wave 3.
+3. Deletion with a grace period: /api/me/delete marks deletion_requested_at, signs the user out and emails a receipt; a "Cancel deletion"
+   link works for 30 days; purge after 30 days via purge_expired_data().
+4. Retention (K16): purge_expired_data() SECURITY DEFINER:
+   - hard-deletes accounts past their grace period (including storage objects: CVs, reports, via storage.objects delete)
+   - anonymises logbooks and applications of students graduated more than 2 years ago (configurable in app_settings)
+   - writes a purge log
+   Agent 35 schedules it weekly.
+5. LLM data policy: in your report, list each configured LLM provider with a link to its data-use and training policy, and recommend which
+   to keep for CV text. Don't change llm_service (agent 25's area; this is advice).
+6. Export: check /api/me/export includes the new wave 2 tables (offers, interviews, logbook_weeks, evaluations, messages). Add what's
+   missing in YOUR route.
+
+YOU OWN: migrations 20261115003601+; backend/routers/profiles.py; app/api/me/**; app/api/consent/**; lib/consent.ts; app/profile/[id]/**;
+new app/{privacy,terms,accessibility}/**; supabase/tests/privacy*.sql; tests.
+
+PROVIDES: K12, K16. CONSUMES: K14 (32), K15 (35) for the receipt email.
+
+ACCEPTANCE
+- pgTAP: an employer selecting from student_public_profile never gets a hidden field; purge_expired_data() deletes only past-grace accounts.
+- An e2e: request deletion → can't sign in → the cancel link restores the account.

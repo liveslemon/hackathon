@@ -1,0 +1,109 @@
+You are one of several AI agents working IN PARALLEL on "PAU InterConnect", an internship + SIWES logbook platform for
+Pan-Atlantic University that is moving from hackathon project to production. Each agent has its own git worktree and branch.
+
+STACK
+- Frontend: frontend/pau-interconnect-app (Next.js 16 App Router, React 19, TypeScript, Tailwind 4 with semantic design tokens,
+  next-themes, sonner, lucide-react, Supabase SSR, Vitest, Playwright). The route guard is proxy.ts. Route handlers live in app/api/**.
+- Backend: backend/ (FastAPI "AI service": CV parsing/OCR, embeddings, matching, LLM failover, durable job queue). pytest in backend/tests.
+- DB: Supabase Postgres + RLS. The ONLY migrations folder is frontend/pau-interconnect-app/supabase/migrations. Read CLAUDE.md.
+
+READ FIRST (in this order)
+1. audit/delivery/README.md, then audit/delivery/10-implementation-plan.md: your wave, your file ownership, the contracts (K1…K14).
+2. The audit files and IDs named in YOUR SECTION below. They're your spec: implement them literally unless you find a better way,
+   and if you do, explain it in your report.
+3. docs/design-system.md, before touching any UI.
+
+FILE OWNERSHIP (this is how we avoid merge conflicts)
+- Edit ONLY the files and folders listed under "YOU OWN". Read anything.
+- You need a change elsewhere? Don't make it. Write it in the "Handoffs" section of your report (file, exact change, why).
+  The one exception: a change of 5 lines or fewer that's needed to compile or to call your new API. Mark it "OUT-OF-AREA EDIT" in the report.
+- New files are fine inside folders you own.
+- Contracts: implement the ones you PROVIDE with exactly the names and signatures in the plan, early (first commit), so others
+  can rely on them. Code against the ones you CONSUME even before the provider merges. Mock them in tests.
+
+DATABASE RULES
+- Never edit an existing migration. Create new files only, in your number range: <wave date>00<agent 2 digits><seq 2 digits>_<agent>_<desc>.sql
+  (wave 1 = 20261101, wave 2 = 20261115, wave 3 = 20261201, wave 4 = 20261215). Example: 20261101002401_24_application_state.sql.
+- Make migrations idempotent and safe on a LIVE database with existing rows: IF NOT EXISTS, DROP … IF EXISTS before CREATE,
+  backfill new NOT NULL columns before adding the constraint, and DROP FUNCTION before changing a return type.
+- The production column types differ from the old migrations in places. profiles.skills is jsonb, NOT text[]. If you depend on
+  a column's type, say so in your report so the integrator can check it against production.
+- Every SECURITY DEFINER function: SET search_path = public, check the caller (auth.uid() / role) inside, and
+  REVOKE ALL … FROM PUBLIC, anon, authenticated, then GRANT only what's needed.
+- NEVER run supabase db push, supabase link, migration repair, backfills or deploys. Never touch production or staging data.
+
+CODE RULES
+- Mocks hide bugs. Two production bugs came from this: a Python MagicMock accepted the JS-only .maybeSingle(), and a pgvector
+  RPC assumed text[]. Call only methods that exist in the real library. For DB code, add at least one test that exercises the real SQL
+  (pgTAP in supabase/tests, or the integration job from agent 26) where you can.
+- Tailwind: use ONLY tokens that exist in app/globals.css (bg-surface, text-fg, text-fg-muted, border-border, bg-brand,
+  text-on-success …). Unknown classes are silently dropped. No raw hex, bg-white, text-slate-*, text-primary, text-muted-fg.
+- No browser dialogs (window.confirm / alert). Use components/ui ConfirmDialog, Modal, Drawer, and sonner toasts.
+- Authorization must hold on the server (RLS, SQL function, or route handler), never only in the UI.
+- Keep existing behaviour unless your scope says to change it. Behaviour changes need a test and a line in your report.
+- Match the surrounding code style. Small commits in the repo's style: "feat(companies): …", "fix(auth): …", "test(rls): …".
+
+QUALITY BAR (must pass before you finish)
+- cd frontend/pau-interconnect-app && npm ci && npm run lint && npm run typecheck && npm run test
+- NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy npx next build
+- cd backend && python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt -r requirements-dev.txt (if present) && .venv/bin/python -m pytest -q
+- Don't push, force-push or rebase. Commit only to your own branch.
+
+DELIVERABLE: audit/delivery/reports/<your-branch-name>.md containing:
+  1. For EVERY audit ID in your scope: ✅ done / ⚠️ partial (why) / ⏭ deferred (why), with the commit hash.
+  2. Contracts provided or consumed, and any deviation from the plan.
+  3. Migrations added, what they do, whether they're safe on existing rows, and which column types you assumed.
+  4. Tests added, plus the exact commands and results.
+  5. Handoffs and OUT-OF-AREA EDITS.
+  6. Manual test steps for a human, per role.
+Commit it as the LAST commit on your branch.
+
+====================================================================================================
+
+YOU ARE AGENT 21: PLATFORM & INFRA. Wave 1. Branch: agent/w1-21-platform. Model: Sonnet.
+
+SCOPE (audit IDs, see 02, 05, 06, 08)
+- P0-1 code side: render.yaml sets region: frankfurt and plan: starter for the web service, and ADDS a background worker service
+  "pau-interconnect-worker" (startCommand: python worker.py, same env vars, region frankfurt). Delete .github/workflows/keep-render-alive.yml.
+- K1: env RUN_INLINE_WORKER (default "true"). When "false", backend/main.py lifespan does NOT start worker_loop.
+  Agent 25 writes backend/worker.py. Just reference it.
+- K2 + P1-6 + PF-5: lib/api.ts exports READ_TIMEOUT_MS = 8000 and AI_TIMEOUT_MS = 20000. Default reads use READ_TIMEOUT_MS
+  with one retry only for network errors. lib/api-server.ts uses READ_TIMEOUT_MS. Errors carry a `kind`
+  ("timeout" | "network" | "auth" | "forbidden" | "server" | "validation"), so pages can show the right message.
+- K3 + RL-4: /ready returns {status, checks:{database}, queue:{queued, processing, failed_1h, oldest_queued_s}, version}
+  (version = env RENDER_GIT_COMMIT or GIT_SHA). Add GET /version. Delete /health-check, /api/health-check and /test-supabase
+  (system.py is yours). Return 503 from /ready when the database check fails. Keep "/", "/health" and "/ready" (Render and
+  uptime monitors call them); remove any other bare aliases in system.py.
+- RL-5: replace the in-memory rate limiter (core/rate_limit.py) with a Postgres-backed fixed window. Write a migration with a rate_limits
+  table + a SECURITY DEFINER function hit_rate_limit(bucket, key, limit, window_s) returns boolean. Keep the same rate_limit(...)
+  dependency signature, so routers don't change.
+- P1-7: Sentry. Add @sentry/nextjs (client + server + edge, source maps upload configured but disabled when SENTRY_AUTH_TOKEN is unset)
+  and sentry-sdk[fastapi] (traces sample rate 0.1). DSNs come from NEXT_PUBLIC_SENTRY_DSN / SENTRY_DSN, and it's a no-op when unset.
+- PF-6 / R-9 (dependencies only, with ZERO imports today): remove @mui/material, @mui/icons-material, @emotion/react, @emotion/styled,
+  cross-fetch from package.json. Move pytest and pytest-asyncio to backend/requirements-dev.txt. Remove redis if nothing imports it.
+  DON'T remove react-icons or @untitledui/* (wave 3 does that).
+- 06 checklist: security headers in next.config.ts (CSP in Report-Only mode with a report-uri to Sentry, HSTS, X-Content-Type-Options,
+  Referrer-Policy, Permissions-Policy). CORS in FastAPI: production origin + Vercel preview pattern from env, nothing else.
+- 08 CI (.github/workflows/ci.yml):
+  - add npm audit --omit=dev --audit-level=high and pip-audit
+  - add a "migration lint" step: every new migration filename matches ^\d{14}_.+\.sql$, is unique, and no existing migration file was modified vs the base branch
+    (exception: 20260223000000_create_profiles.sql, which agent 27 neutralises once)
+  - add a step that fails if SERVICE_ROLE appears in any file containing "use client" or in any NEXT_PUBLIC_ variable name
+  - add an e2e job that runs `npm run test:e2e:ci` against the Vercel preview URL (agent 26 provides the script). Keep it non-blocking
+    (continue-on-error) until staging is ready.
+  - delete the duplicate frontend/pau-interconnect-app/.github/workflows/ci.yml ONLY IF agent 27 hasn't (27 owns that folder,
+    so leave it to 27).
+- Update backend/.env.example and frontend .env.example with every new variable.
+
+YOU OWN: render.yaml, .github/** (repo root), backend/main.py, backend/core/{config,db,rate_limit}.py, backend/routers/system.py,
+backend/requirements.txt, backend/requirements-dev.txt (new), backend/.env.example; in frontend/pau-interconnect-app:
+next.config.ts, vercel.json, package.json, package-lock.json, instrumentation*.ts, sentry.*.config.ts, lib/{api,api-server,env,logger}.ts,
+scripts/health/**, .env.example, tests/lib/{api-error,env}.test.ts; migrations 20261101002101+.
+
+PROVIDES: K1, K2, K3. CONSUMES: backend/worker.py from 25 (only referenced in render.yaml).
+
+ACCEPTANCE
+- Backend tests prove: the rate limit is shared across two app instances (two TestClients, one DB mock with real SQL semantics, or a
+  pgTAP test of hit_rate_limit); /ready returns 503 when the DB check fails; the worker doesn't start when RUN_INLINE_WORKER=false.
+- Vitest: timeout kinds are classified correctly.
+- next build passes with and without the Sentry env vars.

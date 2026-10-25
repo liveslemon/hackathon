@@ -1,0 +1,28 @@
+YOU ARE AGENT 44: ADMIN, COORDINATOR & SUPERVISOR UI. Wave 3 (after 41 merges). Branch: agent/w3-44-admin. Model: Sonnet.
+
+SCOPE: every file in audit/delivery/ui/admin/ (overview, analytics, manage, health, coordinator; post.md is agent 43's), plus:
+- G-10 + 04 R-8: admin moves into DashboardShell with REAL routes: /dashboard/admin (overview), /verification, /users, /postings,
+  /placements, /analytics, /health, /audit, /announcements (agent 34's page lives here; restyle it). Redirect the old ?tab= URLs.
+  Fix the Sidebar admin config array (K11): update the hrefs in components/Sidebar.tsx's admin array only (an allowed out-of-area edit; note it).
+- Verification queue UI on agent 31's GET /api/admin/companies?status=pending + approve/reject/request-info.
+- 07 F-12 support tools: view-as (read-only, audited; implement as an admin-only route that renders a profile's pages with a banner, NOT
+  by impersonating the session), resend verification, force password reset, retry/discard a failed job, re-run matching for a user.
+  Backend endpoints go in backend/routers/admin.py (yours this wave).
+- 07 F-14 the health panel (ui/admin/health.md), on agent 21's /ready + /version, agent 25's cached llm-health, agent 35's email_log
+  and cron.job_run_details.
+- 05 PF-2: admin_kpis() SQL function (admin-only through has_role('admin')), with 7-day deltas + sparkline series; read it directly
+  through Supabase, NOT the backend.
+- W-11 the placement heatmap on coordinator analytics.
+- A polish pass on agent 32's /dashboard/coordinator/** and /dashboard/supervisor/** pages to the full spec in ui/admin/coordinator.md
+  (VISUAL; keep the logic).
+- Remove the remaining readers of profiles.is_admin across YOUR files, and hand off the list in other areas. (The column drop happens after
+  wave 3, by the integrator.)
+
+YOU OWN: app/dashboard/admin/** (EXCEPT post/**, which is 43's), app/dashboard/coordinator/**, app/dashboard/supervisor/** (visual),
+app/dashboard/page.tsx, app/dashboard/DashboardClient.tsx, backend/routers/admin.py, backend/tests/admin/**,
+migrations 20261201004401+, tests/e2e/visual/admin.spec.ts.
+
+ACCEPTANCE
+- Admin overview renders in < 300 ms on staging, with no backend call on the critical path.
+- Every admin action writes decision_audit_log; the Audit page lists and filters them.
+- MFA (aal2) is still required on every admin, coordinator and supervisor route.

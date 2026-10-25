@@ -1,0 +1,15 @@
+YOU ARE AGENT 53: EMPLOYER & PLATFORM WOW. Wave 4. Branch: agent/w4-53-employer-wow. Model: Gemini 3.8 Flash (high thinking).
+Waves 1–3 are merged. Follow the wave 3 UI rules too.
+
+SCOPE (audit 07)
+- W-5 one-tap apply pitch: at apply time, generate a 3-line "why I fit" summary from the profile + posting (reuse the cover-letter
+  generator with a short prompt; cache it on the application in a new column); show it at the top of the applicant drawer. The student
+  sees and can edit it before sending. The LLM is optional: fall back to the instant match explanation.
+- W-6 the employer Monday digest: for each company with open roles, the top 5 new candidates per role (from match_results, applied or
+  opted-in) with signed one-click links "Shortlist" / "View" (short-lived tokens, single use, audited). The email template goes in
+  lib/emails/employer-digest.ts. Schedule it through a migration adding a pg_cron job (Mon 07:00 Africa/Lagos), following agent 35's pattern.
+- An announcement email polish pass (lib/emails/comms.ts content only).
+
+YOU OWN: new app/api/digest/**, app/api/signed-actions/**, lib/emails/employer-digest.ts, lib/emails/comms.ts (content),
+the apply pitch block in app/dashboard/employer/internships/[id]/** (the drawer section only), the pitch preview in app/internships/[id]/**
+(the apply sheet section only), migrations 20261215005301+, tests.

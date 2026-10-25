@@ -1,0 +1,104 @@
+You are one of several AI agents working IN PARALLEL on "PAU InterConnect", an internship + SIWES logbook platform for
+Pan-Atlantic University that is moving from hackathon project to production. Each agent has its own git worktree and branch.
+
+STACK
+- Frontend: frontend/pau-interconnect-app (Next.js 16 App Router, React 19, TypeScript, Tailwind 4 with semantic design tokens,
+  next-themes, sonner, lucide-react, Supabase SSR, Vitest, Playwright). The route guard is proxy.ts. Route handlers live in app/api/**.
+- Backend: backend/ (FastAPI "AI service": CV parsing/OCR, embeddings, matching, LLM failover, durable job queue). pytest in backend/tests.
+- DB: Supabase Postgres + RLS. The ONLY migrations folder is frontend/pau-interconnect-app/supabase/migrations. Read CLAUDE.md.
+
+READ FIRST (in this order)
+1. audit/delivery/README.md, then audit/delivery/10-implementation-plan.md: your wave, your file ownership, the contracts (K1…K14).
+2. The audit files and IDs named in YOUR SECTION below. They're your spec: implement them literally unless you find a better way,
+   and if you do, explain it in your report.
+3. docs/design-system.md, before touching any UI.
+
+FILE OWNERSHIP (this is how we avoid merge conflicts)
+- Edit ONLY the files and folders listed under "YOU OWN". Read anything.
+- You need a change elsewhere? Don't make it. Write it in the "Handoffs" section of your report (file, exact change, why).
+  The one exception: a change of 5 lines or fewer that's needed to compile or to call your new API. Mark it "OUT-OF-AREA EDIT" in the report.
+- New files are fine inside folders you own.
+- Contracts: implement the ones you PROVIDE with exactly the names and signatures in the plan, early (first commit), so others
+  can rely on them. Code against the ones you CONSUME even before the provider merges. Mock them in tests.
+
+DATABASE RULES
+- Never edit an existing migration. Create new files only, in your number range: <wave date>00<agent 2 digits><seq 2 digits>_<agent>_<desc>.sql
+  (wave 1 = 20261101, wave 2 = 20261115, wave 3 = 20261201, wave 4 = 20261215). Example: 20261101002401_24_application_state.sql.
+- Make migrations idempotent and safe on a LIVE database with existing rows: IF NOT EXISTS, DROP … IF EXISTS before CREATE,
+  backfill new NOT NULL columns before adding the constraint, and DROP FUNCTION before changing a return type.
+- The production column types differ from the old migrations in places. profiles.skills is jsonb, NOT text[]. If you depend on
+  a column's type, say so in your report so the integrator can check it against production.
+- Every SECURITY DEFINER function: SET search_path = public, check the caller (auth.uid() / role) inside, and
+  REVOKE ALL … FROM PUBLIC, anon, authenticated, then GRANT only what's needed.
+- NEVER run supabase db push, supabase link, migration repair, backfills or deploys. Never touch production or staging data.
+
+CODE RULES
+- Mocks hide bugs. Two production bugs came from this: a Python MagicMock accepted the JS-only .maybeSingle(), and a pgvector
+  RPC assumed text[]. Call only methods that exist in the real library. For DB code, add at least one test that exercises the real SQL
+  (pgTAP in supabase/tests, or the integration job from agent 26) where you can.
+- Tailwind: use ONLY tokens that exist in app/globals.css (bg-surface, text-fg, text-fg-muted, border-border, bg-brand,
+  text-on-success …). Unknown classes are silently dropped. No raw hex, bg-white, text-slate-*, text-primary, text-muted-fg.
+- No browser dialogs (window.confirm / alert). Use components/ui ConfirmDialog, Modal, Drawer, and sonner toasts.
+- Authorization must hold on the server (RLS, SQL function, or route handler), never only in the UI.
+- Keep existing behaviour unless your scope says to change it. Behaviour changes need a test and a line in your report.
+- Match the surrounding code style. Small commits in the repo's style: "feat(companies): …", "fix(auth): …", "test(rls): …".
+
+QUALITY BAR (must pass before you finish)
+- cd frontend/pau-interconnect-app && npm ci && npm run lint && npm run typecheck && npm run test
+- NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy npx next build
+- cd backend && python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt -r requirements-dev.txt (if present) && .venv/bin/python -m pytest -q
+- Don't push, force-push or rebase. Commit only to your own branch.
+
+DELIVERABLE: audit/delivery/reports/<your-branch-name>.md containing:
+  1. For EVERY audit ID in your scope: ✅ done / ⚠️ partial (why) / ⏭ deferred (why), with the commit hash.
+  2. Contracts provided or consumed, and any deviation from the plan.
+  3. Migrations added, what they do, whether they're safe on existing rows, and which column types you assumed.
+  4. Tests added, plus the exact commands and results.
+  5. Handoffs and OUT-OF-AREA EDITS.
+  6. Manual test steps for a human, per role.
+Commit it as the LAST commit on your branch.
+
+====================================================================================================
+
+YOU ARE AGENT 27: REPO CLEANUP & DOCS. Wave 1. Branch: agent/w1-27-cleanup. Model: Gemini 3.8 Flash (high thinking).
+
+SCOPE (audit 04 R-7 test-connection only, R-11, R-12, R-13, R-14; 02 P0-6 copy; 08 "Docs to keep")
+1. Delete (git rm) after checking nothing imports or links to it (grep, and include the result in your report):
+   - implementation_plan_1.md, product_roadmap.md, AGENT_PROMPTS.md, agent-prompts-v2/   (NEVER delete agent-prompts-v3/ or audit/delivery/; they're in use)
+   - frontend/pau-interconnect-app/{improvements,tasks,ROADMAP.md,.github}
+   - backend/{improvements,.github}
+   - the per-agent reports audit/0*.md, audit/1*.md (keep audit/COVERAGE.md, audit/HANDOFFS.md and audit/delivery/**)
+   - frontend/pau-interconnect-app/public/{file,globe,next,vercel,window}.svg, public/internships.json, public/Alex_Mercer_Stacked_CV.md
+     (check scripts/seed_internships.sh; if it reads internships.json, delete it too or point it at scripts/seed/)
+   - app/test-connection/**
+   - backend/supabase/** (old migrations folder; its one applied file is already copied to the canonical folder, so verify by filename)
+2. Migration history (R-11), carefully:
+   - frontend/pau-interconnect-app/supabase/migrations/add_company_banner_url.sql and create_logbook_table.sql: compare their SQL with the later migrations. If it's
+     covered, delete them. If not, move the still-needed SQL into a NEW idempotent migration in YOUR range (20261101002701_27_<desc>.sql)
+     and delete the originals. NEVER give a migration a timestamp older than the newest one already applied: the Supabase CLI then refuses
+     to push ("Found local migration files to be inserted before the last migration"). They're not in remote history; the CLI skipped them.
+   - 20260223000000_create_profiles.sql contains Python. It's marked applied in remote history. Replace its body with a SQL comment
+     explaining that the original content wasn't SQL and the schema was created by later migrations. This is the ONE allowed edit to an
+     existing migration. Note it in the report.
+3. P0-6 landing copy (app/page.tsx, COPY ONLY, no layout changes):
+   - remove the stats band numbers (100%, 94%+, 150+, 48 hrs), or replace them with neutral, true statements
+   - remove "officially sanctioned by Pan-Atlantic University", "Official SIWES & Internship Compliance" claims and the PAU Coordinator /
+     Industry Mentor feature claims
+   - remove "University coordinator or supervisor? Sign in as Admin"
+   - keep the visuals
+4. Docs:
+   - rewrite README.md: what it is, the architecture diagram (from audit 05), local setup (frontend, backend, worker, Supabase), env vars
+     table, testing, deploy order
+   - create docs/RELEASE.md (the checklist from audit 08) and docs/RUNBOOK.md (backend down, queue stuck, LLM out of credits, a data
+     deletion request, a suspected breach (72 h NDPA notification), restoring from backup)
+   - rewrite backend/VECTOR_MATCHING_EXPLAINED.md for the current design: score_pair, full coverage, upsert, triggers, two-layer
+     explanations, the 80% AI threshold
+5. Add a placeholder brand mark: public/logo.svg and public/logo-dark.svg (a simple geometric mark + "InterConnect" wordmark, using
+   the brand indigo #4f46e5 / #6366f1). Agent 41 wires it in wave 3.
+
+YOU OWN: everything listed in 1–5, plus README.md, docs/** (EXCEPT docs/design-system.md), app/page.tsx (copy only),
+frontend/pau-interconnect-app/public/**.
+
+ACCEPTANCE
+- lint, typecheck, test and build pass (deleted files may have had imports, so fix by deleting the importer only if it's also dead; otherwise hand off).
+- The report lists every deleted path, with the grep proof that it was unused.

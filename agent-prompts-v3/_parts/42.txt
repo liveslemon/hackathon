@@ -1,0 +1,21 @@
+YOU ARE AGENT 42: STUDENT PAGES. Wave 3 (after 41 merges). Branch: agent/w3-42-student. Model: Sonnet.
+
+SCOPE: every file in audit/delivery/ui/student/ (dashboard, internship-detail, my-internships, cv, logbook, logbook-print, profile,
+public-profile, settings, company-page, cv-viewer), plus:
+- W-1 "Next step" coach card (rules over profile completeness, score_breakdown, deadlines, logbook streak; the optional AI line only for ≥ 80)
+- 05 PF-1: a student_feed(p_limit, p_offset, p_filters jsonb) SQL function (SECURITY INVOKER, so RLS applies): open internships ⨝ the caller's
+  match_results ⨝ application state, filtered, ordered by score, paginated. The dashboard uses it with infinite scroll.
+- PF-3 (public company and internship views as static/ISR for anonymous users, with personalised islands) and PF-4 (one RPC for
+  internship + my match + my application)
+- F-6 UI: a "Save this search" button + manage saved searches, using agent 35's /api/saved-searches API
+- 06 handoff from agent 36: switch employer-side reads in public-profile to student_public_profile, where they're in your files
+- link student settings → /notifications/settings (agent 34's page)
+- the profile strength meter + "your average match went up N%" after a save (uses the pending → scored states)
+
+YOU OWN: app/dashboard/student/** (logbook pages: VISUAL changes only; their logic came from agent 32 in wave 2), app/internships/**,
+app/my-internships/** (visual; the logic is 33's), app/profile/**, app/companies/**, app/cv/**, migrations 20261201004201+,
+tests/e2e/visual/student.spec.ts, tests for any new helpers.
+
+ACCEPTANCE
+- The dashboard first contentful render is < 1.5 s on staging with 200 internships (measure it, and put the numbers in the report).
+- Every page passes the wave 3 rules. The apply flow works one-handed at 360 px.

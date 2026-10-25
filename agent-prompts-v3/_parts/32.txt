@@ -1,0 +1,60 @@
+YOU ARE AGENT 32: SIWES ROLES & THE LOGBOOK LOOP. Wave 2. Branch: agent/w2-32-siwes. Model: Opus.
+Wave 1 is merged into dev: K4 (roles coordinator/academic_supervisor + has_role), K5 (transition_application), K6.
+
+SCOPE (audit 07 F-2, F-8, F-9, W-8; 03 student steps 9–11, the coordinator workflow; ui/admin/coordinator.md, functional;
+ui/student/logbook.md + ui/employer/logbook-review.md + ui/student/logbook-print.md, the FUNCTIONAL parts: week view, sign-off, PDF)
+1. Migration (K9, exact names):
+   - siwes_sessions(id, name, starts_on, ends_on, placement_deadline, active bool)
+   - session_enrollments(session_id, student_id, programme, level, matric_no, eligible bool)
+   - supervisor_assignments(placement_id = applied_internships.id, academic_supervisor_id, industry_supervisor_id, assigned_by, assigned_at)
+   - logbook_weeks(placement_id, week_start date, industry_signed_at/by, industry_comment, academic_signed_at/by, academic_comment,
+     unique(placement_id, week_start))
+   - placement_evaluations(placement_id, evaluator_id, kind check in ('industry','academic'), rubric jsonb, overall int, comments, submitted_at)
+   - placement_reports(placement_id, file_path, submitted_at), plus a private storage bucket 'placement-reports'
+   - placement_certificates(placement_id, code unique, issued_at, revoked_at)
+   - is_assigned_supervisor(p_placement uuid) and is_coordinator() helpers
+   - RLS:
+     - students see their own rows
+     - an industry supervisor (company member with member_role 'supervisor', via K8 is_company_member, or the assigned
+       industry_supervisor_id) sees their interns
+     - an academic supervisor sees assigned students
+     - a coordinator sees everything in their sessions
+     - you own ALL logbook_* policies this wave: extend the logbook_entries policies for these roles
+2. Weekly sign-off (F-8):
+   - an API to sign a week (industry, then academic countersign) and to comment
+   - signing a week marks its pending entries approved
+   - a reminder event when a week is unsigned for > 3 days (35 sends it; you insert a row into notifications, or expose a SQL view
+     `overdue_logbook_weeks` for 35's cron)
+3. Completion (F-9):
+   - the industry and academic evaluation forms
+   - the student uploads the final report
+   - when both evaluations + the report exist, the coordinator or academic supervisor finalises: grade, then
+     transition_application(…,'completed') through a service-role call in your route, then a certificate
+4. Certificate + verification (W-8): a PDF certificate with a QR code to /verify/<code>; app/verify/[code]/page.tsx is public (K14) and shows
+   the student name, programme, company, dates and "Valid" / "Revoked".
+5. Logbook PDF: generate server-side (React-PDF in a route handler, or the worker) with a cover page, weekly tables, signature blocks
+   and a QR code. The print page links to it.
+6. Pages (functional, in the existing design system; wave 3 polishes them):
+   - student logbook: a week view + today composer + flagged-first, replacing window.confirm
+   - employer logbook review: grouped by intern and week, with "Sign week"
+   - new /dashboard/coordinator: sessions, unplaced students, at-risk, assignments (bulk by programme), exports CSV
+   - new /dashboard/supervisor: my students, weekly review, evaluation, final grade
+7. proxy.ts + lib/role-guard.ts:
+   - route /dashboard/coordinator/** to role coordinator (admin allowed)
+   - route /dashboard/supervisor/** to academic_supervisor
+   - post-login routing for the new roles
+   - K14 public paths: /invite/**, /verify/**, /privacy, /terms, /accessibility, GET /api/verify/**
+   - keep agent 22's MFA (aal2) checks for these routes
+
+YOU OWN: migrations 20261115003201+; proxy.ts; lib/role-guard.ts; app/api/logbook/**; app/api/reports/**; app/dashboard/student/logbook/**;
+app/dashboard/employer/logbook/**; new app/dashboard/{coordinator,supervisor}/**, app/verify/**, app/api/{siwes,placements,verify}/**;
+optional backend/routers/coordinator.py; supabase/tests/siwes*.sql; new lib/emails/siwes.ts; tests for all of these.
+
+PROVIDES: K9, K14. CONSUMES: K4, K5, K8 (31: is_company_member), K11 (34 adds your nav items), K15 (35).
+
+ACCEPTANCE
+- pgTAP: an academic supervisor sees only assigned students; a company supervisor sees only their company's interns; a student can't sign
+  their own week; a coordinator of session X can't see session Y.
+- An e2e (with agent 26's seeded roles): the student logs 5 days → the industry supervisor signs the week → the academic supervisor
+  countersigns → the PDF shows both signatures.
+- `grep window.confirm` is clean in your pages.
