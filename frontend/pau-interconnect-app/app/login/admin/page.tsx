@@ -69,27 +69,30 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-white md:bg-gradient-to-br md:from-brand md:to-brand-secondary flex items-center justify-center">
-      <div className="w-full max-w-md md:mx-6">
-        <div className="px-6 py-10 md:p-10 md:bg-white md:rounded-3xl md:shadow-2xl">
+    <div className="min-h-screen bg-background md:bg-gradient-to-br md:from-brand/10 md:via-background md:to-brand-secondary/10 flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-md">
+        <div className="px-6 py-10 md:p-10 bg-surface rounded-3xl border border-border shadow-xl">
           <div className="flex flex-col items-center mb-8">
             <Image
               src="/favicon.ico"
               alt="PAU Logo"
               width={56}
               height={56}
-              className="w-14 h-14 mb-4 rounded-xl"
+              className="w-14 h-14 mb-4 rounded-xl shadow-sm"
             />
-            <Typography variant="h3" weight="bold" className="mb-1">
+            <Typography variant="h3" weight="bold" className="mb-1 text-center">
               Admin Portal
             </Typography>
-            <Typography variant="body2" color="muted">
+            <Typography variant="body2" color="muted" className="text-center">
               Sign in with your administrator credentials
             </Typography>
           </div>
 
           {error && (
-            <div className="mb-6 px-4 py-3 rounded-xl bg-red-50 text-red-700 border border-red-100 text-sm font-medium">
+            <div
+              role="alert"
+              className="mb-6 px-4 py-3 rounded-2xl bg-danger-subtle text-danger-fg border border-danger-subtle text-sm font-medium"
+            >
               {error}
             </div>
           )}
@@ -119,7 +122,7 @@ export default function AdminLogin() {
                 <button
                   type="button"
                   onClick={() => router.push("/login/forgot-password")}
-                  className="text-xs text-brand hover:underline font-medium"
+                  className="text-xs text-brand dark:text-indigo-400 hover:underline font-semibold"
                 >
                   Forgot password?
                 </button>
@@ -128,7 +131,7 @@ export default function AdminLogin() {
 
             <Button
               type="submit"
-              className="w-full !rounded-full"
+              className="w-full !rounded-full font-bold dark:bg-indigo-600"
               size="lg"
               isLoading={loading}
             >
@@ -138,11 +141,12 @@ export default function AdminLogin() {
 
           <Typography
             variant="body2"
-            className="text-center mt-8 text-slate-500"
+            color="muted"
+            className="text-center mt-8"
           >
             Not an admin?{" "}
             <span
-              className="text-brand cursor-pointer font-bold hover:underline"
+              className="text-brand dark:text-indigo-400 cursor-pointer font-bold hover:underline ml-1"
               onClick={() => router.push("/")}
             >
               Go back home

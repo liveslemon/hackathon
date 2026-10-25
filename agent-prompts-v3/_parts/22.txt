@@ -1,0 +1,50 @@
+YOU ARE AGENT 22: IDENTITY & ACCESS. Wave 1. Branch: agent/w1-22-identity. Model: Opus (security-critical).
+
+SCOPE (audit 02 P0-2, P0-3, P0-4, P1-5; 06 S-1–S-4, S-6, S-8, S-9; 04 R-6; ui/public/login.md "Admin Login" removal only)
+1. One source of admin identity = profiles.role. Migration:
+   - extend the profiles.role CHECK to: student, employer, admin, coordinator, academic_supervisor (K4)
+   - set role='admin' where is_admin = true
+   - add a trigger keeping is_admin = (role = 'admin') on every insert and update. is_admin stays a real column: 20 files and 6 policies read it.
+   - update public.is_platform_admin() to check role = 'admin' only
+   - extend protect_profile_privileges so only the service role can set role in (admin, coordinator, academic_supervisor)
+   - add public.has_role(p_role text) and public.current_user_active() (true when the caller exists and is not suspended), both
+     STABLE SECURITY DEFINER with search_path, granted to authenticated (K4)
+   Backend core/security.py: remove ADMIN_EMAILS entirely (config field + every use). verify_admin and require_role read profiles.role only.
+   Frontend proxy.ts + lib/role-guard.ts + lib/post-login.ts: role-based only. is_admin becomes a fallback read, never the decider.
+   Delete app/admin/** (the second admin login with ALLOWED_ADMINS) and add a redirect from /admin to /login/admin
+   (a tiny app/admin/page.tsx that calls redirect(); next.config is agent 21's).
+2. Suspension really works (P0-4):
+   - on suspend, routers/admin.py calls the Supabase Admin API update_user_by_id(id, {"ban_duration": "876000h"}); reinstate calls it with "none"
+   - get_current_user rejects suspended users (403 with "Your account is suspended")
+   - proxy.ts redirects suspended users to /login/student?suspended=1, with a clear message on the login page
+   - RLS: AND public.current_user_active() in the SELECT/INSERT/UPDATE policies of applied_internships, logbook_entries, messages and
+     conversations, in one new migration. Re-create those policies with identical logic + the new condition. Copy each current
+     definition from the LATEST migration that defines it.
+3. MFA for staff (S-4): admin, coordinator and academic_supervisor routes need an aal2 session.
+   - proxy.ts checks the JWT `aal` claim for /dashboard/admin/**, /dashboard/coordinator/**, /dashboard/supervisor/**
+   - if it's not aal2, send the user to a new /login/mfa page (enrol a TOTP factor with a QR code, or verify a code), using supabase.auth.mfa.*
+   - backend verify_admin also requires aal2 (configurable via env REQUIRE_ADMIN_MFA, default true, false in tests)
+4. Student sign-up limited to PAU (P1-5, S-6): a BEFORE INSERT trigger on profiles rejects role='student' unless the auth email ends
+   with an allowed domain. The domains come from a new app_settings table (key 'student_email_domains', default ['pau.edu.ng']),
+   so it isn't hard-coded. Show a friendly error on sign-up. (Onboarding is agent 31's in wave 2. Just make the error message
+   from the trigger readable, and list the onboarding copy change as a handoff.)
+5. Session robustness (S-8): in context/AuthContext.tsx, a refresh-token failure (400 from /token) signs out cleanly and routes to login
+   with "Please sign in again". No half-authenticated pages.
+6. Scripts (P0-3, S-9): create_admin.py and create_test_accounts.py read every credential from env vars, refuse to run when SUPABASE_URL
+   is the production project unless --i-know-this-is-prod is passed, and print no passwords.
+7. In routers/admin.py, remove every route decorator WITHOUT the /api prefix (keep only /api/admin/...). Agent 23 updates the two frontend callers.
+8. Remove the "Admin Login" buttons and links from /login/student and /login/employer (copy/markup only; the redesign is wave 3).
+
+YOU OWN: backend/core/security.py, backend/routers/admin.py, backend/create_admin.py, backend/create_test_accounts.py,
+backend/tests/auth/**, backend/tests/admin/**, frontend proxy.ts, lib/{role-guard,post-login,fast-signout,supabaseClient}.ts,
+context/AuthContext.tsx, app/admin/**, app/login/** (incl. new app/login/mfa), app/api/auth/**, tests/lib/{post-login,role-guard}*.test.ts,
+migrations 20261101002201+.
+
+PROVIDES: K4 (exact names). CONSUMES: none.
+
+ACCEPTANCE
+- pgTAP or integration tests: a student can't set role/is_admin; is_admin stays in sync with role; a suspended user gets 0 rows from the
+  4 tables; has_role and current_user_active behave correctly.
+- `grep -rn "ADMIN_EMAILS\|ALLOWED_ADMINS" backend frontend/pau-interconnect-app --include=*.py --include=*.ts --include=*.tsx` returns nothing.
+- Backend tests: an admin without aal2 gets 403 when REQUIRE_ADMIN_MFA=true; a suspended user gets 403.
+- Report: the exact Supabase dashboard steps the human must do (enable MFA, ban behaviour, allowed redirect URLs for /login/mfa).

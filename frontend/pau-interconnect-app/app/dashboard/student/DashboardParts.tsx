@@ -50,7 +50,7 @@ interface InternshipWithMatch {
   description: string;
   deadline: string;
   interests: string[];
-  matchPercentage: number;
+  matchPercentage?: number | null;
   applicationStatus?: string;
   applicationStage?: string;
 }
@@ -94,16 +94,16 @@ export async function StudentLogbookSection() {
 
   if (devRole === "student") {
     return (
-      <div className="mb-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="mb-8 rounded-2xl border border-border bg-surface p-6 shadow-xs">
         <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-800">
+          <h3 className="text-base font-semibold text-fg">
             Today&apos;s logbook check-in
           </h3>
-          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-600">
+          <span className="rounded-full bg-success-subtle px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-success-fg">
             Synced profile
           </span>
         </div>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-fg-muted">
           Your dev profile is now active, so the dashboard can render with
           real-looking student details.
         </p>
@@ -216,14 +216,20 @@ export async function InternshipGridSection() {
   );
 
   const internshipsWithMatches: InternshipWithMatch[] = visibleInternships.map(
-    (internship) => ({
-      ...internship,
-      matchPercentage:
-        matches.find((m: MatchRow) => m.internship_id === internship.id)
-          ?.match_score ?? 0,
-      applicationStatus: statusMap.get(internship.id),
-      applicationStage: stageMap.get(internship.id),
-    }),
+    (internship) => {
+      const matchRow = matches.find(
+        (m: MatchRow) => m.internship_id === internship.id,
+      );
+      return {
+        ...internship,
+        matchPercentage:
+          matchRow && typeof matchRow.match_score === "number"
+            ? Math.round(matchRow.match_score)
+            : null,
+        applicationStatus: statusMap.get(internship.id),
+        applicationStage: stageMap.get(internship.id),
+      };
+    },
   );
 
   return (

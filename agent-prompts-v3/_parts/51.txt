@@ -1,0 +1,18 @@
+YOU ARE AGENT 51: STUDENT WOW FEATURES. Wave 4. Branch: agent/w4-51-student-wow. Model: Sonnet.
+Waves 1–3 are merged. Follow the wave 3 UI rules too (tokens, states, behaviour preservation, visual + axe specs).
+
+SCOPE (audit 07)
+- W-2 CV → profile in 10 seconds: onboarding gets an upload step. After parsing (the existing job + cv_structured), show the extracted skills,
+  experience and projects as confirm/edit chips and write them to the profile on confirm. Reuse the existing parser; add a mapping
+  module + tests on real-shaped cv_structured samples.
+- W-7 voice → logbook entry: record ≤ 60 s in the browser (MediaRecorder); POST to a new backend endpoint that transcribes (Groq Whisper,
+  behind the LLM provider config) and returns text, which goes to the existing enhance prompt; the student reviews before saving. Delete
+  the audio right after transcription. Rate limit 10/day.
+- W-10 PWA: manifest, icons, a service worker (next-pwa or a hand-rolled SW) with an offline fallback page and offline logbook drafts in
+  IndexedDB, synced on reconnect, with conflict handling (the server wins when the entry is approved).
+- W-12 interview prep pack: when an interview is booked (agent 33's tables), generate 5 likely questions + tips from the posting and the
+  student's gaps (an LLM call, cached per interview), shown on the interview card.
+
+YOU OWN: app/onboarding/** (the new CV step only), app/dashboard/student/logbook/** (voice + offline only), app/my-internships/** (the
+interview prep card only), public/manifest.webmanifest, the service worker files, new backend/routers/voice.py and
+backend/services/{transcription,cv_profile_mapping,interview_prep}.py, migrations 20261215005101+, tests.

@@ -35,7 +35,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         {label && (
           <label
             htmlFor={textareaId}
-            className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5 ml-1 select-none"
+            className="block text-xs md:text-sm font-semibold text-fg mb-1.5 ml-1 select-none"
           >
             {label}
           </label>
@@ -46,11 +46,11 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           aria-invalid={Boolean(error)}
           aria-describedby={describedBy}
           className={cx(
-            "w-full py-2.5 px-4 rounded-xl border transition-all duration-200 bg-white dark:bg-slate-900 focus:outline-none focus-visible:ring-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base",
+            "w-full py-2.5 px-4 rounded-xl border transition-all duration-200 bg-surface text-fg focus:outline-none focus-visible:ring-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base min-h-[100px]",
             error
-              ? "border-red-500 text-red-900 dark:text-red-200 focus-visible:ring-red-500/20 focus-visible:border-red-500"
-              : "border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus-visible:border-brand focus-visible:ring-brand/20",
-            "placeholder:text-slate-400 dark:placeholder:text-slate-500",
+              ? "border-danger text-danger focus-visible:ring-danger/20 focus-visible:border-danger"
+              : "border-border hover:border-border-strong focus-visible:border-brand focus-visible:ring-focus-ring/20",
+            "placeholder:text-fg-subtle",
             className,
           )}
           {...props}
@@ -61,8 +61,8 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             className={cx(
               "mt-1.5 text-xs ml-1",
               error
-                ? "text-red-600 dark:text-red-400 font-medium"
-                : "text-slate-500 dark:text-slate-400",
+                ? "text-danger font-medium"
+                : "text-fg-muted",
             )}
           >
             {error || helperText}

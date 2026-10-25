@@ -1,0 +1,111 @@
+You are one of several AI agents working IN PARALLEL on "PAU InterConnect", an internship + SIWES logbook platform for
+Pan-Atlantic University that is moving from hackathon project to production. Each agent has its own git worktree and branch.
+
+STACK
+- Frontend: frontend/pau-interconnect-app (Next.js 16 App Router, React 19, TypeScript, Tailwind 4 with semantic design tokens,
+  next-themes, sonner, lucide-react, Supabase SSR, Vitest, Playwright). The route guard is proxy.ts. Route handlers live in app/api/**.
+- Backend: backend/ (FastAPI "AI service": CV parsing/OCR, embeddings, matching, LLM failover, durable job queue). pytest in backend/tests.
+- DB: Supabase Postgres + RLS. The ONLY migrations folder is frontend/pau-interconnect-app/supabase/migrations. Read CLAUDE.md.
+
+READ FIRST (in this order)
+1. audit/delivery/README.md, then audit/delivery/10-implementation-plan.md: your wave, your file ownership, the contracts (K1…K14).
+2. The audit files and IDs named in YOUR SECTION below. They're your spec: implement them literally unless you find a better way,
+   and if you do, explain it in your report.
+3. docs/design-system.md, before touching any UI.
+
+FILE OWNERSHIP (this is how we avoid merge conflicts)
+- Edit ONLY the files and folders listed under "YOU OWN". Read anything.
+- You need a change elsewhere? Don't make it. Write it in the "Handoffs" section of your report (file, exact change, why).
+  The one exception: a change of 5 lines or fewer that's needed to compile or to call your new API. Mark it "OUT-OF-AREA EDIT" in the report.
+- New files are fine inside folders you own.
+- Contracts: implement the ones you PROVIDE with exactly the names and signatures in the plan, early (first commit), so others
+  can rely on them. Code against the ones you CONSUME even before the provider merges. Mock them in tests.
+
+DATABASE RULES
+- Never edit an existing migration. Create new files only, in your number range: <wave date>00<agent 2 digits><seq 2 digits>_<agent>_<desc>.sql
+  (wave 1 = 20261101, wave 2 = 20261115, wave 3 = 20261201, wave 4 = 20261215). Example: 20261101002401_24_application_state.sql.
+- Make migrations idempotent and safe on a LIVE database with existing rows: IF NOT EXISTS, DROP … IF EXISTS before CREATE,
+  backfill new NOT NULL columns before adding the constraint, and DROP FUNCTION before changing a return type.
+- The production column types differ from the old migrations in places. profiles.skills is jsonb, NOT text[]. If you depend on
+  a column's type, say so in your report so the integrator can check it against production.
+- Every SECURITY DEFINER function: SET search_path = public, check the caller (auth.uid() / role) inside, and
+  REVOKE ALL … FROM PUBLIC, anon, authenticated, then GRANT only what's needed.
+- NEVER run supabase db push, supabase link, migration repair, backfills or deploys. Never touch production or staging data.
+
+CODE RULES
+- Mocks hide bugs. Two production bugs came from this: a Python MagicMock accepted the JS-only .maybeSingle(), and a pgvector
+  RPC assumed text[]. Call only methods that exist in the real library. For DB code, add at least one test that exercises the real SQL
+  (pgTAP in supabase/tests, or the integration job from agent 26) where you can.
+- Tailwind: use ONLY tokens that exist in app/globals.css (bg-surface, text-fg, text-fg-muted, border-border, bg-brand,
+  text-on-success …). Unknown classes are silently dropped. No raw hex, bg-white, text-slate-*, text-primary, text-muted-fg.
+- No browser dialogs (window.confirm / alert). Use components/ui ConfirmDialog, Modal, Drawer, and sonner toasts.
+- Authorization must hold on the server (RLS, SQL function, or route handler), never only in the UI.
+- Keep existing behaviour unless your scope says to change it. Behaviour changes need a test and a line in your report.
+- Match the surrounding code style. Small commits in the repo's style: "feat(companies): …", "fix(auth): …", "test(rls): …".
+
+QUALITY BAR (must pass before you finish)
+- cd frontend/pau-interconnect-app && npm ci && npm run lint && npm run typecheck && npm run test
+- NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy npx next build
+- cd backend && python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt -r requirements-dev.txt (if present) && .venv/bin/python -m pytest -q
+- Don't push, force-push or rebase. Commit only to your own branch.
+
+DELIVERABLE: audit/delivery/reports/<your-branch-name>.md containing:
+  1. For EVERY audit ID in your scope: ✅ done / ⚠️ partial (why) / ⏭ deferred (why), with the commit hash.
+  2. Contracts provided or consumed, and any deviation from the plan.
+  3. Migrations added, what they do, whether they're safe on existing rows, and which column types you assumed.
+  4. Tests added, plus the exact commands and results.
+  5. Handoffs and OUT-OF-AREA EDITS.
+  6. Manual test steps for a human, per role.
+Commit it as the LAST commit on your branch.
+
+====================================================================================================
+
+YOU ARE AGENT 24: APPLICATION STATE MACHINE + DB-ENFORCED RULES. Wave 1. Branch: agent/w1-24-state-machine. Model: Opus.
+
+SCOPE (audit 02 P1-1; 03 "Application state machine"; 04 R-1 DB half; 05 RL-9)
+1. Migration (K5, exact names):
+   - Add applied_internships.state text with a CHECK in (submitted, under_review, shortlisted, interview, offered, offer_accepted,
+     offer_declined, offer_expired, placement_active, completed, rejected, withdrawn).
+   - BACKFILL it from the current status/stage/placement_status for every existing row. Write the mapping table in your report, and handle
+     every combination that exists (stage NULL, status accepted + placement_status active, and so on). Then SET NOT NULL with DEFAULT 'submitted'.
+   - A trigger keeps the legacy columns derived from state:
+     - stage: submitted→applied, under_review→reviewed, shortlisted→shortlisted, interview→interview, offered→offered,
+       offer_accepted/placement_active/completed→accepted, rejected→rejected, withdrawn/offer_declined/offer_expired→withdrawn
+     - status: pending until a final decision; accepted for offer_accepted/placement_active/completed; rejected for rejected
+     - placement_status: active / completed / withdrawn, as today
+     Readers elsewhere keep working unchanged. That's the point: you must NOT edit pages.
+   - public.transition_application(p_app uuid, p_to text, p_reason text default null, p_idempotency_key text default null)
+     returns applied_internships, SECURITY DEFINER, search_path=public. It:
+     - validates the transition graph and the actor:
+       - employer actions require public.is_internship_employer(internship_id)
+       - offer_accepted / offer_declined / withdrawn require auth.uid() = user_id
+       - offer_expired / placement_active require the service role
+       - admin may do any except the student-only ones
+     - on offer_accepted, sets placement_status='active' and placed_at and withdraws the student's other non-final applications (the
+       existing withdraw_other_offers trigger may already do this, so reuse it, don't duplicate it)
+     - writes application_stage_history (changed_by = auth.uid())
+     - handles idempotency: store (application_id, idempotency_key) in a new application_transition_keys table, and on a repeat key
+       return the row without changing it
+   - RLS/privileges: revoke UPDATE on state/status/stage/placement_status from authenticated (column privileges, or a BEFORE UPDATE trigger
+     that raises unless current_setting('app.transition', true) = 'on', which transition_application sets locally).
+   - Logbook rules in the DB (R-1): a BEFORE INSERT/UPDATE trigger on logbook_entries enforcing: entry date not in the future (Africa/Lagos),
+     not older than 7 days on insert unless correcting a flagged entry, no edits to approved entries by the student, and the student must
+     have an active placement for application_id. Check the existing protect_logbook_review first, and EXTEND it, don't duplicate.
+2. Route handlers: rewrite app/api/applications/[id]/{status,stage,accept,withdraw,complete}/route.ts to call
+   supabase.rpc('transition_application', …) using the caller's session. Keep each route's URL, request body and response shape
+   (pages call them), and map the old inputs onto the new states. Remove "employer sets accepted": that request now returns 400 with a
+   clear message. Accept an Idempotency-Key header and pass it through. Emails and notifications stay in the routes for now
+   (agent 35 consolidates email in wave 2).
+3. lib/placements.ts: update the helpers to read state where it's clearer. Keep the exports.
+
+YOU OWN: app/api/applications/**, lib/placements.ts, tests/lib/placements*.test.ts, new tests/lib/application-state*.test.ts,
+frontend/pau-interconnect-app/supabase/tests/state_machine*.sql (pgTAP), migrations 20261101002401+.
+That includes app/api/applications/route.ts (POST apply): set state='submitted' on insert, and accept an Idempotency-Key.
+
+PROVIDES: K5. CONSUMES: none (is_internship_employer exists today; agent 31 redefines it in wave 2, so call it, don't inline it).
+
+ACCEPTANCE
+- pgTAP: every allowed transition passes for the right actor; every disallowed one raises; an employer can't reach offer_accepted;
+  a repeated idempotency key doesn't create a second history row; legacy columns match the mapping for all 12 states.
+- The backfill is verified by a test that builds rows in each legacy combination, then runs the backfill SQL.
+- No page file changed. `git diff --stat` shows only owned paths.

@@ -1,0 +1,17 @@
+YOU ARE AGENT 52: QA, ACCESSIBILITY & PERFORMANCE. Wave 4. Branch: agent/w4-52-qa. Model: Sonnet.
+You FIND and PROVE problems; you don't fix app code (that avoids clashing with 51 and 53). You own tests, CI and reports.
+
+SCOPE (audit 07 F-15; 05 PF-8; 08 CI targets; 09 KPIs)
+1. A WCAG 2.2 AA audit of the 10 most-used pages per role, using agent 26's seeded sessions: axe (all rules), keyboard-only walkthroughs
+   (Playwright scripts that tab through each primary task), focus order, reflow at 320 px, and reduced-motion. Every violation goes into
+   your report as a handoff: page, element selector, rule, fix.
+2. Visual regression baselines: store baselines for every page × theme × {360, 1440}; CI compares on each PR (pixelmatch threshold;
+   update with a label). Make the e2e job in .github/workflows/ci.yml blocking now that staging exists (you own CI this wave).
+3. Performance: Lighthouse CI on the landing, student dashboard, internship detail and applicant review, with budgets (LCP < 2.5 s mobile,
+   CLS < 0.1, TBT < 300 ms). Review pg_stat_statements on staging (the human gives you a read-only connection string) and propose indexes as
+   migrations in your range; the integrator reviews them.
+4. Full e2e per role (student, employer, coordinator, academic supervisor, admin) covering every workflow row in audit 03, on staging.
+5. COVERAGE: rewrite audit/COVERAGE.md listing EVERY audit ID (P0-*, P1-*, R-*, S-*, PF-*, RL-*, F-*, W-*, G-*, and every ui/ file row) with
+   status, commit and verifying test. This is the definition of done for the whole audit.
+
+YOU OWN: tests/**, .github/workflows/**, lighthouserc.*, audit/COVERAGE.md, migrations 20261215005201+ (index proposals only).

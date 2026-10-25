@@ -1,0 +1,35 @@
+YOU ARE AGENT 26: TEST INFRASTRUCTURE. Wave 1. Branch: agent/w1-26-test-infra. Model: Sonnet.
+
+SCOPE (audit 08 "Testing gaps that matter" 1–3, "CI" rows for e2e/RLS/contract; 06 "RLS regression suite")
+1. Staging seed (K7): scripts/seed/seed-staging.ts (run with tsx). Using SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY from env, it
+   idempotently creates:
+   - users student1/student2@test.pau.edu.ng, employer1@test.dev, admin1@test.pau.edu.ng, coordinator1@test.pau.edu.ng,
+     supervisor1@test.pau.edu.ng, with password env SEED_PASSWORD
+   - profiles with realistic data (skills as jsonb arrays)
+   - 6 internships (4 active, 1 draft, 1 closed)
+   - applications in several states, one active placement with 5 logbook entries, and one conversation
+   It REFUSES to run if SUPABASE_URL contains the production ref rvbheqkxighnibpfroya. Also scripts/seed/reset-staging.ts (it deletes
+   only rows created by the seed, tagged in metadata).
+2. Playwright with real sessions: tests/e2e/global-setup.ts logs in each seeded role against E2E_BASE_URL and saves storage state to
+   tests/e2e/.auth/<role>.json (gitignored). Add projects per role. Keep the existing mock-based specs working, or migrate them. Add
+   package.json scripts: "test:e2e:ci" (smoke subset tagged @smoke, all roles) and "test:e2e:full". You may edit package.json "scripts"
+   ONLY (agent 21 owns dependencies; if you need @playwright/test or tsx, they may already be there; list any missing dependency as a handoff).
+   Write smoke specs, one per role: student logs in → dashboard shows matches → opens an internship; employer → postings → applicants;
+   admin → overview shows KPIs (this will FAIL until MFA is set up for the seed admin. Mark it test.fixme with a comment pointing to agent 22's MFA).
+3. RLS regression suite: frontend/pau-interconnect-app/supabase/tests/rls_*.sql (pgTAP, runnable with `supabase test db` on a local or
+   staging DB). Cover at least: student A can't read student B's logbook entries, applications or messages; an employer can't read
+   applicants of another employer's internship; anon can't read profiles; an authenticated user can't execute
+   match_all_students_for_internship or claim_next_cv_job.
+4. Contract types: generate TypeScript types from FastAPI's OpenAPI into types/generated/backend.ts (script "gen:api-types" using
+   openapi-typescript against a running backend, or a checked-in openapi.json exported by a small backend script you add under
+   scripts/seed/). Add a Vitest test that scans the frontend for backendUrl("/api/…") and authenticatedFetch("/api/…") calls to
+   FastAPI paths and fails if a path isn't in the OpenAPI spec. This catches dead or bare paths.
+5. Backend integration tests: backend/tests/integration/ (skipped unless RUN_DB_TESTS=1 and SUPABASE_URL points at a non-production
+   project) exercising the REAL claim_next_cv_job RPC, the matching RPCs and transition_application (once K5 exists; mark xfail if missing).
+
+YOU OWN: playwright.config.ts, tests/e2e/**, frontend/pau-interconnect-app/supabase/tests/** (EXCEPT state_machine*.sql, which is 24's),
+scripts/seed/**, types/generated/**, backend/tests/integration/**, package.json "scripts" block only, .gitignore entries for .auth.
+
+PROVIDES: K7, the npm scripts test:e2e:ci / test:e2e:full / gen:api-types. CONSUMES: K4/K5/K6 (use them in tests if present; xfail otherwise).
+
+ACCEPTANCE: the report includes how to run everything locally and against staging, and which tests are xfail/fixme and why.

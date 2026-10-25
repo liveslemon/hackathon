@@ -92,19 +92,20 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden p-8 sm:p-10">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-md bg-surface rounded-3xl border border-border shadow-xl overflow-hidden p-8 sm:p-10">
         <div className="flex flex-col items-center text-center mb-8">
           <div className="relative w-16 h-16 mb-4">
             <Image
-              src="/logo.png"
+              src="/favicon.ico"
               alt="PAU Interconnect"
-              fill
-              className="object-contain"
+              width={64}
+              height={64}
+              className="object-contain rounded-xl shadow-sm"
               priority
             />
           </div>
-          <Typography variant="h5" weight="bold" className="text-slate-900">
+          <Typography variant="h4" weight="bold">
             Set New Password
           </Typography>
           <Typography variant="body2" color="muted" className="mt-1">
@@ -113,24 +114,27 @@ export default function ResetPasswordPage() {
         </div>
 
         {errorMessage && (
-          <div className="mb-6 px-4 py-3 rounded-xl bg-red-50 text-red-700 border border-red-100 text-sm font-medium">
+          <div
+            role="alert"
+            className="mb-6 px-4 py-3 rounded-2xl bg-danger-subtle text-danger-fg border border-danger-subtle text-sm font-medium"
+          >
             {errorMessage}
           </div>
         )}
 
         {isSuccess ? (
           <div className="space-y-6">
-            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-800 text-sm">
-              <Typography variant="body2" weight="bold" className="mb-1">
+            <div className="p-4 rounded-2xl bg-success-subtle border border-success-subtle text-success-fg text-sm">
+              <Typography variant="body2" weight="bold" className="mb-1 text-success-fg">
                 Password updated successfully!
               </Typography>
-              <Typography variant="body2">
+              <Typography variant="body2" className="text-success-fg">
                 Your password has been changed. Redirecting you to login...
               </Typography>
             </div>
 
             <Button
-              className="w-full !rounded-full"
+              className="w-full !rounded-full font-bold dark:bg-indigo-600"
               onClick={() => router.push("/login/student")}
             >
               Sign In Now
@@ -138,17 +142,17 @@ export default function ResetPasswordPage() {
           </div>
         ) : isReady && !hasSession ? (
           <div className="space-y-6 text-center">
-            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100 text-amber-800 text-sm text-left">
-              <Typography variant="body2" weight="bold" className="mb-1">
+            <div className="p-4 rounded-2xl bg-warning-subtle border border-warning-subtle text-warning-fg text-sm text-left">
+              <Typography variant="body2" weight="bold" className="mb-1 text-warning-fg">
                 Session expired or invalid link
               </Typography>
-              <Typography variant="body2">
+              <Typography variant="body2" className="text-warning-fg">
                 The password reset link is invalid or has expired. Please request a new link to proceed.
               </Typography>
             </div>
 
             <Button
-              className="w-full !rounded-full"
+              className="w-full !rounded-full font-bold dark:bg-indigo-600"
               onClick={() => router.push("/login/forgot-password")}
             >
               Request New Reset Link
@@ -176,7 +180,7 @@ export default function ResetPasswordPage() {
 
             <Button
               type="submit"
-              className="w-full !rounded-full"
+              className="w-full !rounded-full font-bold dark:bg-indigo-600"
               size="lg"
               isLoading={isLoading}
             >

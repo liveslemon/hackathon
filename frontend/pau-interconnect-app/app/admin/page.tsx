@@ -82,13 +82,13 @@ export default function AdminPortalEntry() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-brand bg-gradient-to-br from-brand via-brand-secondary to-brand">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-background md:bg-gradient-to-br md:from-brand/10 md:via-background md:to-brand-secondary/10">
       <div className="w-full max-w-md animate-in fade-in zoom-in duration-500">
-        <Card className="rounded-[40px] shadow-2xl border-none overflow-hidden bg-white">
+        <Card className="rounded-[40px] shadow-2xl border border-border overflow-hidden bg-surface">
           <CardContent className="p-10 md:p-12">
             <div className="flex justify-center mb-8">
-              <div className="w-20 h-20 bg-brand rounded-[32px] flex items-center justify-center shadow-xl shadow-indigo-100/50 transform -rotate-6">
-                <FiLock size={32} className="text-white" />
+              <div className="w-20 h-20 bg-brand text-brand-fg rounded-[32px] flex items-center justify-center shadow-xl shadow-brand/20 transform -rotate-6">
+                <FiLock size={32} />
               </div>
             </div>
 
@@ -100,9 +100,9 @@ export default function AdminPortalEntry() {
             {error && (
               <div
                 role="alert"
-                className="mb-6 p-4 rounded-2xl bg-red-50 text-red-700 border border-red-100 text-sm font-medium flex items-center gap-3 animate-in fade-in"
+                className="mb-6 p-4 rounded-2xl bg-danger-subtle text-danger-fg border border-danger-subtle text-sm font-medium flex items-center gap-3 animate-in fade-in"
               >
-                <FiAlertCircle className="w-5 h-5 shrink-0 text-red-500" />
+                <FiAlertCircle className="w-5 h-5 shrink-0 text-danger-fg" />
                 <span>{error}</span>
               </div>
             )}
@@ -118,7 +118,6 @@ export default function AdminPortalEntry() {
                   if (error) setError("");
                 }}
                 required
-                className="bg-slate-50 border-slate-100 focus:bg-white"
               />
 
               <Input
@@ -131,14 +130,13 @@ export default function AdminPortalEntry() {
                   if (error) setError("");
                 }}
                 required
-                className="bg-slate-50 border-slate-100 focus:bg-white"
               />
 
               <Button
                 type="submit"
                 size="lg"
                 isLoading={loading}
-                className="w-full h-14 text-lg shadow-xl shadow-indigo-100 font-bold"
+                className="w-full h-14 text-lg font-bold shadow-lg"
               >
                 Enter Portal
               </Button>
@@ -149,7 +147,7 @@ export default function AdminPortalEntry() {
                 variant="ghost"
                 leftIcon={<FiArrowLeft />}
                 onClick={() => router.push("/")}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-fg-subtle hover:text-fg"
               >
                 Back to Public Site
               </Button>

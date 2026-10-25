@@ -1,0 +1,38 @@
+YOU ARE AGENT 35: EMAIL & SCHEDULED JOBS. Wave 2. Branch: agent/w2-35-email-cron. Model: Gemini 3.8 Flash (high thinking).
+The human chose ONE email provider in wave 0 (read audit/delivery/reports/wave0.md if present; else default to Resend, and say so).
+
+SCOPE (audit 04 R-15; ui/shared/emails.md P1/P2; 02 P1-8; 06 S-11; 07 F-6 backend + email, W-3 data; 03 notification matrix email column)
+FIRST COMMIT, within your first hour (K15, others depend on it): lib/email.ts exports
+  sendEmail({ to, subject, html, text, category, replyTo?, attachments? }): Promise<{ status: "sent"|"skipped"|"failed", id?, reason? }>
+and lib/emails/layout.ts exports
+  renderEmailLayout({ preheader, title, bodyHtml, cta?: { label, url }, footerNote?, unsubscribeCategory? }): { html, text }
+Keep the existing exports working (callers exist). Other agents put their templates in lib/emails/<area>.ts and call these two.
+1. One provider behind sendEmail. Remove the other provider's code path. The backend's Resend calls in routers/applications.py (cover-letter
+   area) go through the same provider config, or you move those sends to the Next side. Keep the behaviour.
+2. email_log table (to, category, template, status, provider_id, error, created_at) plus provider webhook handling (bounces, complaints) at
+   app/api/email/webhook (verify the signature).
+3. Per-category unsubscribe: signed links to /notifications/settings?unsubscribe=<category>, respecting profiles.settings.notifications
+   (agent 34 owns that page; you generate the links).
+4. pg_cron jobs in a migration (pg_cron + pg_net, secret from Vault via vault.decrypted_secrets, name 'cron_secret'):
+   - deadline-reminders edge function, daily at 08:00 Africa/Lagos
+   - expire_offers() (K10, agent 33), daily at 00:05
+   - REFRESH MATERIALIZED VIEW CONCURRENTLY platform_stats, hourly (K13: you create the view: students placed in the active session, open
+     roles, verified companies, logbook days signed)
+   - purge_expired_data() (K16, agent 36), weekly
+   - digests: offers_expiring_soon (33) and overdue_logbook_weeks (32), via an edge function or route you own that emails them, daily
+   Document what the human must enable (pg_cron, pg_net, the Vault secret) in your report.
+5. F-6 saved searches: a saved_searches table (user, filters jsonb, frequency 'daily'|'weekly'), API app/api/saved-searches/** (CRUD), and a
+   daily/weekly job emailing "N new roles match your search" using match_results and the filters. The UI (a Save search button) is wave 3
+   (agent 42). Document the API in your report.
+6. Templates (lib/emails/platform.ts): application received (student receipt), weekly digest, saved-search alert.
+   Plus a dev-only preview route app/dev/emails/page.tsx (404 in production) that renders every template from every
+   lib/emails/*.ts file.
+
+YOU OWN: lib/{email,email-templates}.ts; lib/emails/{layout,platform}.ts; supabase/functions/**; backend/routers/applications.py
+(email sends only); new app/api/{saved-searches,email}/**, app/dev/emails/**; migrations 20261115003501+; tests/lib/email*.test.ts.
+
+PROVIDES: K13, K15. CONSUMES: K10 (33), K16 (36), views from 32/33 (if missing, guard with to_regclass and log).
+
+ACCEPTANCE
+- Vitest: every template renders html + text, contains an unsubscribe link when unsubscribeCategory is set, and escapes user input.
+- The migration is safe to apply before 32/33/36 merge (cron bodies check that the function/view exists before calling it).

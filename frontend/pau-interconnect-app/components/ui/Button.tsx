@@ -4,9 +4,9 @@ import { cx } from "@/utils/cx";
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "solid" | "outline" | "ghost" | "link";
-  colorType?: "primary" | "secondary" | "danger";
-  size?: "sm" | "md" | "lg";
+  variant?: "solid" | "outline" | "ghost" | "link" | "subtle";
+  colorType?: "primary" | "secondary" | "danger" | "success";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
@@ -34,43 +34,62 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref,
   ) => {
     const baseStyles =
-      "inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-200 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand dark:focus-visible:ring-offset-slate-900 disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed";
+      "inline-flex items-center justify-center font-semibold transition-all duration-200 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-focus-ring disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed";
 
     const sizes = {
-      sm: "px-3 py-1.5 text-xs md:px-4 md:py-2 md:text-sm gap-1.5",
-      md: "px-4 py-2 text-sm md:px-6 md:py-2.5 md:text-base gap-2",
-      lg: "px-6 py-2.5 text-base md:px-8 md:py-3 md:text-lg gap-2.5",
+      xs: "px-2.5 py-1 text-xs rounded-lg gap-1 min-h-[32px]",
+      sm: "px-3 py-1.5 text-xs md:text-sm rounded-xl gap-1.5 min-h-[36px]",
+      md: "px-4 py-2 text-sm md:text-base rounded-xl gap-2 min-h-[42px]",
+      lg: "px-6 py-2.5 text-base md:text-lg rounded-2xl gap-2.5 min-h-[48px]",
+      xl: "px-8 py-3.5 text-lg md:text-xl rounded-2xl gap-3 min-h-[56px]",
     };
 
     const variants = {
       solid: {
         primary:
-          "bg-brand text-white hover:bg-brand-dark shadow-sm shadow-brand/20 active:translate-y-[0.5px]",
+          "bg-brand text-brand-fg hover:bg-brand-hover shadow-sm active:translate-y-[0.5px]",
         secondary:
-          "bg-brand-secondary text-white hover:bg-brand-secondary-dark shadow-sm shadow-brand-secondary/20 active:translate-y-[0.5px]",
+          "bg-brand-secondary text-white hover:bg-brand-secondary-hover shadow-sm active:translate-y-[0.5px]",
         danger:
-          "bg-red-600 text-white hover:bg-red-700 shadow-sm shadow-red-500/20 active:translate-y-[0.5px]",
+          "bg-danger text-on-danger hover:opacity-90 shadow-sm active:translate-y-[0.5px]",
+        success:
+          "bg-success text-on-success hover:opacity-90 shadow-sm active:translate-y-[0.5px]",
       },
       outline: {
         primary:
-          "border-2 border-brand text-brand hover:bg-brand/5 dark:hover:bg-brand/15 active:translate-y-[0.5px]",
+          "border border-border text-fg hover:bg-surface-sunken hover:border-border-strong active:translate-y-[0.5px]",
         secondary:
-          "border-2 border-brand-secondary text-brand-secondary hover:bg-brand-secondary/5 dark:hover:bg-brand-secondary/15 active:translate-y-[0.5px]",
+          "border border-brand-secondary text-brand-secondary hover:bg-brand-secondary-subtle active:translate-y-[0.5px]",
         danger:
-          "border-2 border-red-500 text-red-600 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-950/30 active:translate-y-[0.5px]",
+          "border border-danger text-danger hover:bg-danger-subtle active:translate-y-[0.5px]",
+        success:
+          "border border-success text-success hover:bg-success-subtle active:translate-y-[0.5px]",
+      },
+      subtle: {
+        primary:
+          "bg-brand-subtle text-brand hover:opacity-90 active:translate-y-[0.5px]",
+        secondary:
+          "bg-brand-secondary-subtle text-brand-secondary hover:opacity-90 active:translate-y-[0.5px]",
+        danger:
+          "bg-danger-subtle text-danger hover:opacity-90 active:translate-y-[0.5px]",
+        success:
+          "bg-success-subtle text-success hover:opacity-90 active:translate-y-[0.5px]",
       },
       ghost: {
         primary:
-          "text-brand hover:bg-brand/5 dark:hover:bg-brand/15 active:translate-y-[0.5px]",
+          "text-fg-muted hover:text-fg hover:bg-surface-sunken active:translate-y-[0.5px]",
         secondary:
-          "text-brand-secondary hover:bg-brand-secondary/5 dark:hover:bg-brand-secondary/15 active:translate-y-[0.5px]",
+          "text-brand-secondary hover:bg-brand-secondary-subtle active:translate-y-[0.5px]",
         danger:
-          "text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 active:translate-y-[0.5px]",
+          "text-danger hover:bg-danger-subtle active:translate-y-[0.5px]",
+        success:
+          "text-success hover:bg-success-subtle active:translate-y-[0.5px]",
       },
       link: {
-        primary: "text-brand hover:underline p-0! h-auto",
-        secondary: "text-brand-secondary hover:underline p-0! h-auto",
-        danger: "text-red-600 dark:text-red-400 hover:underline p-0! h-auto",
+        primary: "text-brand hover:underline p-0! h-auto min-h-0",
+        secondary: "text-brand-secondary hover:underline p-0! h-auto min-h-0",
+        danger: "text-danger hover:underline p-0! h-auto min-h-0",
+        success: "text-success hover:underline p-0! h-auto min-h-0",
       },
     };
 

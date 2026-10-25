@@ -53,19 +53,20 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden p-8 sm:p-10">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-md bg-surface rounded-3xl border border-border shadow-xl overflow-hidden p-8 sm:p-10">
         <div className="flex flex-col items-center text-center mb-8">
           <div className="relative w-16 h-16 mb-4">
             <Image
-              src="/logo.png"
+              src="/favicon.ico"
               alt="PAU Interconnect"
-              fill
-              className="object-contain"
+              width={64}
+              height={64}
+              className="object-contain rounded-xl shadow-sm"
               priority
             />
           </div>
-          <Typography variant="h5" weight="bold" className="text-slate-900">
+          <Typography variant="h4" weight="bold">
             Reset Password
           </Typography>
           <Typography variant="body2" color="muted" className="mt-1">
@@ -74,18 +75,21 @@ export default function ForgotPasswordPage() {
         </div>
 
         {errorMessage && (
-          <div className="mb-6 px-4 py-3 rounded-xl bg-red-50 text-red-700 border border-red-100 text-sm font-medium">
+          <div
+            role="alert"
+            className="mb-6 px-4 py-3 rounded-2xl bg-danger-subtle text-danger-fg border border-danger-subtle text-sm font-medium"
+          >
             {errorMessage}
           </div>
         )}
 
         {isSubmitted ? (
           <div className="space-y-6">
-            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-800 text-sm">
-              <Typography variant="body2" weight="bold" className="mb-1">
+            <div className="p-4 rounded-2xl bg-success-subtle border border-success-subtle text-success-fg text-sm">
+              <Typography variant="body2" weight="bold" className="mb-1 text-success-fg">
                 Check your inbox
               </Typography>
-              <Typography variant="body2">
+              <Typography variant="body2" className="text-success-fg">
                 If an account exists for that email, we have sent password reset instructions. Follow the link in the email to set a new password.
               </Typography>
             </div>
@@ -111,14 +115,14 @@ export default function ForgotPasswordPage() {
 
             <Button
               type="submit"
-              className="w-full !rounded-full"
+              className="w-full !rounded-full font-bold dark:bg-indigo-600"
               size="lg"
               isLoading={isLoading}
             >
               Send Reset Link
             </Button>
 
-            <Stack spacing={2} className="mt-6 pt-4 border-t border-slate-100">
+            <Stack spacing={2} className="mt-6 pt-4 border-t border-border">
               <div className="grid grid-cols-2 gap-3">
                 <Button
                   variant="outline"

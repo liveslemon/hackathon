@@ -7,12 +7,22 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 
 export default function Providers({ children }: { children: ReactNode }) {
   return (
-    // Light by default: most pages aren't styled for dark mode yet, so only users
-    // who pick dark in settings get it.
-    <ThemeProvider defaultTheme="light" enableSystem={false}>
+    // Default to system theme with live OS matching
+    <ThemeProvider defaultTheme="system" enableSystem={true}>
       <AuthProvider>
         {children}
-        <Toaster position="bottom-left" richColors closeButton />
+        <Toaster
+          position="bottom-right"
+          theme="system"
+          richColors
+          closeButton
+          toastOptions={{
+            style: {
+              borderRadius: "16px",
+              fontFamily: "var(--font-sans)",
+            },
+          }}
+        />
       </AuthProvider>
     </ThemeProvider>
   );

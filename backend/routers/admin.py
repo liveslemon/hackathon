@@ -401,13 +401,18 @@ async def search_platform(
 @router.get("/api/admin/llm-health")
 async def llm_health(current_user=Depends(verify_admin)):
     """Report which LLM providers are reachable with the deployed keys (Admin only)."""
+    from services.job_queue import get_llm_pause_status
     try:
         res = llm_client.check_providers()
         results = await res if asyncio.iscoroutine(res) or hasattr(res, "__await__") else res
-        return {"working": sum(r.get("ok", False) for r in results), "providers": results}
+        return {
+            "working": sum(r.get("ok", False) for r in results),
+            "providers": results,
+            "reasoning_queue": get_llm_pause_status(),
+        }
     except Exception as e:
         logger.error(f"Error checking LLM health: {e}", exc_info=True)
-        return {"working": 0, "providers": [], "error": str(e)}
+        return {"working": 0, "providers": [], "error": str(e), "reasoning_queue": get_llm_pause_status()}
 
 
 # -----------------------------------------------------------------------------

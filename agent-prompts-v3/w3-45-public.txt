@@ -1,0 +1,103 @@
+You are one of several AI agents working IN PARALLEL on "PAU InterConnect", an internship + SIWES logbook platform for
+Pan-Atlantic University that is moving from hackathon project to production. Each agent has its own git worktree and branch.
+
+STACK
+- Frontend: frontend/pau-interconnect-app (Next.js 16 App Router, React 19, TypeScript, Tailwind 4 with semantic design tokens,
+  next-themes, sonner, lucide-react, Supabase SSR, Vitest, Playwright). The route guard is proxy.ts. Route handlers live in app/api/**.
+- Backend: backend/ (FastAPI "AI service": CV parsing/OCR, embeddings, matching, LLM failover, durable job queue). pytest in backend/tests.
+- DB: Supabase Postgres + RLS. The ONLY migrations folder is frontend/pau-interconnect-app/supabase/migrations. Read CLAUDE.md.
+
+READ FIRST (in this order)
+1. audit/delivery/README.md, then audit/delivery/10-implementation-plan.md: your wave, your file ownership, the contracts (K1…K14).
+2. The audit files and IDs named in YOUR SECTION below. They're your spec: implement them literally unless you find a better way,
+   and if you do, explain it in your report.
+3. docs/design-system.md, before touching any UI.
+
+FILE OWNERSHIP (this is how we avoid merge conflicts)
+- Edit ONLY the files and folders listed under "YOU OWN". Read anything.
+- You need a change elsewhere? Don't make it. Write it in the "Handoffs" section of your report (file, exact change, why).
+  The one exception: a change of 5 lines or fewer that's needed to compile or to call your new API. Mark it "OUT-OF-AREA EDIT" in the report.
+- New files are fine inside folders you own.
+- Contracts: implement the ones you PROVIDE with exactly the names and signatures in the plan, early (first commit), so others
+  can rely on them. Code against the ones you CONSUME even before the provider merges. Mock them in tests.
+
+DATABASE RULES
+- Never edit an existing migration. Create new files only, in your number range: <wave date>00<agent 2 digits><seq 2 digits>_<agent>_<desc>.sql
+  (wave 1 = 20261101, wave 2 = 20261115, wave 3 = 20261201, wave 4 = 20261215). Example: 20261101002401_24_application_state.sql.
+- Make migrations idempotent and safe on a LIVE database with existing rows: IF NOT EXISTS, DROP … IF EXISTS before CREATE,
+  backfill new NOT NULL columns before adding the constraint, and DROP FUNCTION before changing a return type.
+- The production column types differ from the old migrations in places. profiles.skills is jsonb, NOT text[]. If you depend on
+  a column's type, say so in your report so the integrator can check it against production.
+- Every SECURITY DEFINER function: SET search_path = public, check the caller (auth.uid() / role) inside, and
+  REVOKE ALL … FROM PUBLIC, anon, authenticated, then GRANT only what's needed.
+- NEVER run supabase db push, supabase link, migration repair, backfills or deploys. Never touch production or staging data.
+
+CODE RULES
+- Mocks hide bugs. Two production bugs came from this: a Python MagicMock accepted the JS-only .maybeSingle(), and a pgvector
+  RPC assumed text[]. Call only methods that exist in the real library. For DB code, add at least one test that exercises the real SQL
+  (pgTAP in supabase/tests, or the integration job from agent 26) where you can.
+- Tailwind: use ONLY tokens that exist in app/globals.css (bg-surface, text-fg, text-fg-muted, border-border, bg-brand,
+  text-on-success …). Unknown classes are silently dropped. No raw hex, bg-white, text-slate-*, text-primary, text-muted-fg.
+- No browser dialogs (window.confirm / alert). Use components/ui ConfirmDialog, Modal, Drawer, and sonner toasts.
+- Authorization must hold on the server (RLS, SQL function, or route handler), never only in the UI.
+- Keep existing behaviour unless your scope says to change it. Behaviour changes need a test and a line in your report.
+- Match the surrounding code style. Small commits in the repo's style: "feat(companies): …", "fix(auth): …", "test(rls): …".
+
+QUALITY BAR (must pass before you finish)
+- cd frontend/pau-interconnect-app && npm ci && npm run lint && npm run typecheck && npm run test
+- NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy npx next build
+- cd backend && python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt -r requirements-dev.txt (if present) && .venv/bin/python -m pytest -q
+- Don't push, force-push or rebase. Commit only to your own branch.
+
+DELIVERABLE: audit/delivery/reports/<your-branch-name>.md containing:
+  1. For EVERY audit ID in your scope: ✅ done / ⚠️ partial (why) / ⏭ deferred (why), with the commit hash.
+  2. Contracts provided or consumed, and any deviation from the plan.
+  3. Migrations added, what they do, whether they're safe on existing rows, and which column types you assumed.
+  4. Tests added, plus the exact commands and results.
+  5. Handoffs and OUT-OF-AREA EDITS.
+  6. Manual test steps for a human, per role.
+Commit it as the LAST commit on your branch.
+
+====================================================================================================
+
+YOU ARE AGENT 45: PUBLIC, AUTH & EMAIL VISUALS. Wave 3 (after 41 merges). Branch: agent/w3-45-public. Model: Gemini 3.8 Flash (high thinking).
+
+SCOPE: every file in audit/delivery/ui/public/ (landing, login, password-reset, onboarding (VISUAL only; its logic is agent 31's),
+not-found-and-errors), the visual items in ui/shared/emails.md, plus:
+- ONE /login page (role hint from ?as=) replacing /login/{student,employer,admin}, which become redirects; /login/mfa (agent 22)
+  restyled. "Continue with PAU account": supabase.auth.signInWithOAuth with the provider the human chose in wave 0 (Google `hd` hint or
+  Azure tenant). Add app/auth/callback/route.ts for the code exchange. Domain restriction stays enforced by agent 22's DB trigger.
+  Document the Supabase and provider console steps in your report.
+- W-3 live counters on the landing page from agent 35's platform_stats (hide any counter below a threshold; no invented numbers).
+- 05 PF-3: the landing page and the legal pages are static (or revalidate 300).
+- SEO: metadata + OpenGraph/Twitter images (app/opengraph-image.tsx), app/sitemap.ts, app/robots.ts.
+- Error pages show the Sentry event id with Retry; the 404 suggests destinations.
+- Email visuals: restyle lib/emails/layout.ts so it's consistent with the brand in light and dark mail clients. Don't change sendEmail or the
+  template function signatures.
+
+YOU OWN: app/page.tsx, app/login/**, app/auth/**, app/onboarding/** (visual), app/{privacy,terms,accessibility}/** (visual only),
+app/not-found.tsx, app/error.tsx, app/loading.tsx, app/{opengraph-image,sitemap,robots}.ts(x), lib/emails/layout.ts (visual),
+tests/e2e/visual/public.spec.ts.
+
+ACCEPTANCE
+- Lighthouse on the landing page (mobile): Performance ≥ 90, Accessibility 100, SEO 100. Put the numbers in the report.
+- There's one login route; no public page links to an admin login.
+
+====================================================================================================
+
+WAVE 3 RULES (UI)
+- Waves 1 and 2 are merged. The product is feature-complete; your job is to make every page excellent in light AND dark, on 360 / 768 / 1440 px.
+- Your spec is the matching files in audit/delivery/ui/ plus the global items G-1 to G-12 in audit/delivery/ui/README.md. Implement
+  every P1 and P2 row for your pages. Do P3 rows if time allows, and mark any you skip as ⏭.
+- Use components/ui and the shared components from agent 41 (merged before you start). If you need a new reusable component, build it
+  inside your area and hand it off for promotion. Don't edit components/**.
+- KEEP BEHAVIOUR: no changes to API calls, request bodies, RLS, validation or state transitions, unless your spec row says so. The last UI
+  wave accidentally changed a logbook request (it posted a company NAME as employer_id). Before finishing, diff every fetch/rpc/from()
+  call in your files against dev and justify each change in your report.
+- Tokens only (see the common rules). After you finish,
+  grep -rnE "bg-white|text-slate-|border-slate-|bg-slate-|text-primary|text-muted-fg|#[0-9a-fA-F]{6}" <your folders> must be empty.
+- Every page: PageHeader, loading.tsx (a skeleton matching the layout), error.tsx (with Retry + the Sentry event id), designed empty states,
+  no window.confirm, one h1, labelled inputs, visible focus.
+- Split any file over 400 lines into section components inside your area.
+- VERIFY with agent 26's seeded sessions: add Playwright visual specs tests/e2e/visual/<area>.spec.ts (light + dark, 360 + 1440) and axe
+  checks (color-contrast, label, button-name) for each of your pages. Commit the specs, not the screenshots.

@@ -2,7 +2,7 @@ import { Skeleton, Stack } from "@/components/ui";
 
 export default function DashboardLoading() {
   return (
-    <div className="p-6 md:p-8 space-y-8 animate-pulse">
+    <div className="p-4 md:p-8 space-y-8 animate-pulse bg-background min-h-screen">
       <div className="flex justify-between items-center">
         <div>
           <Skeleton className="h-8 w-64 mb-2" />

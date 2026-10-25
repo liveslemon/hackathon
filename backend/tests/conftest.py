@@ -146,6 +146,10 @@ class MockQueryBuilder:
         self.filters.append(("is", column, value))
         return self
 
+    def gte(self, column: str, value: Any):
+        self.filters.append(("gte", column, value))
+        return self
+
     def order(self, column: str, desc: bool = False):
         return self
 
@@ -177,17 +181,8 @@ class MockQueryBuilder:
             for row in inserted:
                 if "id" not in row:
                     row["id"] = str(uuid_lib.uuid4())
+            self.client.data.setdefault(self.table_name, []).extend(inserted)
             return MockPostgrestResponse(data=inserted)
-
-        if self.mutation_type in ("update", "upsert"):
-            payload = self.mutation_payload
-            res = payload if isinstance(payload, list) else [payload]
-            if self.is_single:
-                return MockPostgrestResponse(data=res[0] if res else {})
-            return MockPostgrestResponse(data=res)
-
-        if self.mutation_type == "delete":
-            return MockPostgrestResponse(data=[])
 
         # Filter simulation if table has data and filters
         results = list(table_rows)
@@ -197,6 +192,30 @@ class MockQueryBuilder:
             elif op == "in":
                 val_strs = [str(v) for v in val]
                 results = [r for r in results if isinstance(r, dict) and str(r.get(col)) in val_strs]
+            elif op == "gte":
+                results = [r for r in results if isinstance(r, dict) and str(r.get(col, "")) >= str(val)]
+
+        if self.mutation_type == "update":
+            payload = self.mutation_payload
+            for r in results:
+                if isinstance(r, dict):
+                    r.update(payload)
+            if self.is_single:
+                return MockPostgrestResponse(data=results[0] if results else {})
+            return MockPostgrestResponse(data=results)
+
+        if self.mutation_type == "upsert":
+            payload = self.mutation_payload
+            res = payload if isinstance(payload, list) else [payload]
+            self.client.data.setdefault(self.table_name, []).extend(res)
+            if self.is_single:
+                return MockPostgrestResponse(data=res[0] if res else {})
+            return MockPostgrestResponse(data=res)
+
+        if self.mutation_type == "delete":
+            deleted_set = {id(r) for r in results}
+            self.client.data[self.table_name] = [r for r in table_rows if id(r) not in deleted_set]
+            return MockPostgrestResponse(data=results)
 
         if self.is_single:
             single_data = results[0] if results else (table_rows[0] if table_rows else {})
@@ -366,6 +385,7 @@ def patch_backend_dependencies(mock_supabase: MockSupabase, monkeypatch, request
         "core.security.supabase",
         "services.supabase_service.supabase",
         "services.job_queue.supabase",
+        "services.vector_matching_service.supabase",
         "routers.admin.supabase",
         "routers.applications.supabase",
         "routers.cv.supabase",

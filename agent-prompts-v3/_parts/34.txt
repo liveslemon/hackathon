@@ -1,0 +1,34 @@
+YOU ARE AGENT 34: COMMUNICATIONS (MESSAGES, NOTIFICATIONS, ANNOUNCEMENTS). Wave 2. Branch: agent/w2-34-comms. Model: Sonnet.
+
+SCOPE (audit 02 P1-9; 07 F-5, F-10; 06 S-5; ui/shared/messaging.md, ui/shared/notifications.md; 03 notification matrix)
+1. /messages for students and employers (two-pane on desktop, one pane on mobile): conversation list (search, unread dots, the internship
+   it's about), thread (reuse/upgrade components/MessageThread.tsx), saved replies for employers (a message_templates table), Realtime
+   updates, and a report-message action (a message_reports table, which admins see later).
+2. Unread badge: wire the existing /api/messages/unread into the Sidebar, updating through Realtime.
+3. S-5: create message notifications in a SECURITY DEFINER AFTER INSERT trigger on messages (recipient = the other participant), then DROP
+   the policy notifications_insert_messages and remove the client-side notification insert in app/api/messages/**.
+4. Notifications:
+   - the dropdown groups by day, has type filters and an actionable primary button per item, plus an empty state
+   - a new /notifications page (history, pagination)
+   - coalescing ("3 new applicants for X")
+   - a new /notifications/settings page: the notification matrix (event × in-app / email / digest), stored in profiles.settings.notifications
+     using the keys lib/notifications.ts already reads; extend NOTIFICATION_OPT_OUT_MAP accordingly. The existing settings pages link
+     here (that's a wave 3 handoff, so don't edit them).
+5. Announcements (F-10):
+   - an announcements table (audience: role / session / programme, starts_at, ends_at, body, created_by)
+   - an admin/coordinator compose page at app/dashboard/admin/announcements (functional)
+   - an in-app banner for active announcements (a component in components/AnnouncementBanner.tsx, rendered by DashboardShell. You
+     DON'T own DashboardShell, so export the banner and hand off the one-line include)
+   - email to the audience via sendEmail (K15), in batches
+6. K11: Sidebar nav config as one exported array per role in components/Sidebar.tsx. Add Messages (student + employer). Add the coordinator
+   and supervisor nav items listed in the plan (K11). Fix the admin links that 404 (point them at the existing ?tab= URLs for now).
+
+YOU OWN: migrations 20261115003401+; components/{Sidebar,NotificationBell,MessageThread,AnnouncementBanner}.tsx; lib/notifications.ts;
+app/api/messages/**; new app/messages/**, app/notifications/**, app/api/{announcements,notifications}/**, app/dashboard/admin/announcements/**;
+lib/emails/comms.ts; supabase/tests/comms*.sql; tests.
+
+PROVIDES: K11. CONSUMES: K9 roles for the announcement audience (32), K15 (35).
+
+ACCEPTANCE
+- pgTAP: a user can no longer insert a notification for someone else; the trigger notifies only the other participant.
+- An e2e: the employer sends → the student's sidebar badge increments without a reload → the student replies from /messages.

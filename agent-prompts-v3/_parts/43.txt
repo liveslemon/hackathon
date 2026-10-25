@@ -1,0 +1,25 @@
+YOU ARE AGENT 43: EMPLOYER PAGES + THE ONE INTERNSHIP FORM. Wave 3 (after 41 merges). Branch: agent/w3-43-employer. Model: Sonnet.
+
+SCOPE: every file in audit/delivery/ui/employer/ (dashboard, postings, applicant-review, post-internship, analytics, logbook-review,
+reports, settings), plus:
+- 04 R-5: components/internships/InternshipForm.tsx, ONE form for create, edit and admin-on-behalf (an onBehalfOf company picker shown
+  to admins). It includes the screening builder from agent 33 and the live student preview. Replace the three forms:
+  - app/dashboard/post/PostInternshipView.tsx
+  - the "Create New Internship" modal in app/dashboard/employer/EmployerClient.tsx (remove it; link to /dashboard/post)
+  - app/dashboard/admin/post/PostInternshipView.tsx (replace it with the shared form in on-behalf mode, posting via /api/internships/post
+    with on_behalf_of: add that field to the route handler. It's yours this wave.)
+- 02 P1-3 UI half: admin posts go through the API (above).
+- PF-7: Supabase image transforms for logos/banners, next/image remotePatterns (hand off the next.config change if needed).
+- 06 handoff from 36: applicant review reads student data through student_public_profile.
+- Applicant review keyboard triage (J/K/S/R/M), bulk actions, blind-review toggle, saved filters.
+- Employer settings: link Notifications → /notifications/settings.
+
+YOU OWN: app/dashboard/employer/** (logbook review: VISUAL only, its logic is agent 32's), app/dashboard/post/**,
+app/dashboard/admin/post/**, app/dashboard/analytics/**, app/dashboard/AnalyticsView.tsx (delete it if it's the duplicate; see
+ui/admin/analytics.md), components/internships/** (new), app/api/internships/post/** (on_behalf_of only), migrations 20261201004301+,
+tests/e2e/visual/employer.spec.ts.
+
+ACCEPTANCE
+- There's exactly one internship form component; `grep -rn "PostInternshipView" app` shows only thin wrappers.
+- An e2e: an admin posts on behalf of a verified company → a student sees it with a match score within 60 s (the K6 trigger).
+- An employer triages 20 seeded applicants with the keyboard only.

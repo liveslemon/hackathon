@@ -1,0 +1,40 @@
+YOU ARE AGENT 25: MATCHING, JOBS & AI SERVICE. Wave 1. Branch: agent/w1-25-matching-jobs. Model: Sonnet.
+
+SCOPE (audit 02 P1-3 DB half; 05 RL-2, RL-3, RL-6; 06 upload checklist; 04 R-3/R-4 for your routers)
+1. K6: database-driven rescoring. Migration with triggers (SECURITY DEFINER, search_path set) that enqueue into cv_processing_jobs, using
+   the existing dedupe partial unique indexes (INSERT … ON CONFLICT DO NOTHING):
+   - internships AFTER INSERT, or AFTER UPDATE when status changes to 'active', or when role/description/requirements/required_skills/
+     field/category/location change → kind 'internship_rescore', internship_id = NEW.id, priority 10
+   - profiles AFTER UPDATE of skills, cv_text, cv_structured, experience, projects, interests, course (role = student)
+     → kind 'user_rescore', user_id = NEW.id, priority 10
+   Then remove the now-redundant fetch calls to /api/analyze-new-internship from app/api/internships/post/route.ts,
+   app/api/internships/[id]/route.ts and app/api/internships/[id]/status/route.ts (keep the endpoint itself as a thin admin-only enqueue).
+   This fixes admin-posted internships never being matched, because the trigger fires whatever wrote the row.
+2. RL-2: backend/worker.py, a standalone entrypoint that starts worker_loop (plus the stale-job recovery and stale-match cleanup that
+   already exist), handles SIGTERM gracefully (finish the current job, then exit), and logs a heartbeat. Agent 21 adds the Render service and
+   the RUN_INLINE_WORKER flag.
+3. RL-6: llm_service. Keep at most 3 providers, configurable by env LLM_PROVIDERS="gemini,groq" (order = priority). Timeout of 10 s per
+   call. Store the circuit-breaker state in Postgres (a new llm_provider_state table: provider, paused_until, last_error, updated_at)
+   instead of process memory, so all processes share it. Keep generate_completion / generate_completion_stream signatures.
+   Make llm_client.check_providers() return the CACHED state from llm_provider_state (fast) instead of live-pinging. The worker refreshes
+   it with real pings every 10 min. The /api/admin/llm-health endpoint lives in routers/admin.py (agent 22's file) and already calls
+   check_providers(), so DON'T edit admin.py; changing the service is enough.
+4. Uploads: app/api/cv/upload and backend upload-and-analyze check PDF magic bytes (%PDF-), enforce the 5 MB cap server-side, and generate
+   the storage filename server-side (uuid). Reject anything else with 400.
+5. Remove the bare (non-/api) route aliases in routers/cv.py and routers/analysis.py. Delete dead endpoints analyze-existing-cv and
+   my-matches after a grep proves they're unused (put it in your report). Delete routing_service's duplicate scoring path (scoring lives in
+   services/match_scoring.py).
+6. Keep backfill_match_scores.py working with the new trigger world, and document the order in the report: deploy the worker FIRST, then run
+   the backfill (P0-5 lesson).
+
+YOU OWN: backend/routers/{cv,analysis}.py, backend/services/**, backend/worker.py (new), backend/backfill_*.py, backend/tests/{matching,ai_cv}/**,
+frontend app/api/internships/**, app/api/cv/**, migrations 20261101002501+.
+
+PROVIDES: K6, backend/worker.py. CONSUMES: K1 (RUN_INLINE_WORKER, from 21).
+
+ACCEPTANCE
+- pgTAP or integration test: an insert into internships with status 'active' creates exactly one queued internship_rescore job; a second
+  update before processing doesn't create a duplicate; editing an unrelated column (e.g. view_count) enqueues nothing.
+- A unit test with a fake LLM provider: provider A raises a 429 → state paused in the DB → a second process (new client instance)
+  skips A without calling it.
+- worker.py exits cleanly on SIGTERM in a test.

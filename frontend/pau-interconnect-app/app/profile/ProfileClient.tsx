@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { Input } from "@/components/ui";
+import { Input, Button, Card, Badge } from "@/components/ui";
 import {
   ArrowLeft,
   Edit2,
@@ -25,7 +25,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cx } from "@/utils/cx";
-import Link from "next/link";
 
 // --- Data Options ---
 const courseOptions = [
@@ -167,6 +166,8 @@ type ProfileState = {
   [key: string]: unknown;
 };
 
+type ProfileTab = "academic" | "skills" | "experience" | "credentials";
+
 function isHttpUrl(value: string): boolean {
   if (!value || !value.trim()) return true;
   const trimmed = value.trim();
@@ -299,6 +300,7 @@ export default function ProfileClient({
   userEmail: string | null;
 }) {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<ProfileTab>("academic");
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [profile, setProfile] = useState<ProfileState>(initialProfile || {});
@@ -307,6 +309,7 @@ export default function ProfileClient({
     message: string;
   } | null>(null);
   const [newSkill, setNewSkill] = useState("");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // --- Derived State ---
   const interestsArray: string[] = Array.isArray(profile.interests)
@@ -509,8 +512,6 @@ export default function ProfileClient({
     setHasUnsavedChanges(true);
   };
 
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
   // Warn about unsaved changes before leaving
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -625,9 +626,18 @@ export default function ProfileClient({
 
   const hasCv = Boolean(profile.cv_url || profile.cv_structured);
 
+  const tabs: Array<{ id: ProfileTab; label: string; icon: typeof User }> = [
+    { id: "academic", label: "Personal & Academic", icon: User },
+    { id: "skills", label: "Skills & Interests", icon: Sparkles },
+    { id: "experience", label: "Experience & Projects", icon: Briefcase },
+    { id: "credentials", label: "Certifications & Links", icon: Award },
+  ];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24">
+      {/* Back Button */}
       <button
+        type="button"
         onClick={() => {
           if (hasUnsavedChanges && isEditing) {
             if (!window.confirm("You have unsaved changes. Are you sure you want to leave?")) {
@@ -636,952 +646,1066 @@ export default function ProfileClient({
           }
           router.push("/dashboard/student");
         }}
-        className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-600 transition-colors group"
+        className="inline-flex items-center gap-2 text-sm text-fg-muted hover:text-fg transition-colors group cursor-pointer"
       >
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
         Back to Dashboard
       </button>
 
-      {/* Profile Strength Card */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-indigo-500" />
-            <h3 className="text-sm font-bold text-slate-800">
-              Profile Strength
-            </h3>
-          </div>
-          <span className="text-sm font-bold text-indigo-600">
-            {profileStrength}%
-          </span>
-        </div>
-        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-          <div
-            className={cx(
-              "h-full rounded-full transition-all duration-500",
-              profileStrength >= 80
-                ? "bg-emerald-500"
-                : profileStrength >= 50
-                  ? "bg-amber-500"
-                  : "bg-rose-500",
-            )}
-            style={{ width: `${profileStrength}%` }}
-          />
-        </div>
-        <p className="text-xs text-slate-400 mt-2">
-          {profileStrength < 50
-            ? "Add more details to improve your visibility to employers"
-            : profileStrength < 80
-              ? "Good progress! Add projects or experience to stand out"
-              : "Great profile! Employers can easily discover you"}
-        </p>
-      </div>
-
-      {/* Main Profile Card */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        {/* Header */}
-        <div className="bg-slate-50/50 px-6 py-8 md:px-10 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex flex-col md:flex-row items-center gap-5">
-            <div className="w-20 h-20 bg-white rounded-2xl border border-slate-200 flex items-center justify-center shadow-sm">
-              <User className="w-10 h-10 text-slate-300" />
+      {/* Header Profile Hero Card */}
+      <Card className="overflow-hidden border border-border">
+        <div className="p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex flex-col md:flex-row items-center gap-5 text-center md:text-left">
+            <div className="w-20 h-20 bg-surface-raised rounded-2xl border border-border flex items-center justify-center shadow-xs">
+              <User className="w-10 h-10 text-fg-subtle" />
             </div>
-            <div className="text-center md:text-left">
-              <h1 className="text-xl font-bold text-slate-800">
-                {profile.full_name || "Guest User"}
-              </h1>
-              <p className="text-sm text-slate-400 font-medium">
+            <div>
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                <h1 className="text-xl md:text-2xl font-bold text-fg">
+                  {profile.full_name || "Guest Student"}
+                </h1>
+                {profile.level && (
+                  <Badge variant="neutral" size="sm">
+                    Level {profile.level}
+                  </Badge>
+                )}
+                {profile.course && (
+                  <Badge variant="secondary" size="sm">
+                    {profile.course}
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-fg-muted mt-1 font-medium">
                 {userEmail || "Log in to save"}
               </p>
-              {profile.bio && !isEditing && (
-                <p className="text-sm text-slate-500 mt-1 max-w-md">
+              {profile.bio && (
+                <p className="text-sm text-fg-muted mt-2 max-w-xl">
                   {profile.bio}
                 </p>
               )}
             </div>
           </div>
 
-          <div className="shrink-0 flex gap-2">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {profile.id && (
+              <Button variant="outline" size="sm" href={`/profile/${profile.id}`}>
+                <Eye className="w-4 h-4 mr-1.5" />
+                View Public
+              </Button>
+            )}
             {!isEditing ? (
-              <>
-                <Link
-                  href={`/profile/${profile.id || ""}`}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  View Profile
-                </Link>
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                  Edit Profile
-                </button>
-              </>
+              <Button
+                variant="solid"
+                colorType="primary"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+              >
+                <Edit2 className="w-4 h-4 mr-1.5" />
+                Edit Profile
+              </Button>
             ) : (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setProfile(initialProfile || {});
-                    setIsEditing(false);
-                    setHasUnsavedChanges(false);
-                    setStatus(null);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-500 hover:bg-slate-50 transition-all shadow-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  disabled={isSaving}
-                  onClick={handleSave}
-                  className={cx(
-                    "flex items-center gap-2 px-5 py-2 bg-slate-800 rounded-lg text-sm font-semibold text-white hover:bg-slate-700 transition-all shadow-sm",
-                    isSaving && "opacity-50 cursor-not-allowed",
-                  )}
-                >
-                  {isSaving ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Save className="w-3.5 h-3.5" />
-                  )}
-                  Save Changes
-                </button>
-              </div>
+              <Button
+                variant="subtle"
+                size="sm"
+                onClick={() => {
+                  setProfile(initialProfile || {});
+                  setIsEditing(false);
+                  setHasUnsavedChanges(false);
+                  setStatus(null);
+                }}
+              >
+                Done Editing
+              </Button>
             )}
           </div>
         </div>
 
-        <div className="p-6 md:p-10 space-y-10">
-          {status && (
+        {/* Strength Bar */}
+        <div className="border-t border-border px-6 py-4 bg-surface-sunken">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-brand" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
+                Profile Completeness
+              </span>
+            </div>
+            <span className="text-xs font-bold text-brand">
+              {profileStrength}%
+            </span>
+          </div>
+          <div className="w-full h-2 bg-surface-raised rounded-full overflow-hidden border border-border">
             <div
               className={cx(
-                "p-4 rounded-xl flex items-center gap-3 text-sm font-medium",
-                status.type === "success"
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                  : status.type === "warning"
-                    ? "bg-amber-50 text-amber-700 border border-amber-100"
-                    : "bg-rose-50 text-rose-700 border border-rose-100",
+                "h-full rounded-full transition-all duration-500",
+                profileStrength >= 80
+                  ? "bg-emerald-500"
+                  : profileStrength >= 50
+                    ? "bg-amber-500"
+                    : "bg-rose-500",
               )}
-            >
-              {status.type === "success" ? (
-                <CheckCircle2 className="w-4 h-4" />
-              ) : (
-                <AlertCircle className="w-4 h-4" />
-              )}
-              <span>{status.message}</span>
-            </div>
-          )}
-
-          {/* 1. Personal Information */}
-          <section className="space-y-6">
-            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-              <User className="w-4 h-4 text-slate-400" /> Personal Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                  Full Name
-                </label>
-                <Input
-                  placeholder="Your full name"
-                  value={profile.full_name || ""}
-                  onChange={(e) =>
-                    setProfile({ ...profile, full_name: e.target.value })
-                  }
-                  disabled={!isEditing}
-                  className="bg-transparent border-slate-150 rounded-xl"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                  PAU Email
-                </label>
-                <Input
-                  value={userEmail || ""}
-                  disabled
-                  className="bg-slate-50/50 border-slate-150 rounded-xl opacity-60"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                  Phone Number
-                </label>
-                <Input
-                  placeholder="+234 xxx xxx xxxx"
-                  value={profile.phone || ""}
-                  onChange={(e) =>
-                    setProfile({ ...profile, phone: e.target.value })
-                  }
-                  disabled={!isEditing}
-                  className="bg-transparent border-slate-150 rounded-xl"
-                />
-              </div>
-            </div>
-          </section>
-
-          <hr className="border-slate-100" />
-
-          {/* 2. Professional Summary */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-bold text-slate-800">
-              Professional Summary
-            </h3>
-            <textarea
-              placeholder="A short bio about yourself, your interests, and career goals..."
-              value={profile.bio || ""}
-              onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-              disabled={!isEditing}
-              rows={3}
-              maxLength={300}
-              className={cx(
-                "w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 resize-none",
-                !isEditing && "opacity-70 cursor-default",
-              )}
+              style={{ width: `${profileStrength}%` }}
             />
-            <p className="text-xs text-slate-400 text-right">
-              {(profile.bio || "").length}/300
-            </p>
-          </section>
+          </div>
+          <p className="text-xs text-fg-subtle mt-1.5">
+            {profileStrength < 50
+              ? "Complete academic background, bio, and at least 3 skills to unlock matching."
+              : profileStrength < 80
+                ? "Good progress! Add work experience and projects to boost match scores."
+                : "Profile complete! Your matching accuracy is maximized."}
+          </p>
+        </div>
+      </Card>
 
-          <hr className="border-slate-100" />
+      {/* Status Alert */}
+      {status && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className={cx(
+            "p-4 rounded-xl flex items-center gap-3 text-sm font-medium border",
+            status.type === "success"
+              ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
+              : status.type === "warning"
+                ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
+                : "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20",
+          )}
+        >
+          {status.type === "success" ? (
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+          ) : (
+            <AlertCircle className="w-4 h-4 shrink-0" />
+          )}
+          <span>{status.message}</span>
+        </div>
+      )}
 
-          {/* 3. Academic Information */}
-          <section className="space-y-6">
-            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-              <GraduationCap className="w-4 h-4 text-slate-400" /> Academic
-              Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                  Course of Study
-                </label>
-                {isEditing ? (
-                  <select
-                    value={profile.course || ""}
-                    onChange={(e) =>
-                      setProfile({ ...profile, course: e.target.value })
-                    }
-                    className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
-                  >
-                    <option value="">Select course</option>
-                    {courseOptions.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <Input
-                    value={profile.course || "Not set"}
-                    disabled
-                    className="bg-transparent border-slate-150 rounded-xl"
-                  />
+      {/* Tabs Navigation */}
+      <div className="border-b border-border">
+        <nav className="flex space-x-2 overflow-x-auto pb-px" aria-label="Profile sections">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={cx(
+                  "flex items-center gap-2 py-3 px-4 border-b-2 text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer",
+                  isActive
+                    ? "border-brand text-brand"
+                    : "border-transparent text-fg-muted hover:text-fg hover:border-border",
                 )}
-              </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                  Current Level
-                </label>
-                {isEditing ? (
-                  <select
-                    value={profile.level || ""}
-                    onChange={(e) =>
-                      setProfile({ ...profile, level: e.target.value })
-                    }
-                    className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
-                  >
-                    <option value="">Select level</option>
-                    {levelOptions.map((l) => (
-                      <option key={l} value={l}>
-                        {l} Level
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <Input
-                    value={profile.level ? `${profile.level} Level` : "Not set"}
-                    disabled
-                    className="bg-transparent border-slate-150 rounded-xl"
-                  />
-                )}
-              </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                  Expected Graduation
-                </label>
-                <Input
-                  type={isEditing ? "month" : "text"}
-                  placeholder="2028"
-                  value={profile.expected_graduation || ""}
-                  onChange={(e) =>
-                    setProfile({
-                      ...profile,
-                      expected_graduation: e.target.value,
-                    })
-                  }
-                  disabled={!isEditing}
-                  className="bg-transparent border-slate-150 rounded-xl"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                  CGPA
-                </label>
-                <Input
-                  placeholder="e.g. 4.2"
-                  value={profile.cgpa || ""}
-                  onChange={(e) =>
-                    setProfile({ ...profile, cgpa: e.target.value })
-                  }
-                  disabled={!isEditing}
-                  className="bg-transparent border-slate-150 rounded-xl"
-                />
-              </div>
-            </div>
-          </section>
+              >
+                <Icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
 
-          <hr className="border-slate-100" />
-
-          {/* 4. Skills */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-bold text-slate-800">Skills</h3>
-            <div className="flex flex-wrap gap-2">
-              {skillsArray.map((skill, idx) => (
-                <span
-                  key={`${skill}-${idx}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-sm font-medium border border-indigo-100"
-                >
-                  {skill}
-                  {isEditing && (
-                    <button
-                      onClick={() => removeSkill(skill)}
-                      className="hover:text-red-500 transition-colors"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </span>
-              ))}
-              {skillsArray.length === 0 && !isEditing && (
-                <p className="text-sm text-slate-400">No skills added yet</p>
-              )}
-            </div>
-            {isEditing && (
-              <>
-                <div className="flex gap-2">
+      {/* Tab Panels */}
+      <div className="space-y-6">
+        {/* TAB 1: Academic & Personal */}
+        {activeTab === "academic" && (
+          <div className="space-y-6">
+            <Card className="p-6 md:p-8 space-y-6 border border-border">
+              <h2 className="text-base font-bold text-fg flex items-center gap-2">
+                <User className="w-4 h-4 text-brand" /> Personal Information
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-fg-muted uppercase tracking-widest px-1">
+                    Full Name
+                  </label>
                   <Input
-                    placeholder="Add a skill..."
-                    value={newSkill}
-                    onChange={(e) => setNewSkill(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addSkill(newSkill);
-                      }
+                    placeholder="Your full name"
+                    value={profile.full_name || ""}
+                    onChange={(e) => {
+                      setProfile({ ...profile, full_name: e.target.value });
+                      setHasUnsavedChanges(true);
                     }}
-                    className="bg-transparent border-slate-150 rounded-xl flex-1"
+                    disabled={!isEditing}
+                    className="bg-surface border-border text-fg"
                   />
-                  <button
-                    onClick={() => addSkill(newSkill)}
-                    className="px-3 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {suggestedSkills
-                    .filter((s) => !skillsArray.includes(s))
-                    .slice(0, 12)
-                    .map((skill) => (
-                      <button
-                        key={skill}
-                        onClick={() => addSkill(skill)}
-                        className="px-2.5 py-1 rounded-full bg-slate-50 text-slate-500 text-xs font-medium border border-slate-150 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors"
-                      >
-                        + {skill}
-                      </button>
-                    ))}
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-fg-muted uppercase tracking-widest px-1">
+                    PAU Email
+                  </label>
+                  <Input
+                    value={userEmail || ""}
+                    disabled
+                    className="bg-surface-sunken border-border text-fg-muted cursor-not-allowed opacity-75"
+                  />
                 </div>
-              </>
-            )}
-          </section>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-fg-muted uppercase tracking-widest px-1">
+                    Phone Number
+                  </label>
+                  <Input
+                    placeholder="+234 xxx xxx xxxx"
+                    value={profile.phone || ""}
+                    onChange={(e) => {
+                      setProfile({ ...profile, phone: e.target.value });
+                      setHasUnsavedChanges(true);
+                    }}
+                    disabled={!isEditing}
+                    className="bg-surface border-border text-fg"
+                  />
+                </div>
+              </div>
+            </Card>
 
-          <hr className="border-slate-100" />
-
-          {/* 5. Career Interests & Preferences */}
-          <section className="space-y-6">
-            <h3 className="text-sm font-bold text-slate-800">
-              Career Interests & Preferences
-            </h3>
-            <div className="space-y-4">
-              <p className="text-xs text-slate-400">
-                Select fields you&apos;re interested in for better matching
+            <Card className="p-6 md:p-8 space-y-4 border border-border">
+              <h2 className="text-base font-bold text-fg">
+                Professional Summary & Bio
+              </h2>
+              <textarea
+                placeholder="A short bio about yourself, your career aspirations, and technical focus..."
+                value={profile.bio || ""}
+                onChange={(e) => {
+                  setProfile({ ...profile, bio: e.target.value });
+                  setHasUnsavedChanges(true);
+                }}
+                disabled={!isEditing}
+                rows={3}
+                maxLength={300}
+                className={cx(
+                  "w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-fg placeholder:text-fg-subtle focus:outline-hidden focus:ring-2 focus:ring-brand/20 focus:border-brand resize-none transition-colors",
+                  !isEditing && "opacity-80 bg-surface-sunken cursor-default",
+                )}
+              />
+              <p className="text-xs text-fg-muted text-right">
+                {(profile.bio || "").length}/300 characters
               </p>
-              <div className="flex flex-wrap gap-2">
-                {interestOptions.map((interest) => {
-                  const selected = interestsArray.includes(interest);
-                  return (
-                    <button
-                      key={interest}
-                      type="button"
-                      onClick={() => toggleInterest(interest)}
-                      disabled={!isEditing}
-                      className={cx(
-                        "px-3.5 py-1.5 rounded-full text-sm font-medium transition-all border",
-                        selected
-                          ? "bg-indigo-50 text-indigo-700 border-indigo-200"
-                          : "bg-white text-slate-500 border-slate-200 hover:border-slate-300",
-                        !isEditing && "opacity-70 cursor-default",
-                      )}
-                    >
-                      {interest}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                  Preferred Work Type
-                </label>
-                {isEditing ? (
-                  <select
-                    value={profile.preferred_work_type || ""}
-                    onChange={(e) =>
-                      setProfile({
-                        ...profile,
-                        preferred_work_type: e.target.value,
-                      })
-                    }
-                    className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
-                  >
-                    <option value="">Select</option>
-                    {workTypeOptions.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <Input
-                    value={profile.preferred_work_type || "Not set"}
-                    disabled
-                    className="bg-transparent border-slate-150 rounded-xl"
-                  />
-                )}
-              </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                  Employment Type
-                </label>
-                {isEditing ? (
-                  <select
-                    value={profile.employment_type || ""}
-                    onChange={(e) =>
-                      setProfile({
-                        ...profile,
-                        employment_type: e.target.value,
-                      })
-                    }
-                    className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
-                  >
-                    <option value="">Select</option>
-                    {employmentTypeOptions.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <Input
-                    value={profile.employment_type || "Not set"}
-                    disabled
-                    className="bg-transparent border-slate-150 rounded-xl"
-                  />
-                )}
-              </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                  Availability
-                </label>
-                {isEditing ? (
-                  <select
-                    value={profile.availability || ""}
-                    onChange={(e) =>
-                      setProfile({ ...profile, availability: e.target.value })
-                    }
-                    className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
-                  >
-                    <option value="">Select</option>
-                    {availabilityOptions.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <Input
-                    value={profile.availability || "Not set"}
-                    disabled
-                    className="bg-transparent border-slate-150 rounded-xl"
-                  />
-                )}
-              </div>
-            </div>
-          </section>
+            </Card>
 
-          <hr className="border-slate-100" />
-
-          {/* 6. Experience */}
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-slate-400" /> Experience
-              </h3>
-              {isEditing && (
-                <button
-                  onClick={addExperience}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
-                >
-                  <Plus className="w-3 h-3" /> Add
-                </button>
-              )}
-            </div>
-            {experienceArray.length === 0 && !isEditing && (
-              <p className="text-sm text-slate-400">No experience added yet</p>
-            )}
-            {experienceArray.map((exp, i) => (
-              <div
-                key={i}
-                className="border border-slate-150 rounded-xl p-4 space-y-3 relative group"
-              >
-                {isEditing && (
-                  <button
-                    onClick={() => removeExperience(i)}
-                    className="absolute -top-3 -right-3 bg-white w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-200 transition-colors shadow-sm z-10 opacity-0 group-hover:opacity-100"
-                    title="Remove experience"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Input
-                    placeholder="Company"
-                    value={exp.company}
-                    onChange={(e) =>
-                      updateExperience(i, "company", e.target.value)
-                    }
-                    disabled={!isEditing}
-                    className="bg-transparent border-slate-150 rounded-lg text-sm"
-                  />
-                  <Input
-                    placeholder="Role / Title"
-                    value={exp.role}
-                    onChange={(e) =>
-                      updateExperience(i, "role", e.target.value)
-                    }
-                    disabled={!isEditing}
-                    className="bg-transparent border-slate-150 rounded-lg text-sm"
-                  />
-                  <Input
-                    placeholder="Start date"
-                    type={isEditing ? "month" : "text"}
-                    value={exp.start_date}
-                    onChange={(e) =>
-                      updateExperience(i, "start_date", e.target.value)
-                    }
-                    disabled={!isEditing}
-                    className="bg-transparent border-slate-150 rounded-lg text-sm"
-                  />
-                  <Input
-                    placeholder="End date (or Present)"
-                    type={isEditing ? "month" : "text"}
-                    value={exp.end_date}
-                    onChange={(e) =>
-                      updateExperience(i, "end_date", e.target.value)
-                    }
-                    disabled={!isEditing}
-                    className="bg-transparent border-slate-150 rounded-lg text-sm"
-                  />
-                </div>
-                <textarea
-                  placeholder="Brief description of your role..."
-                  value={exp.description}
-                  onChange={(e) =>
-                    updateExperience(i, "description", e.target.value)
-                  }
-                  disabled={!isEditing}
-                  rows={2}
-                  className={cx(
-                    "w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none",
-                    !isEditing && "opacity-70 cursor-default",
-                  )}
-                />
-              </div>
-            ))}
-          </section>
-
-          <hr className="border-slate-100" />
-
-          {/* 7. Projects */}
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <FolderOpen className="w-4 h-4 text-slate-400" /> Projects
-              </h3>
-              {isEditing && (
-                <button
-                  onClick={addProject}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
-                >
-                  <Plus className="w-3 h-3" /> Add
-                </button>
-              )}
-            </div>
-            {projectsArray.length === 0 && !isEditing && (
-              <p className="text-sm text-slate-400">No projects added yet</p>
-            )}
-            {projectsArray.map((proj, i) => (
-              <div
-                key={i}
-                className="border border-slate-150 rounded-xl p-4 space-y-3 relative group"
-              >
-                {isEditing && (
-                  <button
-                    onClick={() => removeProject(i)}
-                    className="absolute -top-3 -right-3 bg-white w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-200 transition-colors shadow-sm z-10 opacity-0 group-hover:opacity-100"
-                    title="Remove project"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Input
-                    placeholder="Project title"
-                    value={proj.title}
-                    onChange={(e) => updateProject(i, "title", e.target.value)}
-                    disabled={!isEditing}
-                    className="bg-transparent border-slate-150 rounded-lg text-sm"
-                  />
-                  <Input
-                    placeholder="Technologies (comma-separated)"
-                    value={
-                      Array.isArray(proj.technologies)
-                        ? proj.technologies.join(", ")
-                        : ""
-                    }
-                    onChange={(e) =>
-                      updateProject(
-                        i,
-                        "technologies",
-                        e.target.value.split(",").map((s) => s.trim()),
-                      )
-                    }
-                    disabled={!isEditing}
-                    className="bg-transparent border-slate-150 rounded-lg text-sm"
-                  />
-                  <Input
-                    placeholder="GitHub URL"
-                    value={proj.github_url}
-                    onChange={(e) =>
-                      updateProject(i, "github_url", e.target.value)
-                    }
-                    disabled={!isEditing}
-                    className="bg-transparent border-slate-150 rounded-lg text-sm"
-                  />
-                  <Input
-                    placeholder="Demo URL"
-                    value={proj.demo_url}
-                    onChange={(e) =>
-                      updateProject(i, "demo_url", e.target.value)
-                    }
-                    disabled={!isEditing}
-                    className="bg-transparent border-slate-150 rounded-lg text-sm"
-                  />
-                </div>
-                <textarea
-                  placeholder="What does this project do?"
-                  value={proj.description}
-                  onChange={(e) =>
-                    updateProject(i, "description", e.target.value)
-                  }
-                  disabled={!isEditing}
-                  rows={2}
-                  className={cx(
-                    "w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none",
-                    !isEditing && "opacity-70 cursor-default",
-                  )}
-                />
-              </div>
-            ))}
-          </section>
-
-          <hr className="border-slate-100" />
-
-          {/* 8. Certifications */}
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <Award className="w-4 h-4 text-slate-400" /> Certifications
-              </h3>
-              {isEditing && (
-                <button
-                  onClick={addCertification}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
-                >
-                  <Plus className="w-3 h-3" /> Add
-                </button>
-              )}
-            </div>
-            {certificationsArray.length === 0 && !isEditing && (
-              <p className="text-sm text-slate-400">
-                No certifications added yet
-              </p>
-            )}
-            {certificationsArray.map((cert, i) => (
-              <div
-                key={i}
-                className="border border-slate-150 rounded-xl p-4 relative group"
-              >
-                {isEditing && (
-                  <button
-                    onClick={() => removeCertification(i)}
-                    className="absolute -top-3 -right-3 bg-white w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-200 transition-colors shadow-sm z-10 opacity-0 group-hover:opacity-100"
-                    title="Remove certification"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Input
-                    placeholder="Certification name"
-                    value={cert.name}
-                    onChange={(e) =>
-                      updateCertification(i, "name", e.target.value)
-                    }
-                    disabled={!isEditing}
-                    className="bg-transparent border-slate-150 rounded-lg text-sm"
-                  />
-                  <Input
-                    placeholder="Issuing organization"
-                    value={cert.issuer}
-                    onChange={(e) =>
-                      updateCertification(i, "issuer", e.target.value)
-                    }
-                    disabled={!isEditing}
-                    className="bg-transparent border-slate-150 rounded-lg text-sm"
-                  />
-                  <Input
-                    placeholder="Date obtained"
-                    type={isEditing ? "month" : "text"}
-                    value={cert.date}
-                    onChange={(e) =>
-                      updateCertification(i, "date", e.target.value)
-                    }
-                    disabled={!isEditing}
-                    className="bg-transparent border-slate-150 rounded-lg text-sm"
-                  />
-                  <Input
-                    placeholder="Credential URL"
-                    value={cert.credential_url}
-                    onChange={(e) =>
-                      updateCertification(i, "credential_url", e.target.value)
-                    }
-                    disabled={!isEditing}
-                    className="bg-transparent border-slate-150 rounded-lg text-sm"
-                  />
-                </div>
-              </div>
-            ))}
-          </section>
-
-          <hr className="border-slate-100" />
-
-          {/* 9. Languages */}
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <Languages className="w-4 h-4 text-slate-400" /> Languages
-              </h3>
-              {isEditing && (
-                <button
-                  onClick={addLanguage}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
-                >
-                  <Plus className="w-3 h-3" /> Add
-                </button>
-              )}
-            </div>
-            {languagesArray.length === 0 && !isEditing && (
-              <p className="text-sm text-slate-400">No languages added yet</p>
-            )}
-            <div className="space-y-2">
-              {languagesArray.map((lang, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <Input
-                    placeholder="Language"
-                    value={lang.name}
-                    onChange={(e) => updateLanguage(i, "name", e.target.value)}
-                    disabled={!isEditing}
-                    className="bg-transparent border-slate-150 rounded-lg text-sm flex-1"
-                  />
+            <Card className="p-6 md:p-8 space-y-6 border border-border">
+              <h2 className="text-base font-bold text-fg flex items-center gap-2">
+                <GraduationCap className="w-4 h-4 text-brand" /> Academic Information
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-fg-muted uppercase tracking-widest px-1">
+                    Course of Study
+                  </label>
                   {isEditing ? (
                     <select
-                      value={lang.proficiency}
-                      onChange={(e) =>
-                        updateLanguage(i, "proficiency", e.target.value)
-                      }
-                      className="rounded-lg border border-slate-200 bg-transparent px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      value={profile.course || ""}
+                      onChange={(e) => {
+                        setProfile({ ...profile, course: e.target.value });
+                        setHasUnsavedChanges(true);
+                      }}
+                      className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-brand/20 focus:border-brand"
                     >
-                      <option value="Native">Native</option>
-                      <option value="Fluent">Fluent</option>
-                      <option value="Intermediate">Intermediate</option>
-                      <option value="Basic">Basic</option>
+                      <option value="">Select course</option>
+                      {courseOptions.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
                     </select>
                   ) : (
-                    <span className="text-sm text-slate-500 font-medium px-3 py-1 bg-slate-50 rounded-lg">
-                      {lang.proficiency}
-                    </span>
+                    <Input
+                      value={profile.course || "Not set"}
+                      disabled
+                      className="bg-surface-sunken border-border text-fg-muted"
+                    />
                   )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-fg-muted uppercase tracking-widest px-1">
+                    Current Level
+                  </label>
+                  {isEditing ? (
+                    <select
+                      value={profile.level || ""}
+                      onChange={(e) => {
+                        setProfile({ ...profile, level: e.target.value });
+                        setHasUnsavedChanges(true);
+                      }}
+                      className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                    >
+                      <option value="">Select level</option>
+                      {levelOptions.map((l) => (
+                        <option key={l} value={l}>
+                          {l} Level
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input
+                      value={profile.level ? `${profile.level} Level` : "Not set"}
+                      disabled
+                      className="bg-surface-sunken border-border text-fg-muted"
+                    />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-fg-muted uppercase tracking-widest px-1">
+                    Expected Graduation
+                  </label>
+                  <Input
+                    type={isEditing ? "month" : "text"}
+                    placeholder="2028"
+                    value={profile.expected_graduation || ""}
+                    onChange={(e) => {
+                      setProfile({
+                        ...profile,
+                        expected_graduation: e.target.value,
+                      });
+                      setHasUnsavedChanges(true);
+                    }}
+                    disabled={!isEditing}
+                    className="bg-surface border-border text-fg"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-fg-muted uppercase tracking-widest px-1">
+                    CGPA
+                  </label>
+                  <Input
+                    placeholder="e.g. 4.2"
+                    value={profile.cgpa || ""}
+                    onChange={(e) => {
+                      setProfile({ ...profile, cgpa: e.target.value });
+                      setHasUnsavedChanges(true);
+                    }}
+                    disabled={!isEditing}
+                    className="bg-surface border-border text-fg"
+                  />
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* TAB 2: Skills & Career Interests */}
+        {activeTab === "skills" && (
+          <div className="space-y-6">
+            <Card className="p-6 md:p-8 space-y-5 border border-border">
+              <h2 className="text-base font-bold text-fg flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-brand" /> Technical & Soft Skills
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {skillsArray.map((skill, idx) => (
+                  <span
+                    key={`${skill}-${idx}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand/10 text-brand text-sm font-medium border border-brand/20"
+                  >
+                    {skill}
+                    {isEditing && (
+                      <button
+                        type="button"
+                        onClick={() => removeSkill(skill)}
+                        className="hover:text-rose-500 transition-colors cursor-pointer"
+                        aria-label={`Remove ${skill}`}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </span>
+                ))}
+                {skillsArray.length === 0 && !isEditing && (
+                  <p className="text-sm text-fg-muted">No skills added yet. Click &quot;Edit Profile&quot; to add some.</p>
+                )}
+              </div>
+
+              {isEditing && (
+                <div className="space-y-4 pt-2 border-t border-border">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Add a custom skill..."
+                      value={newSkill}
+                      onChange={(e) => setNewSkill(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addSkill(newSkill);
+                        }
+                      }}
+                      className="bg-surface border-border text-fg flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="solid"
+                      colorType="primary"
+                      size="md"
+                      onClick={() => addSkill(newSkill)}
+                    >
+                      <Plus className="w-4 h-4 mr-1" /> Add
+                    </Button>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold text-fg-muted uppercase tracking-wider mb-2">
+                      Suggested Skills
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {suggestedSkills
+                        .filter((s) => !skillsArray.includes(s))
+                        .slice(0, 14)
+                        .map((skill) => (
+                          <button
+                            key={skill}
+                            type="button"
+                            onClick={() => addSkill(skill)}
+                            className="px-2.5 py-1 rounded-full bg-surface-sunken text-fg-muted text-xs font-medium border border-border hover:bg-brand/10 hover:text-brand hover:border-brand/30 transition-colors cursor-pointer"
+                          >
+                            + {skill}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </Card>
+
+            <Card className="p-6 md:p-8 space-y-6 border border-border">
+              <h2 className="text-base font-bold text-fg">
+                Career Interests & Matching Preferences
+              </h2>
+              <div className="space-y-3">
+                <p className="text-xs text-fg-muted">
+                  Select the career paths you are targeting. This directly weights internship recommendations.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {interestOptions.map((interest) => {
+                    const selected = interestsArray.includes(interest);
+                    return (
+                      <button
+                        key={interest}
+                        type="button"
+                        onClick={() => toggleInterest(interest)}
+                        disabled={!isEditing}
+                        className={cx(
+                          "px-3.5 py-1.5 rounded-full text-sm font-medium transition-all border cursor-pointer",
+                          selected
+                            ? "bg-brand/10 text-brand border-brand/30 font-semibold"
+                            : "bg-surface text-fg-muted border-border hover:border-brand/40",
+                          !isEditing && "opacity-75 cursor-default",
+                        )}
+                      >
+                        {interest}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-border">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-fg-muted uppercase tracking-widest px-1">
+                    Preferred Work Type
+                  </label>
+                  {isEditing ? (
+                    <select
+                      value={profile.preferred_work_type || ""}
+                      onChange={(e) => {
+                        setProfile({
+                          ...profile,
+                          preferred_work_type: e.target.value,
+                        });
+                        setHasUnsavedChanges(true);
+                      }}
+                      className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                    >
+                      <option value="">Select</option>
+                      {workTypeOptions.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input
+                      value={profile.preferred_work_type || "Not set"}
+                      disabled
+                      className="bg-surface-sunken border-border text-fg-muted"
+                    />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-fg-muted uppercase tracking-widest px-1">
+                    Employment Type
+                  </label>
+                  {isEditing ? (
+                    <select
+                      value={profile.employment_type || ""}
+                      onChange={(e) => {
+                        setProfile({
+                          ...profile,
+                          employment_type: e.target.value,
+                        });
+                        setHasUnsavedChanges(true);
+                      }}
+                      className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                    >
+                      <option value="">Select</option>
+                      {employmentTypeOptions.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input
+                      value={profile.employment_type || "Not set"}
+                      disabled
+                      className="bg-surface-sunken border-border text-fg-muted"
+                    />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-fg-muted uppercase tracking-widest px-1">
+                    Availability
+                  </label>
+                  {isEditing ? (
+                    <select
+                      value={profile.availability || ""}
+                      onChange={(e) => {
+                        setProfile({ ...profile, availability: e.target.value });
+                        setHasUnsavedChanges(true);
+                      }}
+                      className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                    >
+                      <option value="">Select</option>
+                      {availabilityOptions.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input
+                      value={profile.availability || "Not set"}
+                      disabled
+                      className="bg-surface-sunken border-border text-fg-muted"
+                    />
+                  )}
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* TAB 3: Experience & Projects */}
+        {activeTab === "experience" && (
+          <div className="space-y-6">
+            {/* Work Experience */}
+            <Card className="p-6 md:p-8 space-y-4 border border-border">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-bold text-fg flex items-center gap-2">
+                  <Briefcase className="w-4 h-4 text-brand" /> Work Experience
+                </h2>
+                {isEditing && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addExperience}
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Add Role
+                  </Button>
+                )}
+              </div>
+              {experienceArray.length === 0 && !isEditing && (
+                <p className="text-sm text-fg-muted py-2">No work experience listed yet.</p>
+              )}
+              {experienceArray.map((exp, i) => (
+                <div
+                  key={i}
+                  className="border border-border rounded-xl p-4 md:p-5 space-y-3 bg-surface-sunken/40 relative group"
+                >
                   {isEditing && (
                     <button
-                      onClick={() => removeLanguage(i)}
-                      className="bg-white w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-200 transition-colors shadow-sm"
-                      title="Remove language"
+                      type="button"
+                      onClick={() => removeExperience(i)}
+                      className="absolute -top-2.5 -right-2.5 bg-surface w-7 h-7 rounded-full border border-border flex items-center justify-center text-fg-muted hover:text-rose-500 hover:border-rose-300 transition-colors shadow-xs z-10 cursor-pointer"
+                      title="Remove experience"
+                      aria-label="Remove experience"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Input
+                      placeholder="Company"
+                      value={exp.company}
+                      onChange={(e) =>
+                        updateExperience(i, "company", e.target.value)
+                      }
+                      disabled={!isEditing}
+                      className="bg-surface border-border text-fg text-sm"
+                    />
+                    <Input
+                      placeholder="Role / Title"
+                      value={exp.role}
+                      onChange={(e) =>
+                        updateExperience(i, "role", e.target.value)
+                      }
+                      disabled={!isEditing}
+                      className="bg-surface border-border text-fg text-sm"
+                    />
+                    <Input
+                      placeholder="Start date (YYYY-MM)"
+                      type={isEditing ? "month" : "text"}
+                      value={exp.start_date}
+                      onChange={(e) =>
+                        updateExperience(i, "start_date", e.target.value)
+                      }
+                      disabled={!isEditing}
+                      className="bg-surface border-border text-fg text-sm"
+                    />
+                    <Input
+                      placeholder="End date (or Present)"
+                      type={isEditing ? "month" : "text"}
+                      value={exp.end_date}
+                      onChange={(e) =>
+                        updateExperience(i, "end_date", e.target.value)
+                      }
+                      disabled={!isEditing}
+                      className="bg-surface border-border text-fg text-sm"
+                    />
+                  </div>
+                  <textarea
+                    placeholder="Brief description of key achievements and tech stack..."
+                    value={exp.description}
+                    onChange={(e) =>
+                      updateExperience(i, "description", e.target.value)
+                    }
+                    disabled={!isEditing}
+                    rows={2}
+                    className={cx(
+                      "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-subtle focus:outline-hidden focus:ring-2 focus:ring-brand/20 resize-none",
+                      !isEditing && "opacity-80 cursor-default",
+                    )}
+                  />
                 </div>
               ))}
-            </div>
-          </section>
+            </Card>
 
-          <hr className="border-slate-100" />
+            {/* Projects */}
+            <Card className="p-6 md:p-8 space-y-4 border border-border">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-bold text-fg flex items-center gap-2">
+                  <FolderOpen className="w-4 h-4 text-brand" /> Technical Projects
+                </h2>
+                {isEditing && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addProject}
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Add Project
+                  </Button>
+                )}
+              </div>
+              {projectsArray.length === 0 && !isEditing && (
+                <p className="text-sm text-fg-muted py-2">No projects added yet.</p>
+              )}
+              {projectsArray.map((proj, i) => (
+                <div
+                  key={i}
+                  className="border border-border rounded-xl p-4 md:p-5 space-y-3 bg-surface-sunken/40 relative group"
+                >
+                  {isEditing && (
+                    <button
+                      type="button"
+                      onClick={() => removeProject(i)}
+                      className="absolute -top-2.5 -right-2.5 bg-surface w-7 h-7 rounded-full border border-border flex items-center justify-center text-fg-muted hover:text-rose-500 hover:border-rose-300 transition-colors shadow-xs z-10 cursor-pointer"
+                      title="Remove project"
+                      aria-label="Remove project"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Input
+                      placeholder="Project title"
+                      value={proj.title}
+                      onChange={(e) => updateProject(i, "title", e.target.value)}
+                      disabled={!isEditing}
+                      className="bg-surface border-border text-fg text-sm"
+                    />
+                    <Input
+                      placeholder="Technologies (comma-separated)"
+                      value={
+                        Array.isArray(proj.technologies)
+                          ? proj.technologies.join(", ")
+                          : ""
+                      }
+                      onChange={(e) =>
+                        updateProject(
+                          i,
+                          "technologies",
+                          e.target.value.split(",").map((s) => s.trim()),
+                        )
+                      }
+                      disabled={!isEditing}
+                      className="bg-surface border-border text-fg text-sm"
+                    />
+                    <Input
+                      placeholder="GitHub repository URL"
+                      value={proj.github_url}
+                      onChange={(e) =>
+                        updateProject(i, "github_url", e.target.value)
+                      }
+                      disabled={!isEditing}
+                      className="bg-surface border-border text-fg text-sm"
+                    />
+                    <Input
+                      placeholder="Live Demo URL"
+                      value={proj.demo_url}
+                      onChange={(e) =>
+                        updateProject(i, "demo_url", e.target.value)
+                      }
+                      disabled={!isEditing}
+                      className="bg-surface border-border text-fg text-sm"
+                    />
+                  </div>
+                  <textarea
+                    placeholder="What problem does this project solve? What did you build?"
+                    value={proj.description}
+                    onChange={(e) =>
+                      updateProject(i, "description", e.target.value)
+                    }
+                    disabled={!isEditing}
+                    rows={2}
+                    className={cx(
+                      "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-subtle focus:outline-hidden focus:ring-2 focus:ring-brand/20 resize-none",
+                      !isEditing && "opacity-80 cursor-default",
+                    )}
+                  />
+                </div>
+              ))}
+            </Card>
+          </div>
+        )}
 
-          {/* 10. Portfolio Links */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-              <Globe className="w-4 h-4 text-slate-400" /> Portfolio & Links
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                  GitHub
-                </label>
-                <Input
-                  placeholder="https://github.com/username"
-                  value={portfolioLinks.github || ""}
-                  onChange={(e) =>
-                    setProfile({
-                      ...profile,
-                      portfolio_links: {
-                        ...portfolioLinks,
-                        github: e.target.value,
-                      },
-                    })
-                  }
-                  disabled={!isEditing}
-                  className="bg-transparent border-slate-150 rounded-xl text-sm"
-                />
+        {/* TAB 4: Certifications & Links */}
+        {activeTab === "credentials" && (
+          <div className="space-y-6">
+            {/* Certifications */}
+            <Card className="p-6 md:p-8 space-y-4 border border-border">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-bold text-fg flex items-center gap-2">
+                  <Award className="w-4 h-4 text-brand" /> Certifications & Licenses
+                </h2>
+                {isEditing && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addCertification}
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Add Certificate
+                  </Button>
+                )}
               </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                  LinkedIn
-                </label>
-                <Input
-                  placeholder="https://linkedin.com/in/username"
-                  value={portfolioLinks.linkedin || ""}
-                  onChange={(e) =>
-                    setProfile({
-                      ...profile,
-                      portfolio_links: {
-                        ...portfolioLinks,
-                        linkedin: e.target.value,
-                      },
-                    })
-                  }
-                  disabled={!isEditing}
-                  className="bg-transparent border-slate-150 rounded-xl text-sm"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                  Portfolio Website
-                </label>
-                <Input
-                  placeholder="https://yoursite.com"
-                  value={portfolioLinks.portfolio || ""}
-                  onChange={(e) =>
-                    setProfile({
-                      ...profile,
-                      portfolio_links: {
-                        ...portfolioLinks,
-                        portfolio: e.target.value,
-                      },
-                    })
-                  }
-                  disabled={!isEditing}
-                  className="bg-transparent border-slate-150 rounded-xl text-sm"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                  Other
-                </label>
-                <Input
-                  placeholder="Any other link"
-                  value={portfolioLinks.other || ""}
-                  onChange={(e) =>
-                    setProfile({
-                      ...profile,
-                      portfolio_links: {
-                        ...portfolioLinks,
-                        other: e.target.value,
-                      },
-                    })
-                  }
-                  disabled={!isEditing}
-                  className="bg-transparent border-slate-150 rounded-xl text-sm"
-                />
-              </div>
-            </div>
-          </section>
+              {certificationsArray.length === 0 && !isEditing && (
+                <p className="text-sm text-fg-muted py-2">No certifications added yet.</p>
+              )}
+              {certificationsArray.map((cert, i) => (
+                <div
+                  key={i}
+                  className="border border-border rounded-xl p-4 md:p-5 relative group bg-surface-sunken/40 space-y-3"
+                >
+                  {isEditing && (
+                    <button
+                      type="button"
+                      onClick={() => removeCertification(i)}
+                      className="absolute -top-2.5 -right-2.5 bg-surface w-7 h-7 rounded-full border border-border flex items-center justify-center text-fg-muted hover:text-rose-500 hover:border-rose-300 transition-colors shadow-xs z-10 cursor-pointer"
+                      title="Remove certification"
+                      aria-label="Remove certification"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Input
+                      placeholder="Certification name"
+                      value={cert.name}
+                      onChange={(e) =>
+                        updateCertification(i, "name", e.target.value)
+                      }
+                      disabled={!isEditing}
+                      className="bg-surface border-border text-fg text-sm"
+                    />
+                    <Input
+                      placeholder="Issuing organization"
+                      value={cert.issuer}
+                      onChange={(e) =>
+                        updateCertification(i, "issuer", e.target.value)
+                      }
+                      disabled={!isEditing}
+                      className="bg-surface border-border text-fg text-sm"
+                    />
+                    <Input
+                      placeholder="Date obtained (YYYY-MM)"
+                      type={isEditing ? "month" : "text"}
+                      value={cert.date}
+                      onChange={(e) =>
+                        updateCertification(i, "date", e.target.value)
+                      }
+                      disabled={!isEditing}
+                      className="bg-surface border-border text-fg text-sm"
+                    />
+                    <Input
+                      placeholder="Credential Verification URL"
+                      value={cert.credential_url}
+                      onChange={(e) =>
+                        updateCertification(i, "credential_url", e.target.value)
+                      }
+                      disabled={!isEditing}
+                      className="bg-surface border-border text-fg text-sm"
+                    />
+                  </div>
+                </div>
+              ))}
+            </Card>
 
-          <hr className="border-slate-100" />
+            {/* Languages */}
+            <Card className="p-6 md:p-8 space-y-4 border border-border">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-bold text-fg flex items-center gap-2">
+                  <Languages className="w-4 h-4 text-brand" /> Languages
+                </h2>
+                {isEditing && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addLanguage}
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Add Language
+                  </Button>
+                )}
+              </div>
+              {languagesArray.length === 0 && !isEditing && (
+                <p className="text-sm text-fg-muted py-2">No languages added yet.</p>
+              )}
+              <div className="space-y-3">
+                {languagesArray.map((lang, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Input
+                      placeholder="Language (e.g. English, French, Yoruba)"
+                      value={lang.name}
+                      onChange={(e) => updateLanguage(i, "name", e.target.value)}
+                      disabled={!isEditing}
+                      className="bg-surface border-border text-fg text-sm flex-1"
+                    />
+                    {isEditing ? (
+                      <select
+                        value={lang.proficiency}
+                        onChange={(e) =>
+                          updateLanguage(i, "proficiency", e.target.value)
+                        }
+                        className="rounded-xl border border-border bg-surface px-3 py-2 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-brand/20"
+                      >
+                        <option value="Native">Native</option>
+                        <option value="Fluent">Fluent</option>
+                        <option value="Intermediate">Intermediate</option>
+                        <option value="Basic">Basic</option>
+                      </select>
+                    ) : (
+                      <Badge variant="neutral" size="sm">
+                        {lang.proficiency}
+                      </Badge>
+                    )}
+                    {isEditing && (
+                      <button
+                        type="button"
+                        onClick={() => removeLanguage(i)}
+                        className="bg-surface w-8 h-8 rounded-full border border-border flex items-center justify-center text-fg-muted hover:text-rose-500 hover:border-rose-300 transition-colors cursor-pointer shrink-0"
+                        title="Remove language"
+                        aria-label="Remove language"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
 
-          {/* 11. CV */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-slate-400" /> Resume / CV
-            </h3>
-            <div className="bg-slate-50/50 border border-slate-150 rounded-2xl p-6 flex items-center gap-5">
-              <div className="w-12 h-12 bg-white rounded-xl border border-slate-100 flex items-center justify-center shadow-sm shrink-0">
-                <FileText className="w-6 h-6 text-indigo-500" />
+            {/* Portfolio Links */}
+            <Card className="p-6 md:p-8 space-y-4 border border-border">
+              <h2 className="text-base font-bold text-fg flex items-center gap-2">
+                <Globe className="w-4 h-4 text-brand" /> Portfolio & Web Links
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-fg-muted uppercase tracking-widest px-1">
+                    GitHub Profile
+                  </label>
+                  <Input
+                    placeholder="https://github.com/username"
+                    value={portfolioLinks.github || ""}
+                    onChange={(e) => {
+                      setProfile({
+                        ...profile,
+                        portfolio_links: {
+                          ...portfolioLinks,
+                          github: e.target.value,
+                        },
+                      });
+                      setHasUnsavedChanges(true);
+                    }}
+                    disabled={!isEditing}
+                    className="bg-surface border-border text-fg text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-fg-muted uppercase tracking-widest px-1">
+                    LinkedIn Profile
+                  </label>
+                  <Input
+                    placeholder="https://linkedin.com/in/username"
+                    value={portfolioLinks.linkedin || ""}
+                    onChange={(e) => {
+                      setProfile({
+                        ...profile,
+                        portfolio_links: {
+                          ...portfolioLinks,
+                          linkedin: e.target.value,
+                        },
+                      });
+                      setHasUnsavedChanges(true);
+                    }}
+                    disabled={!isEditing}
+                    className="bg-surface border-border text-fg text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-fg-muted uppercase tracking-widest px-1">
+                    Personal Portfolio Website
+                  </label>
+                  <Input
+                    placeholder="https://yoursite.com"
+                    value={portfolioLinks.portfolio || ""}
+                    onChange={(e) => {
+                      setProfile({
+                        ...profile,
+                        portfolio_links: {
+                          ...portfolioLinks,
+                          portfolio: e.target.value,
+                        },
+                      });
+                      setHasUnsavedChanges(true);
+                    }}
+                    disabled={!isEditing}
+                    className="bg-surface border-border text-fg text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-fg-muted uppercase tracking-widest px-1">
+                    Other Portfolio / Blog
+                  </label>
+                  <Input
+                    placeholder="https://linktr.ee/..."
+                    value={portfolioLinks.other || ""}
+                    onChange={(e) => {
+                      setProfile({
+                        ...profile,
+                        portfolio_links: {
+                          ...portfolioLinks,
+                          other: e.target.value,
+                        },
+                      });
+                      setHasUnsavedChanges(true);
+                    }}
+                    disabled={!isEditing}
+                    className="bg-surface border-border text-fg text-sm"
+                  />
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-slate-700">
-                  {hasCv ? "CV uploaded and analyzed" : "No CV uploaded yet"}
-                </p>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {hasCv
-                    ? "View your ATS score, skill extraction, and match results"
-                    : "Upload your CV for AI-powered analysis and internship matching"}
-                </p>
+            </Card>
+
+            {/* Resume / CV Card */}
+            <Card className="p-6 md:p-8 border border-border">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-brand/10 rounded-xl border border-brand/20 flex items-center justify-center shrink-0">
+                    <FileText className="w-6 h-6 text-brand" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-fg">
+                      {hasCv ? "CV Uploaded & AI Analyzed" : "Resume / CV Status"}
+                    </h3>
+                    <p className="text-xs text-fg-muted mt-0.5">
+                      {hasCv
+                        ? "Your ATS score, parsed skills, and suggestions are active."
+                        : "Upload your PDF CV to run AI skill extraction and ATS grading."}
+                    </p>
+                  </div>
+                </div>
+                <Button variant="solid" colorType="primary" size="sm" href="/dashboard/student/cv" className="shrink-0">
+                  <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                  {hasCv ? "View CV Dashboard" : "Upload Resume"}
+                </Button>
               </div>
-              <Link
-                href="/dashboard/student/cv"
-                className="flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-lg text-sm font-semibold text-white hover:bg-slate-700 transition-all shadow-sm shrink-0"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                {hasCv ? "View Analysis" : "Upload CV"}
-              </Link>
-            </div>
-          </section>
-        </div>
+            </Card>
+          </div>
+        )}
       </div>
+
+      {/* Sticky Save Bar */}
+      {isEditing && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-md border-t border-border p-4 shadow-lg">
+          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 px-4">
+            <div className="flex items-center gap-2 text-sm">
+              {hasUnsavedChanges ? (
+                <>
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                  <span className="font-semibold text-fg">You have unsaved changes</span>
+                </>
+              ) : (
+                <>
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  <span className="text-fg-muted">All changes saved</span>
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="subtle"
+                size="sm"
+                onClick={() => {
+                  setProfile(initialProfile || {});
+                  setIsEditing(false);
+                  setHasUnsavedChanges(false);
+                  setStatus(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="solid"
+                colorType="primary"
+                size="sm"
+                disabled={isSaving}
+                onClick={handleSave}
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-1.5" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

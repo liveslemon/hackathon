@@ -1,13 +1,34 @@
 "use client";
+
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Typography, Button, Input } from "@/components/ui";
+import {
+  Button,
+  Input,
+  Textarea,
+  Card,
+  CardContent,
+  CardHeader,
+  PageHeader,
+} from "@/components/ui";
+
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
 import type { Profile } from "@/types/domain";
-import { companySettingsSchema, type CompanySettingsInput } from "@/lib/validations/employer";
-import { ExternalLink, CheckCircle2, AlertCircle, Building2, Bell } from "lucide-react";
+import {
+  companySettingsSchema,
+  type CompanySettingsInput,
+} from "@/lib/validations/employer";
+import {
+  ExternalLink,
+  Building2,
+  Bell,
+  Save,
+  Upload,
+} from "lucide-react";
+
+import { toast } from "sonner";
 
 interface EmployerSettingsProfile extends Partial<Profile> {
   company_name?: string | null;
@@ -58,11 +79,12 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
 
   const [notificationPrefs, setNotificationPrefs] = useState({
     email_new_applicant: initialNotificationPrefs.email_new_applicant ?? true,
-    email_logbook_submitted: initialNotificationPrefs.email_logbook_submitted ?? true,
-    email_deadline_reminder: initialNotificationPrefs.email_deadline_reminder ?? true,
+    email_logbook_submitted:
+      initialNotificationPrefs.email_logbook_submitted ?? true,
+    email_deadline_reminder:
+      initialNotificationPrefs.email_deadline_reminder ?? true,
   });
 
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -123,16 +145,15 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
     if (!file) return;
 
     if (file.size > 2 * 1024 * 1024) {
-      setMessage({ type: "error", text: "File must be under 2MB." });
+      toast.error("File size must be under 2MB.");
       return;
     }
 
     if (!file.type.startsWith("image/")) {
-      setMessage({ type: "error", text: "Only image files (PNG, JPG, WebP) are allowed." });
+      toast.error("Only image files (PNG, JPG, WebP) are allowed.");
       return;
     }
 
-    setMessage(null);
     const previewUrl = URL.createObjectURL(file);
     if (field === "company_logo_url") {
       setLogoFile(file);
@@ -147,7 +168,6 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setMessage(null);
     setFieldErrors({});
 
     // 1. Client-side schema validation before touching storage
@@ -159,13 +179,15 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
     const validation = companySettingsSchema.safeParse(rawPayload);
     if (!validation.success) {
       const errors: Record<string, string> = {};
-      for (const [field, msgs] of Object.entries(validation.error.flatten().fieldErrors)) {
+      for (const [field, msgs] of Object.entries(
+        validation.error.flatten().fieldErrors,
+      )) {
         if (msgs && msgs[0]) {
           errors[field] = msgs[0];
         }
       }
       setFieldErrors(errors);
-      setMessage({ type: "error", text: "Please correct the errors in the form before saving." });
+      toast.error("Please correct the highlighted form errors before saving.");
       setLoading(false);
       return;
     }
@@ -202,7 +224,10 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
         if (error) {
           // Rollback logo upload if banner fails
           for (const path of uploadedPaths) {
-            await supabase.storage.from("company_assets").remove([path]).catch(() => {});
+            await supabase.storage
+              .from("company_assets")
+              .remove([path])
+              .catch(() => {});
           }
           throw new Error(`Banner upload failed: ${error.message}`);
         }
@@ -235,7 +260,10 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
       } catch (patchErr) {
         // Rollback uploaded assets if database metadata save fails
         for (const path of uploadedPaths) {
-          await supabase.storage.from("company_assets").remove([path]).catch(() => {});
+          await supabase.storage
+            .from("company_assets")
+            .remove([path])
+            .catch(() => {});
         }
         throw patchErr;
       }
@@ -255,280 +283,321 @@ export default function SettingsClient({ user, profile }: SettingsClientProps) {
       setLogoFile(null);
       setBannerFile(null);
       setHasUnsavedChanges(false);
-      setMessage({ type: "success", text: "Company profile updated successfully!" });
+      toast.success("Company profile and branding saved successfully!");
     } catch (err: unknown) {
-      setMessage({ type: "error", text: getErrorMessage(err) });
+      toast.error(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <Typography variant="h3" className="text-slate-800">
-            Company Settings
-          </Typography>
-          <Typography variant="body1" className="text-slate-500 mt-2">
-            Update your company&apos;s public profile, branding, and notification details.
-          </Typography>
-        </div>
-        {user?.id && (
-          <Link
-            href={`/companies/${user.id}`}
-            target="_blank"
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors border border-indigo-100 self-start"
-          >
-            <ExternalLink className="w-4 h-4" />
-            View Public Profile
-          </Link>
-        )}
-      </div>
+    <div className="max-w-4xl mx-auto space-y-8 pb-16">
+      <PageHeader
+        title="Company Settings"
+        description="Manage your organization profile, visual brand identity, and recruitment notifications."
+        actions={
+          user?.id ? (
+            <Link
+              href={`/companies/${user.id}`}
+              target="_blank"
+              className="inline-flex items-center gap-1.5"
+            >
+              <Button variant="outline" size="sm" className="gap-2">
+                <ExternalLink className="w-4 h-4" />
+                View Public Profile
+              </Button>
+            </Link>
+          ) : undefined
+        }
+      />
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            {/* Company Name */}
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Company Name
-              </label>
-              <Input
-                name="company_name"
-                placeholder="e.g. Acme Tech Solutions"
-                value={formData.company_name}
-                onChange={handleChange}
-              />
-              {fieldErrors.company_name && (
-                <p className="text-xs text-rose-500 mt-1">{fieldErrors.company_name}</p>
-              )}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Brand Identity & Visual Assets */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2 text-brand font-medium text-xs">
+              <Building2 className="w-4 h-4" />
+              <span>BRANDING & ASSETS</span>
             </div>
+            <h3 className="text-base font-semibold text-fg">Organization Identity</h3>
+            <p className="text-xs text-fg-muted">
+              Upload high-resolution company emblems and banner artwork shown to students.
+            </p>
+          </CardHeader>
 
-            {/* Company Website */}
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Company Website
-              </label>
-              <Input
-                name="company_website"
-                placeholder="https://example.com"
-                value={formData.company_website}
-                onChange={handleChange}
-              />
-              {fieldErrors.company_website && (
-                <p className="text-xs text-rose-500 mt-1">{fieldErrors.company_website}</p>
-              )}
-            </div>
-
-            {/* Company Logo */}
-            <div className="sm:col-span-1">
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Company Logo
-              </label>
-              <div className="flex items-center gap-4">
-                {logoPreview ? (
-                  <div className="w-12 h-12 rounded-lg bg-slate-100 overflow-hidden border border-slate-200 shrink-0">
-                    <Image
-                      src={logoPreview}
-                      alt="Logo preview"
-                      width={48}
-                      height={48}
-                      unoptimized
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center border border-slate-200 shrink-0">
-                    <Building2 className="w-6 h-6 text-slate-300" />
-                  </div>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleFileSelect(e, "company_logo_url")}
-                  className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100 transition-all cursor-pointer"
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Input
+                  label="Company Legal / Trading Name"
+                  name="company_name"
+                  placeholder="e.g. Acme Tech Solutions"
+                  value={formData.company_name}
+                  onChange={handleChange}
+                  required
                 />
-              </div>
-              <p className="text-xs text-slate-400 mt-1.5">Square PNG or JPG recommended. Max 2MB.</p>
-            </div>
-
-            {/* Company Banner */}
-            <div className="sm:col-span-1">
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Company Banner
-              </label>
-              <div className="flex items-center gap-4">
-                {bannerPreview ? (
-                  <div className="w-20 h-12 rounded-lg bg-slate-100 overflow-hidden border border-slate-200 shrink-0">
-                    <Image
-                      src={bannerPreview}
-                      alt="Banner preview"
-                      width={80}
-                      height={48}
-                      unoptimized
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-20 h-12 rounded-lg bg-slate-100 flex items-center justify-center border border-slate-200 shrink-0">
-                    <Building2 className="w-6 h-6 text-slate-300" />
-                  </div>
+                {fieldErrors.company_name && (
+                  <p className="text-danger-fg text-xs mt-1 font-medium">
+                    {fieldErrors.company_name}
+                  </p>
                 )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleFileSelect(e, "company_banner_url")}
-                  className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100 transition-all cursor-pointer"
-                />
               </div>
-              <p className="text-xs text-slate-400 mt-1.5">Wide banner (around 3:1). Max 2MB.</p>
+
+              <div>
+                <Input
+                  label="Official Website URL"
+                  name="company_website"
+                  placeholder="https://example.com"
+                  value={formData.company_website}
+                  onChange={handleChange}
+                />
+                {fieldErrors.company_website && (
+                  <p className="text-danger-fg text-xs mt-1 font-medium">
+                    {fieldErrors.company_website}
+                  </p>
+                )}
+              </div>
             </div>
 
-            {/* Industry */}
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Industry
-              </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+              {/* Logo Upload & Preview */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-fg">
+                  Company Emblem / Logo
+                </label>
+                <div className="flex items-center gap-4">
+                  {logoPreview ? (
+                    <div className="w-14 h-14 rounded-xl bg-surface-raised overflow-hidden border border-border shrink-0 shadow-xs">
+                      <Image
+                        src={logoPreview}
+                        alt="Logo preview"
+                        width={56}
+                        height={56}
+                        unoptimized
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-14 h-14 rounded-xl bg-surface-sunken flex items-center justify-center border border-border shrink-0 text-fg-muted">
+                      <Building2 className="w-6 h-6" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <input
+                      type="file"
+                      id="logo-upload"
+                      accept="image/*"
+                      onChange={(e) => handleFileSelect(e, "company_logo_url")}
+                      className="hidden"
+                    />
+                    <label htmlFor="logo-upload">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="cursor-pointer gap-2"
+                        onClick={() =>
+                          document.getElementById("logo-upload")?.click()
+                        }
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        Choose Logo
+                      </Button>
+                    </label>
+                    <p className="text-xs text-fg-muted mt-1">
+                      Square PNG or JPG recommended. Max 2MB.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Banner Upload & Preview */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-fg">
+                  Company Cover Banner
+                </label>
+                <div className="flex items-center gap-4">
+                  {bannerPreview ? (
+                    <div className="w-24 h-14 rounded-xl bg-surface-raised overflow-hidden border border-border shrink-0 shadow-xs">
+                      <Image
+                        src={bannerPreview}
+                        alt="Banner preview"
+                        width={96}
+                        height={56}
+                        unoptimized
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-24 h-14 rounded-xl bg-surface-sunken flex items-center justify-center border border-border shrink-0 text-fg-muted">
+                      <Building2 className="w-6 h-6" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <input
+                      type="file"
+                      id="banner-upload"
+                      accept="image/*"
+                      onChange={(e) => handleFileSelect(e, "company_banner_url")}
+                      className="hidden"
+                    />
+                    <label htmlFor="banner-upload">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="cursor-pointer gap-2"
+                        onClick={() =>
+                          document.getElementById("banner-upload")?.click()
+                        }
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        Choose Banner
+                      </Button>
+                    </label>
+                    <p className="text-xs text-fg-muted mt-1">
+                      Wide banner (approx 3:1). Max 2MB.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
               <Input
+                label="Primary Industry Sector"
                 name="industry"
                 placeholder="e.g. Fintech, Healthcare, Software Engineering"
                 value={formData.industry}
                 onChange={handleChange}
               />
               {fieldErrors.industry && (
-                <p className="text-xs text-rose-500 mt-1">{fieldErrors.industry}</p>
+                <p className="text-danger-fg text-xs mt-1 font-medium">
+                  {fieldErrors.industry}
+                </p>
               )}
             </div>
 
-            {/* Company Description */}
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Company Description
-              </label>
-              <textarea
+            <div>
+              <Textarea
+                label="Company Mission & Description"
                 name="company_description"
                 rows={4}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm placeholder:text-slate-400"
-                placeholder="Briefly describe what your company does, its mission and impact..."
+                placeholder="Briefly describe what your organization does, its mission and impact..."
                 value={formData.company_description}
                 onChange={handleChange}
               />
               {fieldErrors.company_description && (
-                <p className="text-xs text-rose-500 mt-1">{fieldErrors.company_description}</p>
+                <p className="text-danger-fg text-xs mt-1 font-medium">
+                  {fieldErrors.company_description}
+                </p>
               )}
             </div>
 
-            {/* Culture & Perks */}
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Company Culture & Perks
-              </label>
-              <textarea
+            <div>
+              <Textarea
+                label="Company Culture, Perks & Mentorship"
                 name="culture"
                 rows={3}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm placeholder:text-slate-400"
-                placeholder="What is it like to work at your company? Mention mentorship, flexibility, team environment..."
+                placeholder="What is it like to work at your organization? Mention mentorship, tools, student growth..."
                 value={formData.culture}
                 onChange={handleChange}
               />
               {fieldErrors.culture && (
-                <p className="text-xs text-rose-500 mt-1">{fieldErrors.culture}</p>
+                <p className="text-danger-fg text-xs mt-1 font-medium">
+                  {fieldErrors.culture}
+                </p>
               )}
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          <hr className="border-slate-100 my-6" />
-
-          {/* Notification Preferences */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Bell className="w-4 h-4 text-slate-400" />
-              <h4 className="text-sm font-bold text-slate-800">
-                Email Notification Preferences
-              </h4>
+        {/* Email Notification Preferences */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2 text-brand font-medium text-xs">
+              <Bell className="w-4 h-4" />
+              <span>NOTIFICATIONS</span>
             </div>
-            <div className="space-y-3">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notificationPrefs.email_new_applicant}
-                  onChange={() => handleNotificationToggle("email_new_applicant")}
-                  className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500/20"
-                />
-                <div>
-                  <span className="text-sm font-medium text-slate-700">
-                    New applicant notifications
-                  </span>
-                  <p className="text-xs text-slate-400">
-                    Receive an email when a student applies to one of your internship postings.
-                  </p>
-                </div>
-              </label>
+            <h3 className="text-base font-semibold text-fg">Email Notification Preferences</h3>
+            <p className="text-xs text-fg-muted">
+              Configure automated notifications dispatched to your verified employer address.
+            </p>
+          </CardHeader>
 
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notificationPrefs.email_logbook_submitted}
-                  onChange={() => handleNotificationToggle("email_logbook_submitted")}
-                  className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500/20"
-                />
-                <div>
-                  <span className="text-sm font-medium text-slate-700">
-                    Logbook entry submissions
-                  </span>
-                  <p className="text-xs text-slate-400">
-                    Receive an email when your intern submits a SIWES logbook entry for weekly review.
-                  </p>
-                </div>
-              </label>
-
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notificationPrefs.email_deadline_reminder}
-                  onChange={() => handleNotificationToggle("email_deadline_reminder")}
-                  className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500/20"
-                />
-                <div>
-                  <span className="text-sm font-medium text-slate-700">
-                    Application deadline reminders
-                  </span>
-                  <p className="text-xs text-slate-400">
-                    Receive a reminder email 3 days before your posting application deadline closes.
-                  </p>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <div className="pt-4 flex items-center justify-between border-t border-slate-100">
-            {message && (
-              <div
-                className={`flex items-center gap-2 text-sm font-medium ${
-                  message.type === "success" ? "text-emerald-600" : "text-rose-600"
-                }`}
-              >
-                {message.type === "success" ? (
-                  <CheckCircle2 className="w-4 h-4 shrink-0" />
-                ) : (
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                )}
-                <span>{message.text}</span>
+          <CardContent className="space-y-4">
+            <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border border-border hover:bg-background/50 transition-colors">
+              <input
+                type="checkbox"
+                checked={notificationPrefs.email_new_applicant}
+                onChange={() => handleNotificationToggle("email_new_applicant")}
+                className="mt-0.5 rounded text-brand focus:ring-brand border-border"
+              />
+              <div className="space-y-0.5">
+                <span className="text-sm font-medium text-fg">
+                  New Applicant Alerts
+                </span>
+                <p className="text-xs text-fg-muted">
+                  Receive real-time notifications when a PAU student applies to an active opening.
+                </p>
               </div>
-            )}
-            {!message && <span />}
-            <Button
-              type="submit"
-              disabled={loading}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-indigo-500/25 px-8"
-            >
-              {loading ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        </form>
-      </div>
+            </label>
+
+            <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border border-border hover:bg-background/50 transition-colors">
+              <input
+                type="checkbox"
+                checked={notificationPrefs.email_logbook_submitted}
+                onChange={() =>
+                  handleNotificationToggle("email_logbook_submitted")
+                }
+                className="mt-0.5 rounded text-brand focus:ring-brand border-border"
+              />
+              <div className="space-y-0.5">
+                <span className="text-sm font-medium text-fg">
+                  SIWES Logbook Submissions
+                </span>
+                <p className="text-xs text-fg-muted">
+                  Receive an email alert whenever an intern submits a logbook activity for employer sign-off.
+                </p>
+              </div>
+            </label>
+
+            <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border border-border hover:bg-background/50 transition-colors">
+              <input
+                type="checkbox"
+                checked={notificationPrefs.email_deadline_reminder}
+                onChange={() =>
+                  handleNotificationToggle("email_deadline_reminder")
+                }
+                className="mt-0.5 rounded text-brand focus:ring-brand border-border"
+              />
+              <div className="space-y-0.5">
+                <span className="text-sm font-medium text-fg">
+                  Application Deadline Reminders
+                </span>
+                <p className="text-xs text-fg-muted">
+                  Receive a prompt 3 days before any of your active internship deadlines expire.
+                </p>
+              </div>
+            </label>
+          </CardContent>
+        </Card>
+
+        {/* Action bar */}
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <Button
+            type="submit"
+            isLoading={loading}
+            className="gap-2 px-6"
+          >
+            <Save className="w-4 h-4" />
+            Save Profile & Preferences
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }
+
 

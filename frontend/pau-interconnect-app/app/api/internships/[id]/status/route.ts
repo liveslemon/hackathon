@@ -54,19 +54,24 @@ export async function PATCH(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  if (status === "active" && existing.status === "draft") {
+  if (status === "closed" || status === "draft") {
+    // Clean up match rows when posting is closed or set to draft
+    await supabase.from("match_results").delete().eq("internship_id", id);
+  } else if (status === "active" && (existing.status === "draft" || existing.status === "closed")) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         const { getBackendUrl } = await import("@/lib/env");
         const backendUrl = getBackendUrl();
-        fetch(`${backendUrl}/api/analyze-new-internship`, {
+        // Await (with a timeout) so the serverless function isn't frozen before the request is sent.
+        await fetch(`${backendUrl}/api/analyze-new-internship`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({ internship_id: id }),
+          signal: AbortSignal.timeout(5000),
         }).catch((e) => console.error("Trigger analysis failed asynchronously:", e));
       }
     } catch (err) {

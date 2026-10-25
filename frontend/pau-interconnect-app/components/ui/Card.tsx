@@ -6,10 +6,24 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   className?: string;
   onClick?: () => void;
   hoverable?: boolean;
+  variant?: "surface" | "raised" | "sunken" | "ghost";
 }
 
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ children, className, onClick, hoverable, role, tabIndex, onKeyDown, ...props }, ref) => {
+  (
+    {
+      children,
+      className,
+      onClick,
+      hoverable,
+      variant = "surface",
+      role,
+      tabIndex,
+      onKeyDown,
+      ...props
+    },
+    ref,
+  ) => {
     const isClickable = Boolean(onClick);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -22,6 +36,13 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
       }
     };
 
+    const variantClasses = {
+      surface: "bg-surface border border-border shadow-sm text-fg",
+      raised: "bg-surface-raised border border-border shadow-md text-fg",
+      sunken: "bg-surface-sunken border border-border/60 text-fg",
+      ghost: "bg-transparent border border-border/40 text-fg",
+    };
+
     return (
       <div
         ref={ref}
@@ -30,10 +51,12 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
         role={role || (isClickable ? "button" : undefined)}
         tabIndex={tabIndex ?? (isClickable ? 0 : undefined)}
         className={cx(
-          "bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden text-slate-900 dark:text-slate-100",
+          "rounded-2xl transition-all duration-200 overflow-hidden",
+          variantClasses[variant],
           hoverable &&
-            "transition-all duration-300 hover:shadow-md cursor-pointer hover:border-slate-200 dark:hover:border-slate-700",
-          isClickable && "focus:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+            "hover:shadow-md hover:border-border-strong cursor-pointer hover:-translate-y-0.5",
+          isClickable &&
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring cursor-pointer",
           className,
         )}
         {...props}
@@ -56,10 +79,7 @@ export const CardHeader = React.forwardRef<HTMLDivElement, CardSectionProps>(
   ({ children, className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cx(
-        "px-6 py-4 border-b border-slate-100 dark:border-slate-800",
-        className,
-      )}
+      className={cx("px-6 py-5 border-b border-border", className)}
       {...props}
     >
       {children}
@@ -84,7 +104,7 @@ export const CardFooter = React.forwardRef<HTMLDivElement, CardSectionProps>(
     <div
       ref={ref}
       className={cx(
-        "px-6 py-4 bg-slate-50/50 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800",
+        "px-6 py-4 bg-surface-sunken/60 border-t border-border flex items-center justify-between",
         className,
       )}
       {...props}

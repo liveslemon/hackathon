@@ -31,13 +31,13 @@ export default function AnalyticsCharts({
           <CartesianGrid
             strokeDasharray="3 3"
             vertical={false}
-            stroke="#f1f5f9"
+            stroke="var(--border)"
           />
           <XAxis
             dataKey="title"
             axisLine={false}
             tickLine={false}
-            tick={{ fontSize: 12, fill: "#94a3b8" }}
+            tick={{ fontSize: 12, fill: "var(--fg-muted)" }}
             tickFormatter={(value) =>
               value && value.length > 15
                 ? value.substring(0, 15) + "..."
@@ -47,16 +47,19 @@ export default function AnalyticsCharts({
           <YAxis
             axisLine={false}
             tickLine={false}
-            tick={{ fontSize: 12, fill: "#94a3b8" }}
+            tick={{ fontSize: 12, fill: "var(--fg-muted)" }}
           />
           <Tooltip
-            cursor={{ fill: "#f8fafc" }}
+            cursor={{ fill: "var(--surface-sunken)" }}
             contentStyle={{
+              backgroundColor: "var(--surface-raised)",
+              color: "var(--fg)",
+              borderColor: "var(--border)",
               borderRadius: "16px",
-              border: "none",
-              boxShadow:
-                "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+              boxShadow: "var(--shadow-lg)",
             }}
+            itemStyle={{ color: "var(--fg)" }}
+            labelStyle={{ color: "var(--fg)", fontWeight: 600 }}
           />
           <Bar
             dataKey="applications"

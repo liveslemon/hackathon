@@ -21,6 +21,8 @@ import type { Profile } from "@/types/domain";
 
 import { notFound } from "next/navigation";
 import { getDaysUntilDeadline } from "@/lib/deadlines";
+import { getMatchScores, type MatchScoreData } from "@/lib/matching";
+import { MatchScore } from "@/components/match/MatchScore";
 
 export default async function InternshipDetailsPage({
   params,
@@ -64,26 +66,21 @@ export default async function InternshipDetailsPage({
   let applicationStatus: string | null = null;
   let applicationStage: string | null = null;
   let applicationId: string | null = null;
-  let matchScore: number | null = null;
+  let matchScoreData: MatchScoreData | null = null;
   let matchingSkills: string[] = [];
   let missingSkills: string[] = [];
   let userProfile: Profile | null = null;
   let hasCvFromTable = false;
 
   if (user) {
-    const [appliedRes, matchRes, profileRes, cvRes] = await Promise.all([
+    const [appliedRes, matchScoresMap, profileRes, cvRes] = await Promise.all([
       supabase
         .from("applied_internships")
         .select("id, status, stage")
         .eq("user_id", user.id)
         .eq("internship_id", internshipId)
         .maybeSingle(),
-      supabase
-        .from("match_results")
-        .select("match_score, matching_skills, missing_skills")
-        .eq("user_id", user.id)
-        .eq("internship_id", internshipId)
-        .maybeSingle(),
+      getMatchScores(supabase, user.id, [internshipId]),
       supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
       supabase
         .from("student_cvs")
@@ -99,11 +96,9 @@ export default async function InternshipDetailsPage({
       applicationId = appliedRes.data.id;
     }
 
-    if (matchRes.data) {
-      matchScore = matchRes.data.match_score;
-      matchingSkills = matchRes.data.matching_skills || [];
-      missingSkills = matchRes.data.missing_skills || [];
-    }
+    matchScoreData = matchScoresMap[internshipId] || null;
+    matchingSkills = matchScoreData?.matchingSkills || [];
+    missingSkills = matchScoreData?.missingSkills || [];
 
     userProfile = profileRes.data;
     if (cvRes.data?.id) {
@@ -154,176 +149,148 @@ export default async function InternshipDetailsPage({
     ? internship.responsibilities
     : internship.responsibilities?.split("\n").filter(Boolean) || [];
 
-  const displayScore =
-    matchScore !== null ? matchScore : internship.matchPercentage || 0;
-
   const daysUntilDeadline = getDaysUntilDeadline(internship.deadline);
-
-  const matchColor =
-    displayScore >= 70
-      ? "text-emerald-600"
-      : displayScore >= 40
-        ? "text-amber-600"
-        : "text-slate-500";
 
   return (
     <DashboardShell userProfile={userProfile}>
-      <div className="max-w-4xl mx-auto px-4 md:px-0 py-6 md:py-10">
+      <div className="max-w-5xl mx-auto px-4 md:px-0 py-6 md:py-10">
         {/* Back link */}
         <Link
           href="/dashboard/student"
-          className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-600 mb-8 transition-colors group"
+          className="inline-flex items-center gap-2 text-sm text-fg-muted hover:text-brand mb-6 transition-colors group font-medium"
         >
-          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-          Back to internships
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+          <span>Back to internships</span>
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Header */}
-            <div>
+            {/* Header Card */}
+            <div className="bg-surface rounded-2xl border border-border p-6 md:p-8 shadow-xs">
               <div className="flex items-start justify-between gap-4 mb-3">
                 <div>
-                  <h1 className="text-2xl font-bold text-slate-800 leading-tight">
+                  <h1 className="text-2xl md:text-3xl font-bold text-fg leading-tight">
                     {internship.role || internship.title}
                   </h1>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                    <span className="text-sm font-medium text-indigo-600">
+                  <div className="flex items-center gap-2 mt-2">
+                    <Building2 className="w-4 h-4 text-fg-subtle" />
+                    <span className="text-sm font-semibold text-brand">
                       {internship.company}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2 mt-4">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 text-slate-600 rounded-md text-xs font-medium border border-slate-100">
-                  <Briefcase className="w-3 h-3" />{" "}
-                  {internship.category || internship.field || "Internship"}
+              <div className="flex flex-wrap gap-2 mt-5">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-sunken text-fg-muted rounded-xl text-xs font-medium border border-border">
+                  <Briefcase className="w-3.5 h-3.5" />
+                  <span>{internship.category || internship.field || "Internship"}</span>
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 text-slate-600 rounded-md text-xs font-medium border border-slate-100">
-                  <MapPin className="w-3 h-3" />{" "}
-                  {internship.location || "Remote"}
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-sunken text-fg-muted rounded-xl text-xs font-medium border border-border">
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>{internship.location || "Remote"}</span>
                 </span>
                 {internship.duration && (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 text-slate-600 rounded-md text-xs font-medium border border-slate-100">
-                    <Clock className="w-3 h-3" /> {internship.duration}
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-sunken text-fg-muted rounded-xl text-xs font-medium border border-border">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>{internship.duration}</span>
                   </span>
                 )}
                 {daysUntilDeadline !== null && (
                   <span
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold border ${
                       daysUntilDeadline > 7
-                        ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                        ? "bg-success-subtle text-success-fg border-success/20"
                         : daysUntilDeadline >= 0
-                          ? "bg-amber-50 text-amber-600 border-amber-100"
-                          : "bg-red-50 text-red-500 border-red-100"
+                          ? "bg-warning-subtle text-warning-fg border-warning/20"
+                          : "bg-danger-subtle text-danger-fg border-danger/20"
                     }`}
                   >
-                    <CalendarDays className="w-3 h-3" />
-                    {daysUntilDeadline > 0
-                      ? `${daysUntilDeadline} days left`
-                      : daysUntilDeadline === 0
-                        ? "Ends today"
-                        : "Deadline passed"}
+                    <CalendarDays className="w-3.5 h-3.5" />
+                    <span>
+                      {daysUntilDeadline > 0
+                        ? `${daysUntilDeadline} days left`
+                        : daysUntilDeadline === 0
+                          ? "Ends today"
+                          : "Deadline passed"}
+                    </span>
                   </span>
                 )}
               </div>
             </div>
 
-            <hr className="border-slate-100" />
-
             {/* Description */}
-            <section>
-              <h3 className="text-sm font-semibold text-slate-800 mb-3">
+            <div className="bg-surface rounded-2xl border border-border p-6 md:p-8 shadow-xs">
+              <h2 className="text-base font-bold text-fg mb-4">
                 About the role
-              </h3>
-              <p className="text-sm text-slate-500 leading-relaxed whitespace-pre-line">
+              </h2>
+              <p className="text-sm text-fg-muted leading-relaxed whitespace-pre-line">
                 {internship.description || "No description provided."}
               </p>
-            </section>
+            </div>
 
             {/* Requirements */}
             {requirementsList.length > 0 && (
-              <section className="bg-white p-5 rounded-xl border border-slate-100">
-                <h3 className="text-sm font-semibold text-slate-800 mb-4">
+              <div className="bg-surface rounded-2xl border border-border p-6 md:p-8 shadow-xs">
+                <h2 className="text-base font-bold text-fg mb-4">
                   Requirements
-                </h3>
-                <ul className="space-y-2.5">
+                </h2>
+                <ul className="space-y-3">
                   {requirementsList.map((req: string, idx: number) => (
-                    <li key={idx} className="flex items-start gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                      <span className="text-sm text-slate-600">{req}</span>
+                    <li key={idx} className="flex items-start gap-3">
+                      <CheckCircle2 className="w-4 h-4 text-success-fg mt-0.5 shrink-0" />
+                      <span className="text-sm text-fg-muted leading-relaxed">{req}</span>
                     </li>
                   ))}
                 </ul>
-              </section>
+              </div>
             )}
 
             {/* Responsibilities */}
             {responsibilitiesList.length > 0 && (
-              <section className="bg-white p-5 rounded-xl border border-slate-100">
-                <h3 className="text-sm font-semibold text-slate-800 mb-4">
+              <div className="bg-surface rounded-2xl border border-border p-6 md:p-8 shadow-xs">
+                <h2 className="text-base font-bold text-fg mb-4">
                   What you&apos;ll do
-                </h3>
-                <ul className="space-y-2.5">
+                </h2>
+                <ul className="space-y-3">
                   {responsibilitiesList.map((res: string, idx: number) => (
-                    <li key={idx} className="flex items-start gap-2.5">
-                      <Zap className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" />
-                      <span className="text-sm text-slate-600">{res}</span>
+                    <li key={idx} className="flex items-start gap-3">
+                      <Zap className="w-4 h-4 text-brand mt-0.5 shrink-0" />
+                      <span className="text-sm text-fg-muted leading-relaxed">{res}</span>
                     </li>
                   ))}
                 </ul>
-              </section>
+              </div>
             )}
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-4">
-            <div className="sticky top-20 space-y-4">
-              {/* Match Score Card */}
-              <div className="bg-white rounded-xl border border-slate-100 overflow-hidden">
-                <div className="p-5 text-center border-b border-slate-50">
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">
-                    Profile match
+          <div className="space-y-6">
+            <div className="sticky top-20 space-y-6">
+              {/* Match Score & Action Card */}
+              <div className="bg-surface rounded-2xl border border-border shadow-xs overflow-hidden">
+                <div className="p-6 border-b border-border">
+                  <p className="text-xs font-bold text-fg-subtle uppercase tracking-wider mb-3">
+                    Profile compatibility
                   </p>
-                  {user && !hasCv ? (
-                    <div className="py-1">
-                      <div className="text-3xl font-bold text-slate-300">--%</div>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Upload your CV to calculate match score
-                      </p>
-                    </div>
-                  ) : !user ? (
-                    <div className="py-1">
-                      <div className="text-3xl font-bold text-slate-300">--%</div>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Sign in to view personalized match
+                  {!user ? (
+                    <div className="py-2 text-center">
+                      <div className="text-3xl font-bold text-fg-subtle">--%</div>
+                      <p className="text-xs text-fg-muted mt-1">
+                        Sign in to view personalized match compatibility
                       </p>
                     </div>
                   ) : (
-                    <>
-                      <div className={`text-4xl font-bold ${matchColor}`}>
-                        {displayScore}%
-                      </div>
-                      <div className="w-full h-1.5 bg-slate-100 rounded-full mt-3 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-1000 ${
-                            displayScore >= 70
-                              ? "bg-emerald-500"
-                              : displayScore >= 40
-                                ? "bg-amber-500"
-                                : "bg-slate-300"
-                          }`}
-                          style={{ width: `${displayScore}%` }}
-                        />
-                      </div>
-                    </>
+                    <MatchScore
+                      scoreData={matchScoreData}
+                      showExplanation={true}
+                      className="w-full"
+                    />
                   )}
                 </div>
 
-                <div className="p-5 space-y-3">
+                <div className="p-6 space-y-4">
                   {user ? (
                     <InternshipClientParts
                       internship={internship}
@@ -339,8 +306,8 @@ export default async function InternshipDetailsPage({
                       isProfileComplete={isProfileComplete}
                     />
                   ) : (
-                    <Link href="/login/student">
-                      <button className="w-full py-2.5 bg-slate-800 text-white rounded-lg text-sm font-semibold hover:bg-slate-700 transition-colors">
+                    <Link href="/login/student" className="block">
+                      <button className="w-full py-3 bg-brand text-fg-inverse rounded-xl text-sm font-semibold hover:bg-brand-hover transition-colors cursor-pointer">
                         Sign in to Apply
                       </button>
                     </Link>
@@ -349,10 +316,10 @@ export default async function InternshipDetailsPage({
               </div>
 
               {/* Details Card */}
-              <div className="bg-white rounded-xl border border-slate-100 p-4 space-y-3">
-                <div className="flex items-center gap-2.5 text-sm">
-                  <Clock className="w-4 h-4 text-slate-300" />
-                  <span className="text-slate-500">
+              <div className="bg-surface rounded-2xl border border-border p-6 space-y-3.5 shadow-xs">
+                <div className="flex items-center gap-3 text-sm">
+                  <Clock className="w-4 h-4 text-fg-subtle" />
+                  <span className="text-fg-muted">
                     Posted{" "}
                     {internship.created_at
                       ? new Date(internship.created_at).toLocaleDateString(
@@ -362,9 +329,9 @@ export default async function InternshipDetailsPage({
                       : "recently"}
                   </span>
                 </div>
-                <div className="flex items-center gap-2.5 text-sm">
-                  <CalendarDays className="w-4 h-4 text-slate-300" />
-                  <span className="text-slate-500">
+                <div className="flex items-center gap-3 text-sm">
+                  <CalendarDays className="w-4 h-4 text-fg-subtle" />
+                  <span className="text-fg-muted">
                     Deadline:{" "}
                     {internship.deadline
                       ? new Date(internship.deadline).toLocaleDateString(
@@ -379,10 +346,10 @@ export default async function InternshipDetailsPage({
                     href={internship.company_website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2.5 text-sm text-indigo-600 hover:text-indigo-700 transition-colors"
+                    className="flex items-center gap-2.5 text-sm font-medium text-brand hover:text-brand-hover transition-colors pt-1"
                   >
                     <ExternalLink className="w-4 h-4" />
-                    Company website
+                    <span>Company website</span>
                   </a>
                 )}
               </div>

@@ -1,0 +1,105 @@
+You are one of several AI agents working IN PARALLEL on "PAU InterConnect", an internship + SIWES logbook platform for
+Pan-Atlantic University that is moving from hackathon project to production. Each agent has its own git worktree and branch.
+
+STACK
+- Frontend: frontend/pau-interconnect-app (Next.js 16 App Router, React 19, TypeScript, Tailwind 4 with semantic design tokens,
+  next-themes, sonner, lucide-react, Supabase SSR, Vitest, Playwright). The route guard is proxy.ts. Route handlers live in app/api/**.
+- Backend: backend/ (FastAPI "AI service": CV parsing/OCR, embeddings, matching, LLM failover, durable job queue). pytest in backend/tests.
+- DB: Supabase Postgres + RLS. The ONLY migrations folder is frontend/pau-interconnect-app/supabase/migrations. Read CLAUDE.md.
+
+READ FIRST (in this order)
+1. audit/delivery/README.md, then audit/delivery/10-implementation-plan.md: your wave, your file ownership, the contracts (K1…K14).
+2. The audit files and IDs named in YOUR SECTION below. They're your spec: implement them literally unless you find a better way,
+   and if you do, explain it in your report.
+3. docs/design-system.md, before touching any UI.
+
+FILE OWNERSHIP (this is how we avoid merge conflicts)
+- Edit ONLY the files and folders listed under "YOU OWN". Read anything.
+- You need a change elsewhere? Don't make it. Write it in the "Handoffs" section of your report (file, exact change, why).
+  The one exception: a change of 5 lines or fewer that's needed to compile or to call your new API. Mark it "OUT-OF-AREA EDIT" in the report.
+- New files are fine inside folders you own.
+- Contracts: implement the ones you PROVIDE with exactly the names and signatures in the plan, early (first commit), so others
+  can rely on them. Code against the ones you CONSUME even before the provider merges. Mock them in tests.
+
+DATABASE RULES
+- Never edit an existing migration. Create new files only, in your number range: <wave date>00<agent 2 digits><seq 2 digits>_<agent>_<desc>.sql
+  (wave 1 = 20261101, wave 2 = 20261115, wave 3 = 20261201, wave 4 = 20261215). Example: 20261101002401_24_application_state.sql.
+- Make migrations idempotent and safe on a LIVE database with existing rows: IF NOT EXISTS, DROP … IF EXISTS before CREATE,
+  backfill new NOT NULL columns before adding the constraint, and DROP FUNCTION before changing a return type.
+- The production column types differ from the old migrations in places. profiles.skills is jsonb, NOT text[]. If you depend on
+  a column's type, say so in your report so the integrator can check it against production.
+- Every SECURITY DEFINER function: SET search_path = public, check the caller (auth.uid() / role) inside, and
+  REVOKE ALL … FROM PUBLIC, anon, authenticated, then GRANT only what's needed.
+- NEVER run supabase db push, supabase link, migration repair, backfills or deploys. Never touch production or staging data.
+
+CODE RULES
+- Mocks hide bugs. Two production bugs came from this: a Python MagicMock accepted the JS-only .maybeSingle(), and a pgvector
+  RPC assumed text[]. Call only methods that exist in the real library. For DB code, add at least one test that exercises the real SQL
+  (pgTAP in supabase/tests, or the integration job from agent 26) where you can.
+- Tailwind: use ONLY tokens that exist in app/globals.css (bg-surface, text-fg, text-fg-muted, border-border, bg-brand,
+  text-on-success …). Unknown classes are silently dropped. No raw hex, bg-white, text-slate-*, text-primary, text-muted-fg.
+- No browser dialogs (window.confirm / alert). Use components/ui ConfirmDialog, Modal, Drawer, and sonner toasts.
+- Authorization must hold on the server (RLS, SQL function, or route handler), never only in the UI.
+- Keep existing behaviour unless your scope says to change it. Behaviour changes need a test and a line in your report.
+- Match the surrounding code style. Small commits in the repo's style: "feat(companies): …", "fix(auth): …", "test(rls): …".
+
+QUALITY BAR (must pass before you finish)
+- cd frontend/pau-interconnect-app && npm ci && npm run lint && npm run typecheck && npm run test
+- NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy npx next build
+- cd backend && python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt -r requirements-dev.txt (if present) && .venv/bin/python -m pytest -q
+- Don't push, force-push or rebase. Commit only to your own branch.
+
+DELIVERABLE: audit/delivery/reports/<your-branch-name>.md containing:
+  1. For EVERY audit ID in your scope: ✅ done / ⚠️ partial (why) / ⏭ deferred (why), with the commit hash.
+  2. Contracts provided or consumed, and any deviation from the plan.
+  3. Migrations added, what they do, whether they're safe on existing rows, and which column types you assumed.
+  4. Tests added, plus the exact commands and results.
+  5. Handoffs and OUT-OF-AREA EDITS.
+  6. Manual test steps for a human, per role.
+Commit it as the LAST commit on your branch.
+
+====================================================================================================
+
+YOU ARE AGENT 33: HIRING (INTERVIEWS, OFFERS, SCREENING). Wave 2. Branch: agent/w2-33-hiring. Model: Sonnet.
+Wave 1 is merged: K5 transition_application (use it for EVERY state change; never update state/status/stage directly).
+
+SCOPE (audit 07 F-3, F-4, F-7; 03 student steps 7–8, employer steps 5–6; ui/employer/applicant-review.md + ui/student/my-internships.md,
+FUNCTIONAL parts: schedule, offer, tabs, withdraw)
+1. Migration (K10, exact names):
+   - interview_slots(id, internship_id, starts_at, ends_at, location_or_link, capacity, created_by)
+   - interviews(id, application_id, slot_id, starts_at, ends_at, location_or_link, status check in ('proposed','booked','rescheduled',
+     'cancelled','completed'), notes)
+   - offers(id, application_id unique, start_date, end_date, stipend, terms text, expires_at, letter_path, status check in
+     ('sent','accepted','declined','expired','withdrawn'), created_by, created_at)
+   - internship_questions(id, internship_id, position, kind check in ('text','yes_no','choice'), prompt, options jsonb, required, knockout jsonb)
+   - application_answers(application_id, question_id, answer jsonb)
+   - RLS through can_manage_internship (K8; until 31 merges, is_internship_employer, which 31 redefines) and the student's ownership
+   - expire_offers(): SECURITY DEFINER; for each sent offer past expires_at, calls transition_application(… 'offer_expired') with the
+     service-role context; agent 35 schedules it daily
+2. APIs (new route folders):
+   - app/api/interviews/**: the employer creates slots; the student books one (transition → interview if not already); reschedule,
+     cancel; an .ics attachment (lib/ics.ts)
+   - app/api/offers/**: the employer makes an offer (transition → offered; a PDF offer letter from a template, in a private bucket);
+     the student accepts or declines (transition → offer_accepted / offer_declined). Accepting shows "your other applications will be
+     withdrawn" and relies on the K5 side effects.
+   - app/api/internships/[id]/questions/**: CRUD for screening questions (employer); the apply route (app/api/applications/route.ts,
+     yours this wave) stores answers and applies knockout rules (auto-reject with a reason via transition_application).
+3. UI (functional, existing design system; wave 3 polishes):
+   - applicant review: Schedule interview, Make offer, a screening answers block in the applicant drawer, bulk shortlist/reject with a
+     reason picker + template; no direct "accepted" anywhere
+   - /my-internships: tabs Applied · Interviews · Offers · Saved · Archived; Withdraw (ConfirmDialog); the offer card with accept/decline
+     + countdown; the interview card with add-to-calendar
+   - /dashboard/post: a screening questions builder section ONLY (the form consolidation is wave 3, agent 43)
+4. Emails via sendEmail (K15) with your templates in lib/emails/hiring.ts: interview booked/changed/cancelled (+ .ics),
+   offer made, offer expiring in 48 h (expose a view `offers_expiring_soon` for 35's cron), offer accepted/declined.
+
+YOU OWN: migrations 20261115003301+; app/api/applications/**; app/api/{interviews,offers}/**; app/api/internships/[id]/questions/**;
+app/dashboard/employer/internships/[id]/**; app/my-internships/**; app/dashboard/post/** (screening section only); lib/ics.ts;
+lib/emails/hiring.ts; supabase/tests/hiring*.sql; tests for all of these.
+
+PROVIDES: K10. CONSUMES: K5, K8, K15.
+
+ACCEPTANCE
+- pgTAP: only the student can accept; an expired offer can't be accepted; knockout answers auto-reject; employer B can't see A's answers.
+- Vitest: the .ics output is valid (DTSTART/DTEND in UTC, UID stable, METHOD:REQUEST).
+- An e2e (seeded): employer offers → student accepts → the other application auto-withdraws → the logbook unlocks.

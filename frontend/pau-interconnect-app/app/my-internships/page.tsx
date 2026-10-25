@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import DashboardShell from "@/components/DashboardShell";
-import { Skeleton } from "@/components/ui";
+import { Skeleton, PageHeader, Badge } from "@/components/ui";
 import { Clock } from "lucide-react";
 import { MyInternshipsSections } from "./MyInternshipsParts";
 import { supabaseFetch } from "@/lib/supabase-fetch";
@@ -46,41 +46,36 @@ export default async function MyInternshipsPage() {
 
   return (
     <DashboardShell userProfile={profile}>
-      <header className="flex items-center justify-between mb-8 px-4 sm:px-0">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800 leading-tight">
-            My Internships
-          </h2>
-          <p className="text-sm text-slate-400 mt-1">
-            Manage your applications and active roles
-          </p>
-        </div>
-        <div className="hidden sm:flex px-4 py-2 bg-white rounded-xl border border-slate-100 shadow-sm items-center gap-2.5">
-          <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
-            <Clock className="text-emerald-500 w-4 h-4" />
-          </div>
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-            Updated just now
-          </span>
-        </div>
-      </header>
-
-      <Suspense
-        fallback={
-          <div className="space-y-10 px-4 sm:px-0">
-            <Skeleton className="h-40 rounded-3xl w-full" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-              {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-[280px] rounded-[24px]" />
-              ))}
+      <div className="max-w-7xl mx-auto px-4 sm:px-0">
+        <PageHeader
+          title="My Internships"
+          description="Track your application progress, upcoming deadlines, and saved roles."
+          badge={
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-sunken border border-border text-xs text-fg-muted">
+              <Clock className="w-3.5 h-3.5 text-brand" />
+              <span>Real-time sync</span>
             </div>
+          }
+          className="mb-8"
+        />
+
+        <Suspense
+          fallback={
+            <div className="space-y-10 pb-12">
+              <Skeleton className="h-36 rounded-2xl w-full" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} className="h-[280px] rounded-2xl" />
+                ))}
+              </div>
+            </div>
+          }
+        >
+          <div className="pb-12">
+            <MyInternshipsSections />
           </div>
-        }
-      >
-        <div className="px-4 sm:px-0 pb-12">
-          <MyInternshipsSections />
-        </div>
-      </Suspense>
+        </Suspense>
+      </div>
     </DashboardShell>
   );
 }

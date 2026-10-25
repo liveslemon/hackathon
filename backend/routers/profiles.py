@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, field_validator
 from typing import Optional, Any
 from core.security import get_current_user
 from core.rate_limit import rate_limit
-from services.job_queue import PROFILE_REMATCH, enqueue
+from services.job_queue import PROFILE_REMATCH, USER_RESCORE, enqueue
 from services.supabase_service import supabase
 
 logger = logging.getLogger(__name__)
@@ -246,6 +246,8 @@ async def refresh_my_matches(
     current_user=Depends(rate_limit("refresh_matches", 10, 3600)),
 ):
     """Re-run matching after the student edits their profile (skills, projects, ...)."""
-    await asyncio.to_thread(enqueue, current_user.id, PROFILE_REMATCH, None, "profile")
+    await asyncio.to_thread(enqueue, current_user.id, USER_RESCORE, None, "profile", 10)
     return {"status": "processing"}
+
+
 

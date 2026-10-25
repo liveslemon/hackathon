@@ -35,9 +35,9 @@ export default function DashboardClient({
   }, [user, session, profile, loading, router]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8fafc]">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background">
       <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand mb-4" />
-      <p className="text-sm font-medium text-slate-500">Redirecting to your dashboard...</p>
+      <p className="text-sm font-medium text-fg-muted">Redirecting to your dashboard...</p>
     </div>
   );
 }

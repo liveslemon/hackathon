@@ -1,0 +1,16 @@
+WAVE 3 RULES (UI)
+- Waves 1 and 2 are merged. The product is feature-complete; your job is to make every page excellent in light AND dark, on 360 / 768 / 1440 px.
+- Your spec is the matching files in audit/delivery/ui/ plus the global items G-1 to G-12 in audit/delivery/ui/README.md. Implement
+  every P1 and P2 row for your pages. Do P3 rows if time allows, and mark any you skip as ⏭.
+- Use components/ui and the shared components from agent 41 (merged before you start). If you need a new reusable component, build it
+  inside your area and hand it off for promotion. Don't edit components/**.
+- KEEP BEHAVIOUR: no changes to API calls, request bodies, RLS, validation or state transitions, unless your spec row says so. The last UI
+  wave accidentally changed a logbook request (it posted a company NAME as employer_id). Before finishing, diff every fetch/rpc/from()
+  call in your files against dev and justify each change in your report.
+- Tokens only (see the common rules). After you finish,
+  grep -rnE "bg-white|text-slate-|border-slate-|bg-slate-|text-primary|text-muted-fg|#[0-9a-fA-F]{6}" <your folders> must be empty.
+- Every page: PageHeader, loading.tsx (a skeleton matching the layout), error.tsx (with Retry + the Sentry event id), designed empty states,
+  no window.confirm, one h1, labelled inputs, visible focus.
+- Split any file over 400 lines into section components inside your area.
+- VERIFY with agent 26's seeded sessions: add Playwright visual specs tests/e2e/visual/<area>.spec.ts (light + dark, 360 + 1440) and axe
+  checks (color-contrast, label, button-name) for each of your pages. Commit the specs, not the screenshots.

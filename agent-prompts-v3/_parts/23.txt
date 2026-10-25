@@ -1,0 +1,24 @@
+YOU ARE AGENT 23: BACKEND DEAD-CODE REMOVAL. Wave 1. Branch: agent/w1-23-backend-cleanup. Model: Gemini 3.8 Flash (high thinking).
+
+SCOPE (audit 04 R-1 FastAPI half, R-2 FastAPI half, R-3, R-4; 01 endpoint table)
+This is a careful deletion job. For each endpoint, prove it's unused BEFORE deleting it: grep the whole frontend (app/, lib/, components/,
+context/), supabase/functions/ and backend/ for the path, with and without the /api prefix. Put the grep result in your report.
+1. backend/routers/logbook.py: delete every endpoint EXCEPT POST /api/logbook/enhance (the UI uses the Next.js /api/logbook/* route
+   handlers). Delete their now-unused helpers and tests. Keep enhance's rate limit and auth.
+2. backend/routers/applications.py: keep draft-cover-letter and draft-cover-letter-stream. Delete submit-application,
+   applications/{app_id}/status, internships/{internship_id}/applicants, applications/student, and their tests (the Next routes are the live copies).
+3. backend/routers/profiles.py: delete GET /api/companies/{employer_id} if unused (verify). Keep employer/profile, me/delete, me/refresh-matches.
+4. R-3: in the three routers above, remove every decorator WITHOUT the /api prefix (keep only /api/...).
+   DON'T touch cv.py, analysis.py (agent 25), admin.py (agent 22) or system.py (agent 21). They remove their own bare aliases.
+5. Fix the two frontend callers that use bare paths: app/dashboard/admin/overview/OverviewView.tsx ("/admin/stats" → "/api/admin/stats")
+   and app/dashboard/admin/analytics/AnalyticsView.tsx ("/admin/analytics" → "/api/admin/analytics"). Those two lines only.
+6. Update backend/tests so the suite passes. Delete tests for deleted endpoints. Don't weaken tests for kept endpoints.
+
+YOU OWN: backend/routers/{applications,logbook,profiles}.py, backend/tests/{discovery_apply,logbook,profiles}/**, plus the 2 lines in
+the 2 admin view files named above.
+
+ALSO HANDOFF (don't do): list any bare-path callers you find for cv/analysis/admin/system routes, so their owners can remove the aliases.
+
+ACCEPTANCE
+- The report has a table: endpoint | callers found (grep output) | action.
+- pytest, lint and typecheck pass. The FastAPI app starts and /openapi.json lists only /api/... paths for your three routers.

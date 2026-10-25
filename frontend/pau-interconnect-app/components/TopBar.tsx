@@ -1,12 +1,13 @@
 "use client";
 import React from "react";
-import { Menu, Search, User, LogOut } from "lucide-react";
-import { Input } from "./ui";
+import { Menu, Search, LogOut } from "lucide-react";
+import { Input, Avatar } from "./ui";
 import { cx } from "@/utils/cx";
 import { usePathname } from "next/navigation";
 import type { Profile } from "@/types/domain";
 import { fastSignOut } from "@/lib/fast-signout";
 import { NotificationBell } from "@/components/NotificationBell";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface TopBarProps {
   onMenuClick: () => void;
@@ -57,12 +58,12 @@ const TopBar = ({
     "User";
 
   return (
-    <header className="sticky top-0 z-30 flex items-center h-14 md:h-16 px-4 md:px-8 bg-white/90 backdrop-blur-sm border-b border-slate-100">
+    <header className="sticky top-0 z-30 flex items-center h-14 md:h-16 px-4 md:px-8 bg-surface/90 backdrop-blur-md border-b border-border">
       {/* Mobile Menu */}
       <button
         onClick={onMenuClick}
         aria-label="Open navigation menu"
-        className="lg:hidden p-2 -ml-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors shrink-0 mr-3"
+        className="lg:hidden p-2 -ml-2 text-fg-muted hover:text-fg hover:bg-surface-sunken rounded-xl transition-colors shrink-0 mr-3 min-w-[40px] min-h-[40px] flex items-center justify-center cursor-pointer"
       >
         <Menu className="w-5 h-5" />
       </button>
@@ -83,9 +84,9 @@ const TopBar = ({
                 onFocus={() => setIsSearchFocused(true)}
                 onBlur={() => setIsSearchFocused(false)}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="w-full bg-slate-50 border-transparent focus:border-slate-200 focus:bg-white focus:ring-0 rounded-lg h-9 pl-9 text-sm"
+                className="w-full bg-surface-sunken border-transparent focus:border-border focus:bg-surface rounded-xl h-9 pl-9 text-sm"
               />
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-subtle pointer-events-none">
                 <Search className="w-4 h-4" />
               </div>
             </div>
@@ -95,16 +96,23 @@ const TopBar = ({
         )}
 
         {/* Right side controls */}
-        <div className="flex items-center gap-1 shrink-0 ml-auto">
+        <div className="flex items-center gap-2 shrink-0 ml-auto">
+          {/* Theme Switcher */}
+          <ThemeToggle variant="dropdown" />
+
+          {/* Notifications */}
           {userProfile?.id && <NotificationBell userId={userProfile.id} />}
 
-          <div className="w-px h-5 bg-slate-100 mx-1" />
+          <div className="w-px h-5 bg-border mx-1" />
 
+          {/* User Profile and Logout */}
           <div className="flex items-center gap-2 pl-1">
-            <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
-              <User className="w-3.5 h-3.5" />
-            </div>
-            <span className="text-xs font-medium text-slate-500 hidden md:block">
+            <Avatar
+              name={displayName}
+              size="sm"
+              className="bg-brand-subtle text-brand"
+            />
+            <span className="text-xs font-semibold text-fg hidden md:block">
               {displayName}
             </span>
 
@@ -113,15 +121,15 @@ const TopBar = ({
               disabled={isLoggingOut}
               aria-label="Sign out"
               className={cx(
-                "p-1.5 rounded-lg transition-colors ml-1",
+                "p-2 rounded-xl transition-colors ml-1 min-w-[36px] min-h-[36px] flex items-center justify-center cursor-pointer",
                 isLoggingOut
-                  ? "text-red-400 opacity-50 cursor-not-allowed"
-                  : "text-slate-300 hover:text-red-500 hover:bg-red-50",
+                  ? "text-danger opacity-50 cursor-not-allowed"
+                  : "text-fg-subtle hover:text-danger hover:bg-danger-subtle",
               )}
               title="Sign Out"
             >
               {isLoggingOut ? (
-                <div className="w-4 h-4 rounded-full border-2 border-red-400 border-t-transparent animate-spin" />
+                <div className="w-4 h-4 rounded-full border-2 border-danger border-t-transparent animate-spin" />
               ) : (
                 <LogOut className="w-4 h-4" />
               )}
